@@ -19,6 +19,7 @@ export type Item = {
   payout: null | { id?: string; status: string; amount_minor?: number; available_at: string };
   refunded_minor: number;
   checks: { trigger: string; result: string; checked_at: string }[];
+  review: null | { id: string; rating: number; text: string; seller_reply: string; moderation_status: string };
 };
 
 export type Order = {
@@ -70,3 +71,8 @@ export const PAYOUT_LABEL: Record<string, string> = {
   hold: "Ожидание 48 ч", suspended: "Приостановлена (жалоба)", available: "Доступна к выводу", requested: "Запрошена",
   pending_reconciliation: "Сверка с провайдером", paid: "Выплачена", failed: "Ошибка выплаты", cancelled: "Отменена (возврат)",
 };
+
+export const leaveReview = (oid: string, iid: string, rating: number, text: string) =>
+  apiFetch(`/orders/${oid}/items/${iid}/review`, { method: "POST", body: { rating, text } });
+export const replyReview = (rid: string, text: string) => apiFetch(`/reviews/${rid}/reply`, { method: "POST", body: { text } });
+export const complainReview = (rid: string, reason: string) => apiFetch(`/reviews/${rid}/complain`, { method: "POST", body: { reason } });

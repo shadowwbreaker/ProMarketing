@@ -10,15 +10,18 @@ import { ErrorState, LoadingState } from "@/components/ui/States";
 import { useToast } from "@/components/ui/Toast";
 import {
   decideTerms,
+  complainReview,
   getOrder,
   getOrderEvents,
   Item,
   itemAction,
+  leaveReview,
   mockComplete,
   Order,
   orderAction,
   OrderEvent,
   PAYOUT_LABEL,
+  replyReview,
   startPayment,
   STATUS_LABEL,
 } from "@/lib/api/orders";
@@ -106,6 +109,30 @@ function ItemCard({ o, it, run }: { o: Order; it: Item; run: (fn: () => Promise<
         )}
         {buyer && proof && <Button variant="ghost" onClick={() => run(() => itemAction(o.id, it.id, "check-publication"), "Проверка запущена")}>Проверить публикацию</Button>}
       </div>
+
+      {it.review && (
+        <div className="rounded-lg bg-bg p-3 text-sm">
+          <p><b>Отзыв: {"★".repeat(it.review.rating)}</b> {it.review.text}{it.review.moderation_status !== "published" && <span className="text-muted"> ({it.review.moderation_status})</span>}</p>
+          {it.review.seller_reply && <p className="mt-1 text-muted">Ответ продавца: {it.review.seller_reply}</p>}
+          <div className="mt-1 flex gap-3 text-xs">
+            {seller && !it.review.seller_reply && <button className="text-accent" onClick={() => { const t = prompt("Ответ на отзыв"); if (t) void run(async () => { await replyReview(it.review!.id, t); return getOrder(o.id); }, "Ответ опубликован"); }}>Ответить</button>}
+            <button className="text-muted" onClick={() => { const r = prompt("Почему отзыв нарушает правила?"); if (r) void run(async () => { await complainReview(it.review!.id, r); return getOrder(o.id); }, "Жалоба отправлена модератору"); }}>Пожаловаться на отзыв</button>
+          </div>
+        </div>
+      )}
+      {buyer && !it.review && ["COMPLETED", "PARTIALLY_REFUNDED"].includes(it.status) && (
+        <form className="flex flex-wrap items-end gap-2 border-t border-border pt-3" onSubmit={(e) => {
+          e.preventDefault();
+          const f = new FormData(e.currentTarget);
+          void run(async () => { await leaveReview(o.id, it.id, Number(f.get("rating")), String(f.get("text") ?? "")); return getOrder(o.id); }, "Спасибо за отзыв");
+        }}>
+          <label className="flex flex-col text-sm">Оценка
+            <select name="rating" defaultValue="5" className="rounded-lg border border-border bg-surface px-2 py-1">{[5, 4, 3, 2, 1].map((n) => <option key={n} value={n}>{"★".repeat(n)}</option>)}</select>
+          </label>
+          <input name="text" aria-label="Текст отзыва" placeholder="Как прошло сотрудничество?" className="min-w-0 flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm" />
+          <Button type="submit" variant="secondary">Оставить отзыв</Button>
+        </form>
+      )}
 
       {seller && ["IN_PROGRESS", "AWAITING_PUBLICATION"].includes(it.status) && (
         <form onSubmit={onProof} className="grid gap-2 border-t border-border pt-3 sm:grid-cols-[1fr_200px]">

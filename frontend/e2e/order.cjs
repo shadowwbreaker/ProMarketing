@@ -47,6 +47,9 @@ async function login(ctx, base, email) {
   await buyer.reload();
   await buyer.getByRole("button", { name: "Подтвердить выполнение" }).click();
   await buyer.getByText("Выполнен").first().waitFor();
+  await buyer.getByLabel("Текст отзыва").fill("Всё по ТЗ и вовремя");
+  await buyer.getByRole("button", { name: "Оставить отзыв" }).click();
+  await buyer.getByText("Всё по ТЗ и вовремя").waitFor();
 
   await seller.goto(`${base}/account`);
   await seller.getByRole("button", { name: "Выплаты" }).click();

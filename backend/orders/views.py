@@ -52,12 +52,13 @@ class ItemSerializer(serializers.ModelSerializer):
     payout = serializers.SerializerMethodField()
     refunded_minor = serializers.SerializerMethodField()
     checks = serializers.SerializerMethodField()
+    review = serializers.SerializerMethodField()
 
     class Meta:
         model = OrderItem
         fields = ["id", "status", "price_minor", "fee_minor", "seller_amount_minor", "accept_deadline", "publish_deadline",
                   "placement_until", "accepted_at", "published_at", "confirm_deadline", "confirmed_at", "payout_available_at",
-                  "account", "proofs", "payout", "refunded_minor", "checks"]
+                  "account", "proofs", "payout", "refunded_minor", "checks", "review"]
 
     def get_account(self, o):
         a = o.social_account
@@ -78,6 +79,11 @@ class ItemSerializer(serializers.ModelSerializer):
         from payments.services import refunded_amount
 
         return refunded_amount(o.pk, include_pending=False)
+
+    def get_review(self, o):
+        r = o.reviews.first()
+        return None if not r else {"id": str(r.pk), "rating": r.rating, "text": r.text, "seller_reply": r.seller_reply,
+                                   "moderation_status": r.moderation_status}
 
     def get_checks(self, o):
         return [{"trigger": c.trigger, "result": c.result, "checked_at": c.checked_at} for c in o.publication_checks.order_by("-checked_at")[:5]]

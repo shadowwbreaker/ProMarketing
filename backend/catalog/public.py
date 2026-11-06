@@ -100,7 +100,7 @@ def apply_filters(qs, params):
             rmin = float(v)
         except ValueError as e:
             raise DomainError("rating_min должен быть числом", code="bad_filter", status_code=400) from e
-        good = (Review.objects.filter(moderation_status="published", order_item__status="COMPLETED")
+        good = (Review.objects.filter(moderation_status="published", order_item__status__in=["COMPLETED", "PARTIALLY_REFUNDED"])
                 .values("target_user_id").annotate(n=Count("id")))
         from django.db.models import Avg
 
@@ -241,7 +241,7 @@ class SellerPage(APIView):
         accounts = list(sellable_accounts().filter(owner=seller).prefetch_related("offers"))
         nets = list(sellable_networks().filter(owner=seller))
         rating = seller_rating(seller.pk)
-        reviews = (Review.objects.filter(target_user=seller, moderation_status="published", order_item__status="COMPLETED")
+        reviews = (Review.objects.filter(target_user=seller, moderation_status="published", order_item__status__in=["COMPLETED", "PARTIALLY_REFUNDED"])
                    .select_related("author__profile").order_by("-created_at")[:20])
         ratings = {seller.pk: rating}
         first_listed = SocialAccount.objects.filter(owner=seller).aggregate(m=Min("created_at"))["m"]

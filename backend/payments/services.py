@@ -209,6 +209,10 @@ def _finish_refund(refund_id, provider_status: str):
             dst = S.REFUNDED if full else S.PARTIALLY_REFUNDED
             if item.status != dst and can_transition(item.status, dst):
                 _move(order, item, dst, event="item.refunded", amount=refund.amount_minor)
+            if full:
+                from reviews.services import withdraw_for_refunded_item
+
+                withdraw_for_refunded_item(item)
             _adjust_payout_after_refund(item, total)
             notify(order.buyer, "refund.done", "Возврат выполнен", f"{refund.amount_minor / 100:.2f} ₽", order=order.pk)
         elif provider_status == "failed":
