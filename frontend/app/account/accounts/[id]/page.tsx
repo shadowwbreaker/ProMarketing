@@ -2,6 +2,7 @@
 
 import { useParams } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useState } from "react";
+import { OffersPanel } from "@/components/OffersPanel";
 import { TrustBadge } from "@/components/stats/TrustBadge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -135,6 +136,8 @@ export default function AccountDetailPage() {
           Последнее обновление не удалось: {job.error_message}. Предыдущая статистика сохранена.
         </p>
       )}
+
+      <OffersPanel accountId={acc.id} listed={acc.is_listed} onChanged={() => void load()} />
 
       {hist && hist.results[0] && (
         <Card>

@@ -25,6 +25,19 @@ const { chromium } = require("playwright");
   const disabled = await page.getByRole("button", { name: "Обновить статистику" }).isDisabled();
   if (!disabled) throw new Error("refresh should be limited right after first fetch");
   await page.getByText("Доступно с").waitFor();
+  // Phase 4: offer + listing rules + network
+  await page.getByLabel("Цена, ₽").fill("15000");
+  await page.getByRole("button", { name: "Добавить предложение" }).click();
+  await page.getByText("Интеграция внутри ролика · 15").waitFor();
+  await page.getByRole("button", { name: "Опубликовать в каталоге" }).click();
+  await page.getByText("подтвердите email").waitFor(); // unverified seller cannot list
+  await page.goto(`${base}/account/networks`);
+  await page.getByLabel("Название").fill("Моя сетка");
+  await page.getByRole("button", { name: "Создать" }).click();
+  await page.getByText("Моя сетка").click();
+  await page.waitForURL("**/account/networks/*");
+  await page.getByRole("button", { name: "Добавить", exact: true }).click();
+  await page.getByRole("button", { name: "Убрать" }).waitFor();
   await browser.close();
   console.log("E2E ACCOUNTS OK");
 })().catch((e) => {

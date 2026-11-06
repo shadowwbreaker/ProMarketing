@@ -9,6 +9,7 @@ api_v1 = [
     path("health/ready", ReadyView.as_view(), name="health-ready"),
     path("", include("accounts.urls")),
     path("", include("social_data.urls")),
+    path("", include("catalog.urls")),
 ]
 
 urlpatterns = [

@@ -140,7 +140,18 @@ export default function AccountPage() {
             />
           </>
         )}
-        {tab === "networks" && <MineList<Simple> path="networks" empty="Сеток пока нет" render={(n) => String(n.title)} />}
+        {tab === "networks" && (
+          <>
+            <Link href="/account/networks" className="self-start rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-ink">
+              Управлять сетками
+            </Link>
+            <MineList<Simple>
+              path="networks"
+              empty="Сеток пока нет"
+              render={(n) => <Link href={`/account/networks/${n.id}`} className="hover:text-accent">{String(n.title)}</Link>}
+            />
+          </>
+        )}
         {tab === "reviews" && <MineList<Simple> path="reviews" empty="Отзывов пока нет" render={(r) => `${r.rating}★ ${r.text ?? ""}`} />}
         {tab === "tickets" && <MineList<Simple> path="tickets" empty="Обращений нет" render={(t) => `${t.subject} · ${t.status}`} />}
         {tab === "notifications" && <MineList<Simple> path="notifications" empty="Уведомлений нет" render={(n) => String(n.title)} />}
