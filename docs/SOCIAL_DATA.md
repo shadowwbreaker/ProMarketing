@@ -1,6 +1,6 @@
 # SOCIAL DATA — получение статистики социальных аккаунтов
 
-Статус документа: исследование Phase 0 (2026-11-07). Реализации нет.
+Статус документа: исследование Phase 0; реализация Phase 3 — 2026-11-07 (см. §8).
 
 ## 1. Принципы (из roadmap, обязательны)
 
@@ -103,6 +103,24 @@ backend/social_data/
 ## 7. Хранение токенов
 
 OAuth-токены шифруются на уровне приложения (ключ из секретов окружения), доступ — только сервису `social_data`. Отключение аккаунта → отзыв токена у платформы и удаление.
+
+## 8. Реализация (Phase 3)
+
+| Компонент | Файл | Статус |
+|---|---|---|
+| Интерфейс провайдера | `backend/social_data/core/provider.py` | реализован, тесты |
+| Парсер ссылок | `core/url_parser.py` | реализован, тесты |
+| TikTok (Display API, Login Kit) | `providers/tiktok/provider.py` | реализован, контрактные тесты; живой API не проверен (нет ключей) |
+| YouTube (Data API v3) | `providers/youtube/provider.py` | реализован, контрактные тесты; живой API не проверен (нет ключа) |
+| Instagram | `providers/instagram/provider.py` | `[!] BLOCKED` (D-013) |
+| Fake (dev/test) | `providers/fake/provider.py` | запрещён в production |
+| Ручной ввод | `providers/manual/provider.py` | статус MANUAL |
+| Сервис обновления | `services/refresh_service.py` | лимиты, история, SUSPICIOUS |
+| Задачи | `tasks.py` | `run_refresh_job` (разовая), `purge_expired_youtube_data` (только удаление) |
+
+Порог SUSPICIOUS: рост подписчиков ×3 или средних просмотров ×5 между обновлениями. Аккаунт уходит на проверку модератору (`under_review`) — это сигнал, а не обвинение.
+
+API: `POST /social-accounts`, `GET /social-accounts/{id}`, `POST /social-accounts/{id}/refresh`, `GET /social-accounts/{id}/statistics`, `POST /social-accounts/{id}/manual-statistics`, `GET /social-accounts/oauth/tiktok/start`, `POST /social-accounts/oauth/tiktok/callback`.
 
 ## Источники
 

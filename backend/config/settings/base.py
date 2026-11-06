@@ -146,7 +146,10 @@ CELERY_TASK_ACKS_LATE = True
 CELERY_TASK_ALWAYS_EAGER = env.bool("CELERY_TASK_ALWAYS_EAGER", default=False)
 # Periodic tasks: ONLY internal timers and data-retention cleanup (DECISIONS D-004).
 # Never add a periodic task that calls social platforms. Enforced by tests.
-CELERY_BEAT_SCHEDULE = {}
+CELERY_BEAT_SCHEDULE = {
+    # Deletion only (YouTube API data retention, D-016) — does not fetch anything.
+    "purge-expired-youtube-data": {"task": "social_data.tasks.purge_expired_youtube_data", "schedule": 60 * 60 * 24},
+}
 
 # --- Email -----------------------------------------------------------------
 EMAIL_BACKEND = env("EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend")

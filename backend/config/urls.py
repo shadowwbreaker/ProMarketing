@@ -8,6 +8,7 @@ api_v1 = [
     path("health/live", LiveView.as_view(), name="health-live"),
     path("health/ready", ReadyView.as_view(), name="health-ready"),
     path("", include("accounts.urls")),
+    path("", include("social_data.urls")),
 ]
 
 urlpatterns = [
