@@ -1,3 +1,4 @@
+from rest_framework.throttling import ScopedRateThrottle
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 from rest_framework.response import Response
@@ -41,6 +42,8 @@ class MessageSerializer(serializers.ModelSerializer):
 
 class Messages(APIView):
     permission_classes = [IsActiveUser]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "chat"
 
     def get(self, request, pk):
         chat = services.get_chat(pk, request.user)

@@ -22,3 +22,20 @@ class RequestIdMiddleware:
             request_id_var.reset(token)
         response["X-Request-ID"] = rid
         return response
+
+
+class SecurityHeadersMiddleware:
+    """API responses are data only: forbid rendering/embedding them (defence in depth against XSS/clickjacking)."""
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        response = self.get_response(request)
+        if request.path.startswith("/api/"):
+            response.setdefault("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'; base-uri 'none'")
+        response.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+        response.setdefault("X-Content-Type-Options", "nosniff")
+        response.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+        response.setdefault("Cross-Origin-Opener-Policy", "same-origin")
+        return response

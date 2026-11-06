@@ -1,3 +1,4 @@
+from rest_framework.throttling import ScopedRateThrottle
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 
@@ -117,6 +118,8 @@ class OpenIn(serializers.Serializer):
 
 class OpenDispute(APIView):
     permission_classes = [IsActiveUser]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "dispute_open"
 
     def post(self, request, pk):
         s = OpenIn(data=request.data)
@@ -263,6 +266,8 @@ class StaffAction(APIView):
 # --- support tickets -------------------------------------------------------------------
 class Tickets(APIView):
     permission_classes = [IsActiveUser]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "ticket"
 
     def post(self, request):
         subject = (request.data.get("subject") or "").strip()

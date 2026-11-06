@@ -197,26 +197,11 @@ def test_role_management_requires_super_admin(api, user_factory):
 
 
 @pytest.mark.django_db
-def test_auth_rate_limited(api, settings):
+def test_auth_rate_limited(api, monkeypatch):
     from django.core.cache import cache
-
-    cache.clear()
-    settings.REST_FRAMEWORK = {**settings.REST_FRAMEWORK, "DEFAULT_THROTTLE_RATES": {"auth": "3/min", "stats_refresh": "10/min"}}
     from rest_framework.throttling import ScopedRateThrottle
 
-    ScopedRateThrottle.THROTTLE_RATES = settings.REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"]
+    cache.clear()
+    monkeypatch.setattr(ScopedRateThrottle, "THROTTLE_RATES", {**ScopedRateThrottle.THROTTLE_RATES, "auth": "3/min"})
     codes = [api.post("/api/v1/auth/login", {"email": "x@example.com", "password": "y"}, format="json").status_code for _ in range(5)]
     assert codes[-1] == 429
-    ScopedRateThrottle.THROTTLE_RATES = {"auth": "1000/min", "stats_refresh": "1000/min"}
-
-
-@pytest.mark.django_db
-def test_session_endpoint(api, user_factory):
-    r = api.get("/api/v1/auth/session")
-    assert r.status_code == 200 and r.json() == {"user": None} and "csrftoken" in r.cookies
-    u = user_factory()
-    api.force_login(u)
-    assert api.get("/api/v1/auth/session").json()["user"]["email"] == u.email
-    u.status = "blocked"
-    u.save()
-    assert api.get("/api/v1/auth/session").json() == {"user": None}

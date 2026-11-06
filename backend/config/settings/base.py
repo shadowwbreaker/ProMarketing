@@ -44,10 +44,12 @@ INSTALLED_APPS = [
     "support",
     "reviews",
     "staff",
+    "antifraud",
 ]
 
 MIDDLEWARE = [
     "common.middleware.RequestIdMiddleware",
+    "common.middleware.SecurityHeadersMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -131,6 +133,10 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {
         "auth": env("THROTTLE_AUTH", default="10/min"),
         "stats_refresh": env("THROTTLE_STATS_REFRESH", default="10/hour"),
+        "chat": env("THROTTLE_CHAT", default="30/min"),
+        "dispute_open": env("THROTTLE_DISPUTE_OPEN", default="10/day"),
+        "ticket": env("THROTTLE_TICKET", default="10/day"),
+        "review": env("THROTTLE_REVIEW", default="30/day"),
     },
 }
 SPECTACULAR_SETTINGS = {
@@ -161,6 +167,7 @@ CELERY_BEAT_SCHEDULE = {
     "payments-release-payouts": {"task": "payments.tasks.release_payouts", "schedule": 600},
     "support-dispute-timeouts": {"task": "support.tasks.process_dispute_timeouts", "schedule": 900},
     "support-close-appeal-windows": {"task": "support.tasks.close_expired_appeal_windows", "schedule": 3600},
+    "accounts-expire-sanctions": {"task": "accounts.tasks.expire_sanctions", "schedule": 900},
 }
 
 # --- Email -----------------------------------------------------------------

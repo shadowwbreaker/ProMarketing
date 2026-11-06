@@ -125,3 +125,31 @@ def set_roles(*, target: User, roles: list[str], actor: User, comment: str) -> N
         del target._role_codes_cache
     record(action="user.roles_changed", subject_type="user", subject_id=target.pk, actor=actor, is_staff_action=True,
            before={"roles": before}, after={"roles": sorted(roles)}, comment=comment)
+
+
+def expire_sanctions(now=None) -> int:
+    """Temporary limits/blocks end automatically when their term passes (internal timer)."""
+    from .models import UserSanction
+
+    now = now or timezone.now()
+    n = 0
+    for s in UserSanction.objects.filter(revoked_at__isnull=True, ends_at__lte=now, type__in=["limit", "block"]).select_related("user"):
+        s.revoked_at = now
+        s.save(update_fields=["revoked_at", "updated_at"])
+        u = s.user
+        still = UserSanction.objects.filter(user=u, revoked_at__isnull=True, type__in=["limit", "block"]).filter(
+            models_q_active(now)).exists()
+        if not still and u.status != User.Status.ACTIVE:
+            before = u.status
+            u.status = User.Status.ACTIVE
+            u.save(update_fields=["status", "updated_at"])
+            record(action="user.sanction_expired", subject_type="user", subject_id=u.pk, before={"status": before},
+                   after={"status": "active"})
+        n += 1
+    return n
+
+
+def models_q_active(now):
+    from django.db.models import Q
+
+    return Q(ends_at__isnull=True) | Q(ends_at__gt=now)

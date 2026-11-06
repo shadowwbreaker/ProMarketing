@@ -1,5 +1,7 @@
 from django.urls import path
 
+from antifraud.views import Signals
+
 from . import views
 
 urlpatterns = [
@@ -13,4 +15,5 @@ urlpatterns = [
     path("staff/orders", views.Orders.as_view()),
     path("staff/audit", views.Audit.as_view()),
     path("staff/audit/verify", views.AuditVerify.as_view()),
+    path("staff/fraud-signals", Signals.as_view()),
 ]

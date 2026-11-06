@@ -7,6 +7,9 @@ from django.utils import timezone
 from common.models import BaseModel
 
 
+LIMITED_DENY = {"order.create", "account.manage_own"}
+
+
 class UserManager(BaseUserManager):
     use_in_migrations = True
 
@@ -80,6 +83,8 @@ class User(BaseModel, AbstractBaseUser, PermissionsMixin):
 
         if self.status == self.Status.BLOCKED or not self.is_active:
             return False
+        if self.status == self.Status.LIMITED and perm in LIMITED_DENY:
+            return False  # temporary restriction: no new deals or listings, existing ones can be finished
         return perm in permissions_for_roles(self.role_codes)
 
 

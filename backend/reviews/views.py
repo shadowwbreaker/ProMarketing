@@ -1,3 +1,4 @@
+from rest_framework.throttling import ScopedRateThrottle
 from django.shortcuts import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -19,6 +20,8 @@ def _r(r: Review, staff=False):
 
 class CreateReview(APIView):
     permission_classes = [IsActiveUser]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "review"
 
     def post(self, request, pk, item_id):
         try:
