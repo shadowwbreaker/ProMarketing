@@ -17,7 +17,8 @@ def user_factory(db):
     def make(email=None, roles=("buyer",), password="Str0ng-pass-123", **extra):
         counter["n"] += 1
         email = email or f"user{counter['n']}@example.com"
-        user = User.objects.create_user(email=email, password=password, is_email_verified=True, **extra)
+        extra.setdefault("is_email_verified", True)
+        user = User.objects.create_user(email=email, password=password, **extra)
         UserProfile.objects.create(user=user, display_name=email.split("@")[0])
         for r in roles:
             assign_role(user, r)

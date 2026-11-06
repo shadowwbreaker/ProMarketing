@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import { MineList } from "./MineList";
+import { PayoutsPanel } from "./PayoutsPanel";
+import { STATUS_LABEL } from "@/lib/api/orders";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Field } from "@/components/ui/Field";
@@ -21,6 +23,7 @@ const TABS: Tab[] = [
   { key: "sales", label: "Мои продажи", seller: true },
   { key: "accounts", label: "Мои аккаунты", seller: true },
   { key: "networks", label: "Мои сетки", seller: true },
+  { key: "payouts", label: "Выплаты", seller: true },
   { key: "reviews", label: "Отзывы" },
   { key: "tickets", label: "Обращения" },
   { key: "notifications", label: "Уведомления" },
@@ -61,10 +64,10 @@ export default function AccountPage() {
   }
 
   const orderRow = (o: OrderBrief) => (
-    <div className="flex flex-wrap justify-between gap-2">
+    <Link href={`/orders/${o.id}`} className="flex flex-wrap justify-between gap-2 hover:text-accent">
       <span>Заказ от {formatDateTime(o.created_at)} · позиций: {o.items_count}</span>
-      <span className="font-semibold">{formatMoney(o.total_minor, o.currency)} · {o.status}</span>
-    </div>
+      <span className="font-semibold">{formatMoney(o.total_minor, o.currency)} · {STATUS_LABEL[o.status] ?? o.status}</span>
+    </Link>
   );
 
   return (
@@ -152,6 +155,7 @@ export default function AccountPage() {
             />
           </>
         )}
+        {tab === "payouts" && <PayoutsPanel />}
         {tab === "reviews" && <MineList<Simple> path="reviews" empty="Отзывов пока нет" render={(r) => `${r.rating}★ ${r.text ?? ""}`} />}
         {tab === "tickets" && <MineList<Simple> path="tickets" empty="Обращений нет" render={(t) => `${t.subject} · ${t.status}`} />}
         {tab === "notifications" && <MineList<Simple> path="notifications" empty="Уведомлений нет" render={(n) => String(n.title)} />}

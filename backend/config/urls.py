@@ -10,6 +10,8 @@ api_v1 = [
     path("", include("accounts.urls")),
     path("", include("social_data.urls")),
     path("", include("catalog.urls")),
+    path("", include("orders.urls")),
+    path("", include("payments.urls")),
 ]
 
 urlpatterns = [

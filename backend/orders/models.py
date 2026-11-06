@@ -35,6 +35,8 @@ class Order(BaseModel):
     fee_bps = models.PositiveIntegerField(help_text="Комиссия платформы, зафиксированная при создании (D-015)")
     current_terms_version = models.ForeignKey("OrderTermsVersion", null=True, blank=True, on_delete=models.PROTECT, related_name="+")
     paid_at = models.DateTimeField(null=True, blank=True)
+    materials_delivered_at = models.DateTimeField(null=True, blank=True, help_text="Покупатель передал материалы (сценарий 14)")
+    seller_terms_accepted_at = models.DateTimeField(null=True, blank=True, help_text="Продавец принял условия (первое принятие позиции)")
 
     class Meta:
         indexes = [models.Index(fields=["buyer", "-created_at"]), models.Index(fields=["seller", "-created_at"])]
@@ -71,6 +73,26 @@ class OrderTermsVersion(BaseModel, AppendOnlyModel):
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=["order", "version"], name="terms_version_unique")]
+
+
+class OrderTermsProposal(BaseModel):
+    """Proposed change of terms after payment. Becomes a new OrderTermsVersion only when the other party agrees
+    (scenario 11: new requirements are never binding automatically)."""
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "Ожидает согласия"
+        ACCEPTED = "accepted", "Принято"
+        REJECTED = "rejected", "Отклонено"
+        WITHDRAWN = "withdrawn", "Отозвано"
+
+    order = models.ForeignKey(Order, on_delete=models.PROTECT, related_name="terms_proposals")
+    proposed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+")
+    changes = models.JSONField(help_text="Изменяемые поля условий")
+    comment = models.TextField(blank=True, max_length=2000)
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.PENDING)
+    decided_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT, related_name="+")
+    decided_at = models.DateTimeField(null=True, blank=True)
+    resulting_version = models.ForeignKey(OrderTermsVersion, null=True, blank=True, on_delete=models.PROTECT, related_name="+")
 
 
 class OrderItem(BaseModel):

@@ -69,3 +69,17 @@ class PaymentProvider(Protocol):
 - ЮKassa, сделки API: https://yookassa.ru/developers/solutions-for-platforms/safe-deal/integration/deals
 - Т-Банк, Мультирасчёты: https://www.tbank.ru/about/news/27032025-t-bank-launched-service-for-automating-settlements-in-transactions-on-online-platforms-multi-settlements
 - Stripe Connect, возвраты и споры: https://docs.stripe.com/connect/marketplace/tasks/refunds-disputes
+
+## 7. Реализация (2026-11-07)
+
+| Компонент | Файл |
+|---|---|
+| Интерфейс и возможности провайдера | `backend/payments/providers/base.py` |
+| Mock-провайдер (только dev/test) | `providers/mock.py` |
+| Сервис: платёж, webhook, сверка, возвраты, выплаты | `payments/services.py` |
+| API | `POST /orders/{id}/pay`, `POST /payments/webhooks/{provider}`, `GET /me/payouts`, `POST /me/payouts/{id}/withdraw`, `POST /me/payouts/{id}/retry`, dev: `POST /payments/mock/{id}/complete` |
+| Таймер выплат | `payments.tasks.release_payouts` (каждые 10 мин) |
+
+Правила: заказ оплачен только после подписанного webhook и подтверждения статуса у провайдера; неверно подписанные события не сохраняются; ключ идемпотентности записывается до вызова провайдера; таймаут переводит операцию в `pending_reconciliation` без повтора; возврат после выплаты отклоняется (R-01). При частичном возврате выплата пересчитывается: `(цена − возврат) − 5%`.
+
+Чтобы подключить реального провайдера: реализовать `PaymentProvider` (например, `providers/yookassa.py`), заполнить `capabilities` по документации и договору, зарегистрировать в `providers/registry.py`, проверить `supports_d014()`.

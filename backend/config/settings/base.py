@@ -149,6 +149,12 @@ CELERY_TASK_ALWAYS_EAGER = env.bool("CELERY_TASK_ALWAYS_EAGER", default=False)
 CELERY_BEAT_SCHEDULE = {
     # Deletion only (YouTube API data retention, D-016) — does not fetch anything.
     "purge-expired-youtube-data": {"task": "social_data.tasks.purge_expired_youtube_data", "schedule": 60 * 60 * 24},
+    # Internal order/payment timers (D-004). They never poll social platforms; window_end creates at most
+    # one event-driven publication check per order item (D-010).
+    "orders-expire-unaccepted": {"task": "orders.tasks.expire_unaccepted", "schedule": 300},
+    "orders-confirmation-windows": {"task": "orders.tasks.process_confirmation_windows", "schedule": 600},
+    "orders-missed-deadlines": {"task": "orders.tasks.notify_missed_publish_deadlines", "schedule": 3600},
+    "payments-release-payouts": {"task": "payments.tasks.release_payouts", "schedule": 600},
 }
 
 # --- Email -----------------------------------------------------------------

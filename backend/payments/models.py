@@ -60,7 +60,8 @@ class RefundRequest(BaseModel):
     reason = models.TextField()
     provider_refund_id = models.CharField(max_length=128, null=True, blank=True)
     idempotency_key = models.CharField(max_length=64, unique=True)
-    requested_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+")
+    requested_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT, related_name="+",
+                                     help_text="Пусто — инициировано системой (таймер)")
 
     class Meta:
         constraints = [models.CheckConstraint(condition=models.Q(amount_minor__gt=0), name="refund_amount_positive")]
