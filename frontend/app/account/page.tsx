@@ -12,6 +12,7 @@ import { Field } from "@/components/ui/Field";
 import { LoadingState } from "@/components/ui/States";
 import { useToast } from "@/components/ui/Toast";
 import { becomeSeller, resendVerification, updateProfile } from "@/lib/api/auth";
+import { readAll } from "@/lib/api/chat";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { fieldErrors } from "@/lib/forms";
 import { formatDateTime, formatMoney } from "@/lib/format";
@@ -39,6 +40,10 @@ export default function AccountPage() {
   const router = useRouter();
   const toast = useToast();
   const [tab, setTab] = useState("profile");
+  useEffect(() => {
+    const t = new URLSearchParams(window.location.search).get("tab");
+    if (t) setTab(t);
+  }, []);
   const [busy, setBusy] = useState(false);
   const [leaving, setLeaving] = useState(false);
 
@@ -158,7 +163,20 @@ export default function AccountPage() {
         {tab === "payouts" && <PayoutsPanel />}
         {tab === "reviews" && <MineList<Simple> path="reviews" empty="Отзывов пока нет" render={(r) => `${r.rating}★ ${r.text ?? ""}`} />}
         {tab === "tickets" && <MineList<Simple> path="tickets" empty="Обращений нет" render={(t) => `${t.subject} · ${t.status}`} />}
-        {tab === "notifications" && <MineList<Simple> path="notifications" empty="Уведомлений нет" render={(n) => String(n.title)} />}
+        {tab === "notifications" && (
+          <>
+            <button className="self-start text-sm text-accent" onClick={() => readAll().then(() => toast("Все прочитаны", "success"))}>Отметить все прочитанными</button>
+            <MineList<Simple>
+              path="notifications"
+              empty="Уведомлений нет"
+              render={(n) => {
+                const order = (n.payload as Record<string, string> | undefined)?.order;
+                const inner = <><b className={n.read_at ? "font-normal" : ""}>{String(n.title)}</b> {n.body ? `· ${String(n.body)}` : ""} <span className="text-xs text-muted">{formatDateTime(String(n.created_at))}</span></>;
+                return order ? <Link href={`/orders/${order}`} className="hover:text-accent">{inner}</Link> : inner;
+              }}
+            />
+          </>
+        )}
         {tab === "activity" && (
           <MineList<Simple> path="activity" empty="Действий пока нет" render={(a) => `${formatDateTime(String(a.created_at))} · ${a.action}`} />
         )}

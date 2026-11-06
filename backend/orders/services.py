@@ -410,3 +410,20 @@ def notify_missed_publish_deadlines(now=None) -> int:
         notify(order.seller, "order.deadline_missed", "Срок публикации истёк", "Опубликуйте рекламу или свяжитесь с покупателем", order=order.pk)
         n += 1
     return n
+
+
+def notify_deadlines_soon(now=None) -> int:
+    """Roadmap 8.2: «Приближается дедлайн» — once per item, 24h before publish deadline."""
+    now = now or timezone.now()
+    n = 0
+    qs = OrderItem.objects.filter(status__in=[S.IN_PROGRESS, S.AWAITING_PUBLICATION], publish_deadline__gt=now,
+                                  publish_deadline__lte=now + timedelta(hours=24)).select_related("order")
+    for item in qs:
+        if item.order.events.filter(order_item=item, type="item.deadline_soon").exists():
+            continue
+        with transaction.atomic():
+            append_event(_lock(item.order_id), "item.deadline_soon", item=item)
+        notify(item.order.seller, "order.deadline_soon", "До срока публикации меньше суток",
+               f"Опубликуйте рекламу до {item.publish_deadline:%d.%m %H:%M} UTC", order=item.order_id)
+        n += 1
+    return n

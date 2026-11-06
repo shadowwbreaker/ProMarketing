@@ -106,6 +106,8 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = "static/"
+MEDIA_ROOT = env("MEDIA_ROOT", default=str(BASE_DIR / "media"))
+ATTACHMENT_MAX_SIZE = env.int("ATTACHMENT_MAX_SIZE", default=20 * 1024 * 1024)
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # --- Sessions / CSRF -------------------------------------------------------
@@ -154,6 +156,7 @@ CELERY_BEAT_SCHEDULE = {
     "orders-expire-unaccepted": {"task": "orders.tasks.expire_unaccepted", "schedule": 300},
     "orders-confirmation-windows": {"task": "orders.tasks.process_confirmation_windows", "schedule": 600},
     "orders-missed-deadlines": {"task": "orders.tasks.notify_missed_publish_deadlines", "schedule": 3600},
+    "orders-deadlines-soon": {"task": "orders.tasks.notify_deadlines_soon", "schedule": 3600},
     "payments-release-payouts": {"task": "payments.tasks.release_payouts", "schedule": 600},
 }
 

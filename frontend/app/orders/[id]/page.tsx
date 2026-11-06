@@ -2,6 +2,7 @@
 
 import { useParams, useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useCallback, useEffect, useState } from "react";
+import { OrderChat } from "@/components/OrderChat";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { ErrorState, LoadingState } from "@/components/ui/States";
@@ -210,6 +211,8 @@ function OrderPageInner() {
             ) : <p className="mt-2 text-xs text-muted">Ждём ответа другой стороны</p>}
           </Card>
         ))}
+
+        <OrderChat orderId={o.id} role={o.role} />
 
         <Card>
           <h2 className="mb-2 font-bold">История заказа</h2>

@@ -71,3 +71,10 @@ def notify_missed_publish_deadlines():
 
     return run()
 
+
+
+@shared_task(name="orders.tasks.notify_deadlines_soon")
+def notify_deadlines_soon():
+    from .services import notify_deadlines_soon as run
+
+    return run()

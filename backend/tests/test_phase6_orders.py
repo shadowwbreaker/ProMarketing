@@ -8,28 +8,9 @@ from catalog.models import AccountNetwork, NetworkItem
 from orders.events import verify_order_chain
 from orders.models import Order, OrderItem, OrderTermsVersion, PublicationCheck
 from payments.models import FinancialLedgerEntry, Payment, PaymentWebhookEvent, Payout, RefundRequest
-from payments.providers.mock import MockPaymentProvider
-from payments.providers.registry import set_payment_provider
 
 TERMS = {"brand": "Кофейня «Зерно»", "brief": "Показать напиток, упомянуть акцию", "cta": "Перейди по ссылке в профиле",
          "site_url": "https://example.com"}
-
-
-@pytest.fixture(autouse=True)
-def mock_provider():
-    p = MockPaymentProvider()
-    set_payment_provider(p)
-    yield p
-    set_payment_provider(None)
-
-
-@pytest.fixture
-def market(user_factory, account_factory, offer_factory):
-    seller = user_factory(roles=("buyer", "seller"))
-    buyer = user_factory(roles=("buyer",))
-    accs = [account_factory(seller, listed=True) for _ in range(3)]
-    offers = [offer_factory(a, price_minor=100_000 * (i + 1)) for i, a in enumerate(accs)]
-    return {"seller": seller, "buyer": buyer, "accs": accs, "offers": offers}
 
 
 def as_(api, user):

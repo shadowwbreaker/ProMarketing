@@ -61,3 +61,23 @@ def offer_factory(db):
         return AdvertisingOffer.objects.create(social_account=account, price_minor=price_minor, ad_format=ad_format, **extra)
 
     return make
+
+
+@pytest.fixture(autouse=True)
+def mock_provider():
+    from payments.providers.mock import MockPaymentProvider
+    from payments.providers.registry import set_payment_provider
+
+    p = MockPaymentProvider()
+    set_payment_provider(p)
+    yield p
+    set_payment_provider(None)
+
+
+@pytest.fixture
+def market(user_factory, account_factory, offer_factory):
+    seller = user_factory(roles=("buyer", "seller"))
+    buyer = user_factory(roles=("buyer",))
+    accs = [account_factory(seller, listed=True) for _ in range(3)]
+    offers = [offer_factory(a, price_minor=100_000 * (i + 1)) for i, a in enumerate(accs)]
+    return {"seller": seller, "buyer": buyer, "accs": accs, "offers": offers}

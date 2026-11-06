@@ -12,6 +12,8 @@ api_v1 = [
     path("", include("catalog.urls")),
     path("", include("orders.urls")),
     path("", include("payments.urls")),
+    path("", include("chats.urls")),
+    path("", include("files.urls")),
 ]
 
 urlpatterns = [

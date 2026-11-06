@@ -31,6 +31,13 @@ async function login(ctx, base, email) {
 
   const seller = await login(await browser.newContext(), base, "demo-seller1@example.com");
   await seller.goto(orderUrl);
+  await seller.getByText("Оплата получена платёжным провайдером.").waitFor(); // system message in chat
+  await seller.getByLabel("Сообщение").fill("Здравствуйте! Сниму завтра.");
+  await seller.getByRole("button", { name: "Отправить", exact: true }).click();
+  await buyer.getByText("Здравствуйте! Сниму завтра.").waitFor({ timeout: 10000 }); // buyer sees it via polling
+  await buyer.getByLabel("Сообщение").fill("Напишите мне в телеграм");
+  await buyer.getByRole("button", { name: "Отправить", exact: true }).click();
+  await buyer.getByText(/Договариваться и платить вне платформы запрещено/).waitFor();
   await seller.getByRole("button", { name: "Принять заказ" }).click();
   await seller.getByText("Опубликовать до").waitFor();
   await seller.getByLabel("Ссылка на видео").fill("https://www.tiktok.com/@demo_0/video/777");
@@ -44,6 +51,7 @@ async function login(ctx, base, email) {
   await seller.goto(`${base}/account`);
   await seller.getByRole("button", { name: "Выплаты" }).click();
   await seller.getByText("Ожидание 48 ч").first().waitFor();
+  await seller.getByRole("link", { name: /Уведомления: [1-9]/ }).waitFor();
   await browser.close();
   console.log("E2E ORDER OK");
 })().catch((e) => { console.error(e); process.exit(1); });

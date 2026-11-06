@@ -169,6 +169,7 @@ def refund_item(item_id, *, amount_minor: int | None, reason: str, actor, decisi
                                               requested_by=actor, dispute_decision=decision,
                                               idempotency_key=f"ref-{uuid.uuid4().hex}")
         _ledger(L.REFUND_REQUESTED, amount, item=item, refund=refund.pk)
+        notify(item.order.buyer, "refund.started", "Возврат инициирован", f"{amount / 100:.2f} ₽", order=item.order_id)
         order = Order.objects.select_for_update().get(pk=item.order_id)
         from orders.state import can_transition
 
@@ -298,6 +299,7 @@ def withdraw(payout_id, *, actor) -> Payout:
         po.status = Payout.Status.REQUESTED
         po.save(update_fields=["status", "updated_at"])
         _ledger(L.PAYOUT_REQUESTED, po.amount_minor, item=po.order_item)
+        notify(po.seller, "payout.started", "Выплата инициирована", f"{po.amount_minor / 100:.2f} ₽", payout=po.pk)
     try:
         result = provider.request_payout(seller_ref=str(po.seller_id), amount_minor=po.amount_minor,
                                          idempotency_key=po.idempotency_key, deal_ref=str(po.order_item.order_id))

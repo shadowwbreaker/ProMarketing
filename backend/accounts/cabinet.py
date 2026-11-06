@@ -137,3 +137,18 @@ class MyActivity(_Mine):
 
     def get_queryset(self):
         return AuditLog.objects.filter(actor=self.request.user).order_by("-seq")
+
+
+class NotificationsUnread(APIView):
+    permission_classes = [IsActiveUser]
+
+    def get(self, request):
+        return Response({"unread": Notification.objects.filter(user=request.user, read_at__isnull=True).count()})
+
+
+class NotificationsReadAll(APIView):
+    permission_classes = [IsActiveUser]
+
+    def post(self, request):
+        n = Notification.objects.filter(user=request.user, read_at__isnull=True).update(read_at=timezone.now())
+        return Response({"marked": n})
