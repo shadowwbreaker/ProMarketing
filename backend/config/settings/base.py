@@ -158,6 +158,8 @@ CELERY_BEAT_SCHEDULE = {
     "orders-missed-deadlines": {"task": "orders.tasks.notify_missed_publish_deadlines", "schedule": 3600},
     "orders-deadlines-soon": {"task": "orders.tasks.notify_deadlines_soon", "schedule": 3600},
     "payments-release-payouts": {"task": "payments.tasks.release_payouts", "schedule": 600},
+    "support-dispute-timeouts": {"task": "support.tasks.process_dispute_timeouts", "schedule": 900},
+    "support-close-appeal-windows": {"task": "support.tasks.close_expired_appeal_windows", "schedule": 3600},
 }
 
 # --- Email -----------------------------------------------------------------

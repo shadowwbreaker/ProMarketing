@@ -14,6 +14,7 @@ api_v1 = [
     path("", include("payments.urls")),
     path("", include("chats.urls")),
     path("", include("files.urls")),
+    path("", include("support.urls")),
 ]
 
 urlpatterns = [

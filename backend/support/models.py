@@ -78,6 +78,8 @@ class Dispute(BaseModel):
     response_due_at = models.DateTimeField(null=True, blank=True)
     response_overdue = models.BooleanField(default=False, help_text="Сторона не ответила в срок (учитывается, но не решает спор)")
     appeal_of = models.ForeignKey("self", null=True, blank=True, on_delete=models.PROTECT, related_name="appeals")
+    has_counterclaim = models.BooleanField(default=False, help_text="Вторая сторона подала встречную претензию (сценарий 15)")
+    resolved_at = models.DateTimeField(null=True, blank=True)
     closed_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
@@ -90,6 +92,8 @@ class DisputeItem(BaseModel):
     dispute = models.ForeignKey(Dispute, on_delete=models.PROTECT, related_name="items")
     order_item = models.ForeignKey("orders.OrderItem", on_delete=models.PROTECT, related_name="dispute_items")
     is_active = models.BooleanField(default=True)
+    status_before = models.CharField(max_length=32, default="", help_text="Статус позиции до спора — восстанавливается при отказе")
+    decided = models.BooleanField(default=False)
 
     class Meta:
         constraints = [
@@ -180,3 +184,10 @@ class AdminNote(BaseModel):
 
     class Meta:
         indexes = [models.Index(fields=["subject_type", "subject_id"])]
+
+
+class TicketMessage(BaseModel):
+    ticket = models.ForeignKey(SupportTicket, on_delete=models.PROTECT, related_name="messages")
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+")
+    is_staff_reply = models.BooleanField(default=False)
+    body = models.TextField(max_length=10_000)

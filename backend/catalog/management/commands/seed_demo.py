@@ -42,6 +42,12 @@ class Command(BaseCommand):
             buyer = User.objects.create_user(email="demo-buyer@example.com", password="Demo-password-1", is_email_verified=True)
             UserProfile.objects.create(user=buyer, display_name="Демо-покупатель")
             assign_role(buyer, "buyer")
+        for email, name, role in [("demo-admin@example.com", "Демо-администратор", "admin"),
+                                  ("demo-support@example.com", "Демо-поддержка", "support_agent")]:
+            if not User.objects.filter(email=email).exists():
+                staff = User.objects.create_user(email=email, password="Demo-password-1", is_email_verified=True, is_staff=True)
+                UserProfile.objects.create(user=staff, display_name=name)
+                assign_role(staff, role)
         created = []
         for n, (title, platform, cat, geo, followers, avg, price) in enumerate(DEMO):
             owner = sellers[0] if n < 4 else sellers[1]
@@ -72,4 +78,4 @@ class Command(BaseCommand):
                                            price_minor=acc.offers.get(ad_format="integration").price_minor)
             net.total_price_minor = 6_500_000
             net.save()
-        self.stdout.write(self.style.SUCCESS("Demo data ready. Logins: demo-seller1@example.com / demo-buyer@example.com, password Demo-password-1"))
+        self.stdout.write(self.style.SUCCESS("Demo data ready. Logins: demo-seller1@, demo-buyer@, demo-admin@, demo-support@example.com — password Demo-password-1"))

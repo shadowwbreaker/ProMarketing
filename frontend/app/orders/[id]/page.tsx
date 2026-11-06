@@ -2,6 +2,7 @@
 
 import { useParams, useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useCallback, useEffect, useState } from "react";
+import { DisputePanel } from "@/components/DisputePanel";
 import { OrderChat } from "@/components/OrderChat";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -211,6 +212,8 @@ function OrderPageInner() {
             ) : <p className="mt-2 text-xs text-muted">Ждём ответа другой стороны</p>}
           </Card>
         ))}
+
+        <DisputePanel order={o} onChanged={() => void load()} />
 
         <OrderChat orderId={o.id} role={o.role} />
 

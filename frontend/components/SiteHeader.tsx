@@ -30,8 +30,10 @@ export function SiteHeader() {
         </Link>
         <nav className="flex items-center gap-4 text-sm">
           <Link href="/catalog" className="hover:text-accent">Каталог</Link>
+          <Link href="/support" className="hidden hover:text-accent sm:inline">Поддержка</Link>
           {loading ? null : me ? (
             <>
+              {me.permissions.includes("staff.access") && <Link href="/staff" className="hover:text-accent">Служебный раздел</Link>}
               <Bell />
               <Link href="/account" className="font-semibold hover:text-accent">{me.profile.display_name}</Link>
             </>

@@ -81,3 +81,19 @@ def market(user_factory, account_factory, offer_factory):
     accs = [account_factory(seller, listed=True) for _ in range(3)]
     offers = [offer_factory(a, price_minor=100_000 * (i + 1)) for i, a in enumerate(accs)]
     return {"seller": seller, "buyer": buyer, "accs": accs, "offers": offers}
+
+
+@pytest.fixture(autouse=True)
+def _reference_data(request):
+    """Transactional tests TRUNCATE tables, wiping rows seeded by data migrations — restore them."""
+    marker = request.node.get_closest_marker("django_db")
+    if not marker:
+        return
+    if not marker.kwargs.get("transaction"):
+        request.getfixturevalue("db")
+    import importlib
+
+    from django.apps import apps
+
+    importlib.import_module("support.migrations.0002_seed_reasons").seed(apps, None)
+    importlib.import_module("accounts.migrations.0003_seed_roles").seed(apps, None)
