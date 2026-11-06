@@ -17,3 +17,6 @@ frontend/playwright-report/
 # misc
 .DS_Store
 *.log
+
+# local sync snapshots
+.sync/
