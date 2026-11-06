@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     "notifications",
     "support",
     "reviews",
+    "staff",
 ]
 
 MIDDLEWARE = [

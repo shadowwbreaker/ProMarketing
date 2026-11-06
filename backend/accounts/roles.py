@@ -27,6 +27,8 @@ P = {
     "user.sanction": "Применять санкции",
     "user.manage_roles": "Назначать роли",
     "settings.security": "Настройки безопасности платформы",
+    "audit.view": "Просмотр журнала действий",
+    "finance.view": "Просмотр финансовых показателей",
 }
 
 _BUYER = {"order.create", "dispute.open"}
@@ -39,6 +41,8 @@ _ADMIN = _SUPPORT | _MODERATOR | {
     "finance.refund",
     "finance.payout",
     "user.sanction",
+    "audit.view",
+    "finance.view",
 }
 _SUPER = _ADMIN | {"user.manage_roles", "settings.security"}
 
