@@ -1,0 +1,59 @@
+# Dev environment (D-017): Docker Desktop + WSL2. Usage from repo root:
+#   copy .env.example .env   (then fill FIELD_ENCRYPTION_KEY)
+#   docker compose -f infra/docker-compose.yml up --build
+name: promarketing
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: promarketing
+      POSTGRES_PASSWORD: promarketing
+      POSTGRES_DB: promarketing
+    ports: ["5432:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U promarketing"]
+      interval: 5s
+      retries: 10
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 10
+  minio:
+    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: promarketing
+      MINIO_ROOT_PASSWORD: promarketing-dev
+    ports: ["9000:9000", "9001:9001"]
+    volumes: [miniodata:/data]
+  backend:
+    build: ../backend
+    env_file: ../.env
+    command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    ports: ["8000:8000"]
+    volumes: ["../backend:/app"]
+    depends_on:
+      db: {condition: service_healthy}
+      redis: {condition: service_healthy}
+  worker:
+    build: ../backend
+    env_file: ../.env
+    command: celery -A config worker -l info
+    volumes: ["../backend:/app"]
+    depends_on:
+      db: {condition: service_healthy}
+      redis: {condition: service_healthy}
+  frontend:
+    build: ../frontend
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+      API_INTERNAL_URL: http://backend:8000
+    ports: ["3000:3000"]
+    depends_on: [backend]
+volumes:
+  pgdata:
+  miniodata:

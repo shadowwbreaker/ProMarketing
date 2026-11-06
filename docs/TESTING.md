@@ -24,6 +24,6 @@
 ## Запуск (будет уточнён в Phase 1)
 ```
 docker compose -f infra/docker-compose.yml up -d db redis
-cd backend && pytest
+cd backend && pytest            # нужен PostgreSQL (DATABASE_URL)
 cd frontend && npm test
 ```

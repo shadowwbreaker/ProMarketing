@@ -255,24 +255,24 @@ Claude Code обязан самостоятельно обновлять его:
 
 ### Backend
 
-- [ ] Настроить структуру backend.
-- [ ] Настроить API.
-- [ ] Настроить подключение к базе данных.
-- [ ] Реализовать миграции.
-- [ ] Настроить конфигурацию окружений.
-- [ ] Настроить логирование.
-- [ ] Настроить обработку ошибок.
-- [ ] Реализовать централизованную валидацию.
-- [ ] Настроить фоновые задачи только для операций, которые действительно требуют фонового выполнения.
+- [v] VERIFIED · Настроить структуру backend. — `backend/`, модульный монолит (D-002)
+- [v] VERIFIED · Настроить API. — DRF, `/api/v1/`, OpenAPI `/api/schema/` (тест `test_schema_generates`)
+- [v] VERIFIED · Настроить подключение к базе данных. — PostgreSQL 16, `/api/v1/health/ready` (тест)
+- [v] VERIFIED · Реализовать миграции. — 14 миграций; `migrate`, откат `orders zero` и повторное применение проверены 2026-11-07
+- [v] VERIFIED · Настроить конфигурацию окружений. — `config/settings/{base,dev,test,prod}`; prod отказывается стартовать с mock/fake/dev-секретом (тест)
+- [v] VERIFIED · Настроить логирование. — JSON-логи, `request_id`, маскирование секретов
+- [v] VERIFIED · Настроить обработку ошибок. — единый формат `{error:{code,message,details,request_id}}` (тест)
+- [x] IMPLEMENTED · Реализовать централизованную валидацию. — DRF-сериализаторы + доменные исключения `common.exceptions`; применяется с Phase 2
+- [v] VERIFIED · Настроить фоновые задачи только для операций, которые действительно требуют фонового выполнения. — Celery + Redis; тест запрещает периодические задачи к соцсетям (D-004)
 
 ### Frontend
 
-- [ ] Настроить структуру frontend.
-- [ ] Создать общую систему компонентов.
-- [ ] Реализовать адаптивную сетку.
-- [ ] Создать базовую систему уведомлений.
-- [ ] Настроить обработку API-запросов.
-- [ ] Настроить состояния загрузки и ошибок.
+- [v] VERIFIED · Настроить структуру frontend. — Next.js 15 + TS + Tailwind 4, `frontend/`
+- [v] VERIFIED · Создать общую систему компонентов. — Button, Card, Field, States, Toast
+- [v] VERIFIED · Реализовать адаптивную сетку. — контейнер `max-w-6xl`; e2e-проверка отсутствия горизонтальной прокрутки на 375px
+- [v] VERIFIED · Создать базовую систему уведомлений. — ToastProvider
+- [v] VERIFIED · Настроить обработку API-запросов. — `lib/api/client.ts`: CSRF, credentials, разбор ошибок (тест)
+- [v] VERIFIED · Настроить состояния загрузки и ошибок. — LoadingState/ErrorState/EmptyState (тест StatusPanel)
 
 ### База данных
 
@@ -317,12 +317,12 @@ Claude Code обязан самостоятельно обновлять его:
 
 ### Проверка
 
-- [ ] Приложение запускается.
-- [ ] База данных подключается.
-- [ ] Миграции работают.
-- [ ] Базовые API работают.
-- [ ] Frontend взаимодействует с backend.
-- [ ] Базовые автоматические тесты проходят.
+- [v] VERIFIED · Приложение запускается. — runserver + next start, 2026-11-07
+- [v] VERIFIED · База данных подключается. — health/ready → database ok
+- [v] VERIFIED · Миграции работают. — см. выше
+- [v] VERIFIED · Базовые API работают. — health live/ready, schema
+- [v] VERIFIED · Frontend взаимодействует с backend. — e2e `frontend/e2e/smoke.cjs`: страница /status получает ответ backend
+- [v] VERIFIED · Базовые автоматические тесты проходят. — backend pytest 16 passed; frontend vitest 6 passed; tsc, eslint, next build — OK
 
 
 ### План реализации PHASE 1 (добавлено 2026-11-07, ждёт подтверждения)
@@ -347,6 +347,20 @@ Claude Code обязан самостоятельно обновлять его:
 **Параллельно, силами пользователя (внешние сроки):** регистрация приложений TikTok for Developers и Meta for Developers, проект Google Cloud с YouTube Data API, выбор платёжного провайдера, юридическая консультация по рынку.
 
 **Не входит в Phase 1:** регистрация/вход (Phase 2), реальные вызовы API соцсетей (Phase 3), любые реальные платежи.
+
+### Отчёт PHASE 1 (2026-11-07)
+
+**Completed:** backend (Django 5.2, DRF, PostgreSQL, Redis/Celery), все модели из списка roadmap и `docs/DATABASE.md` §9, миграции с ограничениями целостности, триггеры append-only для `audit_auditlog`, `orders_orderevent`, `orders_ordertermsversion`, `payments_financialledgerentry`; справочники ролей и причин жалоб; интерфейсы `SocialDataProvider` (+ fake, manual, парсер ссылок) и `PaymentProvider` (+ `MockPaymentProvider`); frontend (Next.js 15, компоненты, API-клиент, состояния, тосты); `infra/docker-compose.yml`, Dockerfile, `.env.example`.
+
+**Verified:** pytest 16/16, vitest 6/6, `tsc --noEmit`, eslint, `next build`, e2e smoke (frontend ↔ backend), миграции вперёд/назад.
+
+**Remaining / не проверено:** запуск `infra/docker-compose.yml` целиком — `[x] IMPLEMENTED`, не проверен (нужен Docker Desktop у пользователя; `docker compose config` валиден). Централизованная валидация будет наполняться по мере появления API.
+
+**Blockers:** push в GitHub — нет прав записи у сессии (Q-07).
+
+**Decisions:** модуль `files` для вложений; Instagram выключен флагом (D-013); комиссия и удержание — настройки `PLATFORM_FEE_BPS`, `PAYOUT_HOLD_HOURS`.
+
+**Next Phase:** PHASE 2 — авторизация, роли, кабинет.
 
 ---
 
