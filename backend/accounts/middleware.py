@@ -15,5 +15,7 @@ class LastSeenMiddleware:
         if user is not None and user.is_authenticated:
             now = timezone.now()
             if user.last_seen_at is None or now - user.last_seen_at > timedelta(minutes=5):
-                type(user).objects.filter(pk=user.pk).update(last_seen_at=now)
+                from django.contrib.auth import get_user_model
+
+                get_user_model().objects.filter(pk=user.pk).update(last_seen_at=now)
         return response

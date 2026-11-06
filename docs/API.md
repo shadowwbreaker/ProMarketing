@@ -24,3 +24,22 @@
 | `disputes/`, `support/tickets/` | 9 |
 | `staff/...` | 9–10 |
 | `reviews/` | 11 |
+
+## Реализовано (Phase 1–2)
+
+| Метод | Путь | Доступ | Назначение |
+|---|---|---|---|
+| GET | `/health/live`, `/health/ready` | все | Проверка работоспособности |
+| GET | `/auth/csrf`, `/auth/session` | все | CSRF-cookie; текущий пользователь или `null` |
+| POST | `/auth/register` | все | Регистрация (`email, password, display_name, as_seller, accept_terms`) |
+| POST | `/auth/login`, `/auth/logout` | все | Вход / выход |
+| POST | `/auth/verify-email`, `/auth/resend-verification` | все / вошедший | Подтверждение email |
+| POST | `/auth/password-reset`, `/auth/password-reset/confirm` | все | Сброс пароля |
+| POST | `/auth/password-change` | вошедший | Смена пароля |
+| GET/PATCH | `/me` | вошедший | Профиль, роли, разрешения |
+| POST | `/me/become-seller` | вошедший | Добавить роль продавца |
+| GET | `/me/{purchases,sales,accounts,networks,reviews,tickets,notifications,activity}` | вошедший | Кабинет (только свои данные) |
+| POST | `/me/notifications/{id}/read` | вошедший | Прочитать уведомление |
+| PUT | `/staff/users/{id}/roles` | `user.manage_roles` | Назначить роли (с комментарием, в журнал) |
+
+Ограничение частоты запросов: область `auth` (`THROTTLE_AUTH`, по умолчанию 10/мин).

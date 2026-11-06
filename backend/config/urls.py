@@ -7,6 +7,7 @@ from common.views import LiveView, ReadyView
 api_v1 = [
     path("health/live", LiveView.as_view(), name="health-live"),
     path("health/ready", ReadyView.as_view(), name="health-ready"),
+    path("", include("accounts.urls")),
 ]
 
 urlpatterns = [

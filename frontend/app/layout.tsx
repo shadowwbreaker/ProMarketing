@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { SiteHeader } from "@/components/SiteHeader";
 import { ToastProvider } from "@/components/ui/Toast";
+import { AuthProvider } from "@/lib/auth/AuthProvider";
 
 export const metadata: Metadata = {
   title: "ProMarketing — реклама у авторов коротких видео",
@@ -13,8 +14,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="ru">
       <body className="font-sans antialiased">
         <ToastProvider>
-          <SiteHeader />
-          <main className="mx-auto max-w-6xl px-4 py-8">{children}</main>
+          <AuthProvider>
+            <SiteHeader />
+            <main className="mx-auto max-w-6xl px-4 py-8">{children}</main>
+          </AuthProvider>
         </ToastProvider>
       </body>
     </html>
