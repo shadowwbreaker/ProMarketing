@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/Card";
-import { LoadingState } from "@/components/ui/States";
+import { ErrorState, LoadingState } from "@/components/ui/States";
 import { apiFetch } from "@/lib/api/client";
 import { formatCount, formatMoney } from "@/lib/format";
 
@@ -17,7 +17,9 @@ const LABELS: [string, string][] = [
 
 export default function StaffDashboard() {
   const [d, setD] = useState<Dash>();
-  useEffect(() => void apiFetch<Dash>("/staff/dashboard").then(setD), []);
+  const [err, setErr] = useState<string>();
+  useEffect(() => void apiFetch<Dash>("/staff/dashboard").then(setD).catch((e) => setErr(e instanceof Error ? e.message : "Ошибка")), []);
+  if (err) return <ErrorState message={err} />;
   if (!d) return <LoadingState />;
   return (
     <div className="flex flex-col gap-4">

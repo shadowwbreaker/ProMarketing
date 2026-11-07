@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { TrustBadge } from "@/components/stats/TrustBadge";
-import { EmptyState, LoadingState } from "@/components/ui/States";
+import { EmptyState, ErrorState, LoadingState } from "@/components/ui/States";
 import { compare, getCompareList, setCompareList } from "@/lib/api/insights";
 import type { OfferCard } from "@/lib/api/public";
 import { PLATFORM_LABEL } from "@/lib/api/social";
@@ -25,12 +25,14 @@ const ROWS: [string, (o: OfferCard) => React.ReactNode][] = [
 export default function ComparePage() {
   const [ids, setIds] = useState<string[]>();
   const [rows, setRows] = useState<OfferCard[]>();
+  const [err, setErr] = useState<string>();
   useEffect(() => setIds(getCompareList()), []);
   useEffect(() => {
-    if (ids && ids.length >= 2) void compare(ids).then(setRows);
+    if (ids && ids.length >= 2) void compare(ids).then(setRows).catch((e) => setErr(e instanceof Error ? e.message : "Ошибка"));
   }, [ids]);
   if (!ids) return <LoadingState />;
   if (ids.length < 2) return <EmptyState title="Добавьте к сравнению хотя бы два предложения">Кнопка «Добавить к сравнению» есть на странице предложения.</EmptyState>;
+  if (err) return <ErrorState message={err} />;
   if (!rows) return <LoadingState />;
   return (
     <div className="flex flex-col gap-4">

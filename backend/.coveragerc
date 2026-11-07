@@ -1,0 +1,13 @@
+[run]
+source = .
+omit =
+    .venv/*
+    */migrations/*
+    tests/*
+    manage.py
+    config/asgi.py
+    config/wsgi.py
+
+[report]
+fail_under = 85
+skip_empty = True

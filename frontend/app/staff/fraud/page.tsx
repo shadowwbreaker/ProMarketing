@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/Card";
-import { EmptyState, LoadingState } from "@/components/ui/States";
+import { EmptyState, ErrorState, LoadingState } from "@/components/ui/States";
 import { apiFetch } from "@/lib/api/client";
 
 type S = { type: string; severity: string; user: string | null; subject: string; detail: string };
@@ -15,7 +15,9 @@ const LABEL: Record<string, string> = {
 
 export default function FraudSignals() {
   const [d, setD] = useState<{ results: S[]; note: string }>();
-  useEffect(() => void apiFetch<{ results: S[]; note: string }>("/staff/fraud-signals").then(setD), []);
+  const [err, setErr] = useState<string>();
+  useEffect(() => void apiFetch<{ results: S[]; note: string }>("/staff/fraud-signals").then(setD).catch((e) => setErr(e instanceof Error ? e.message : "Ошибка")), []);
+  if (err) return <ErrorState message={err} />;
   if (!d) return <LoadingState />;
   return (
     <div className="flex flex-col gap-3">

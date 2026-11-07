@@ -5,7 +5,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Field } from "@/components/ui/Field";
-import { EmptyState, LoadingState } from "@/components/ui/States";
+import { EmptyState, ErrorState, LoadingState } from "@/components/ui/States";
 import { useToast } from "@/components/ui/Toast";
 import { createNetwork, listNetworks, Network } from "@/lib/api/catalog";
 import { fieldErrors } from "@/lib/forms";
@@ -14,7 +14,8 @@ import { formatCount, formatMoney } from "@/lib/format";
 export default function NetworksPage() {
   const toast = useToast();
   const [nets, setNets] = useState<Network[]>();
-  const load = () => listNetworks().then(setNets);
+  const [err, setErr] = useState<string>();
+  const load = () => listNetworks().then(setNets).catch((e) => setErr(fieldErrors(e).form ?? "Ошибка"));
   useEffect(() => {
     void load();
   }, []);
@@ -32,6 +33,7 @@ export default function NetworksPage() {
     }
   }
 
+  if (err) return <ErrorState message={err === "Недостаточно прав" ? "Сетки доступны продавцам. Включите роль продавца в профиле." : err} />;
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-2xl font-bold">Мои рекламные сетки</h1>

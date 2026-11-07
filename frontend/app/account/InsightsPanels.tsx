@@ -3,14 +3,17 @@
 import { useEffect, useState } from "react";
 import { CardGrid, NetworkCard, OfferCard } from "@/components/catalog/Cards";
 import { Card } from "@/components/ui/Card";
-import { EmptyState, LoadingState } from "@/components/ui/States";
+import { EmptyState, ErrorState, LoadingState } from "@/components/ui/States";
+import { fieldErrors } from "@/lib/forms";
 import { Analytics, getAnalytics, getFavorites, getRecommendations, getReferrals, getViewed } from "@/lib/api/insights";
 import type { NetworkCard as N, OfferCard as O } from "@/lib/api/public";
 import { formatMoney } from "@/lib/format";
 
 function Grid({ load, empty }: { load: () => Promise<O[]>; empty: string }) {
   const [rows, setRows] = useState<O[]>();
-  useEffect(() => void load().then(setRows), [load]);
+  const [err, setErr] = useState<string>();
+  useEffect(() => void load().then(setRows).catch((e) => setErr(fieldErrors(e).form)), [load]);
+  if (err) return <ErrorState message={err} />;
   if (!rows) return <LoadingState />;
   if (!rows.length) return <EmptyState title={empty} />;
   return <CardGrid>{rows.map((o) => <OfferCard key={o.id} o={o} />)}</CardGrid>;
@@ -21,7 +24,9 @@ export const RecommendationsPanel = () => <Grid load={getRecommendations} empty=
 
 export function FavoritesPanel() {
   const [d, setD] = useState<{ accounts: O[]; networks: N[] }>();
-  useEffect(() => void getFavorites().then(setD), []);
+  const [err, setErr] = useState<string>();
+  useEffect(() => void getFavorites().then(setD).catch((e) => setErr(fieldErrors(e).form)), []);
+  if (err) return <ErrorState message={err} />;
   if (!d) return <LoadingState />;
   if (!d.accounts.length && !d.networks.length) return <EmptyState title="В избранном пусто" />;
   return <CardGrid>{d.accounts.map((o) => <OfferCard key={o.id} o={o} />)}{d.networks.map((n) => <NetworkCard key={n.id} n={n} />)}</CardGrid>;
@@ -33,7 +38,9 @@ const Stat = ({ label, value }: { label: string; value: string }) => (
 
 export function AnalyticsPanel() {
   const [a, setA] = useState<Analytics>();
-  useEffect(() => void getAnalytics().then(setA), []);
+  const [err, setErr] = useState<string>();
+  useEffect(() => void getAnalytics().then(setA).catch((e) => setErr(fieldErrors(e).form)), []);
+  if (err) return <ErrorState message={err} />;
   if (!a) return <LoadingState />;
   const b = a.buyer;
   return (
@@ -65,7 +72,9 @@ export function AnalyticsPanel() {
 
 export function ReferralsPanel() {
   const [r, setR] = useState<{ code: string; invited: number; reward_policy: string }>();
-  useEffect(() => void getReferrals().then(setR), []);
+  const [err, setErr] = useState<string>();
+  useEffect(() => void getReferrals().then(setR).catch((e) => setErr(fieldErrors(e).form)), []);
+  if (err) return <ErrorState message={err} />;
   if (!r) return <LoadingState />;
   const link = `${typeof window !== "undefined" ? window.location.origin : ""}/register?ref=${r.code}`;
   return (
