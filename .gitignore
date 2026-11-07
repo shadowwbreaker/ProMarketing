@@ -21,3 +21,4 @@ frontend/playwright-report/
 # local sync snapshots
 .sync/
 backend/media/
+dump.rdb
