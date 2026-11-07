@@ -21,6 +21,7 @@ class RegisterSerializer(serializers.Serializer):
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True)
+    otp = serializers.CharField(required=False, allow_blank=True, max_length=10)
 
 
 class TokenSerializer(serializers.Serializer):
@@ -57,10 +58,10 @@ class MeSerializer(serializers.ModelSerializer):
         fields = ["id", "email", "is_email_verified", "status", "date_joined", "profile", "roles", "permissions"]
         read_only_fields = ["id", "email", "is_email_verified", "status", "date_joined", "roles", "permissions"]
 
-    def get_roles(self, obj):
+    def get_roles(self, obj) -> list[str]:
         return sorted(obj.role_codes)
 
-    def get_permissions(self, obj):
+    def get_permissions(self, obj) -> list[str]:
         return sorted(permissions_for_roles(obj.role_codes))
 
     def update(self, instance, validated_data):

@@ -175,6 +175,8 @@ def _load_prod():
 
 
 def test_prod_settings_refuse_mock_and_fake(monkeypatch):
+    monkeypatch.setenv("S3_BUCKET", "evidence")
+    monkeypatch.setenv("EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend")
     monkeypatch.setenv("DJANGO_SECRET_KEY", "x" * 50)
     monkeypatch.setenv("FIELD_ENCRYPTION_KEY", "k")
     monkeypatch.setenv("PAYMENT_PROVIDER", "mock")
@@ -214,3 +216,15 @@ def test_field_encryption_roundtrip():
     token = encrypt("secret-token")
     assert token != "secret-token" and decrypt(token) == "secret-token"
     assert json.dumps(encrypt(""))  # empty stays empty
+
+
+def test_prod_settings_require_storage_and_real_email(monkeypatch):
+    monkeypatch.setenv("DJANGO_SECRET_KEY", "x" * 50)
+    monkeypatch.setenv("FIELD_ENCRYPTION_KEY", "k")
+    monkeypatch.setenv("PAYMENT_PROVIDER", "yookassa")
+    monkeypatch.setenv("SOCIAL_PROVIDER_MODE", "official")
+    monkeypatch.delenv("S3_BUCKET", raising=False)
+    monkeypatch.setenv("EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend")
+    with pytest.raises(ImproperlyConfigured) as e:
+        _load_prod()
+    assert "S3_BUCKET" in str(e.value) and "email" in str(e.value).lower()

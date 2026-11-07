@@ -190,6 +190,7 @@ SELLER_ACCEPT_TIMEOUT_HOURS = env.int("SELLER_ACCEPT_TIMEOUT_HOURS", default=24)
 BUYER_CONFIRM_WINDOW_HOURS = env.int("BUYER_CONFIRM_WINDOW_HOURS", default=72)
 DISPUTE_RESPONSE_HOURS = env.int("DISPUTE_RESPONSE_HOURS", default=48)
 BUYER_PUBLICATION_CHECKS_LIMIT = env.int("BUYER_PUBLICATION_CHECKS_LIMIT", default=3)
+STAFF_2FA_REQUIRED = env.bool("STAFF_2FA_REQUIRED", default=False)  # forced on in production
 RESULTS_REPORTS_ENABLED = env.bool("RESULTS_REPORTS_ENABLED", default=True)  # D-018: buyer opt-in, 3 checks max
 
 # Platform feature flags (D-013, D-016)

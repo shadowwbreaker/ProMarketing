@@ -92,6 +92,15 @@ class LoginView(AuthThrottleMixin, APIView):
         if user.status == User.Status.BLOCKED:
             record(action="user.login_blocked", subject_type="user", subject_id=user.pk, actor=user, ip=_ip(request))
             raise DomainError("Аккаунт заблокирован. Обратитесь в поддержку.", code="account_blocked", status_code=403)
+        from .twofactor import is_enabled, verify
+
+        if is_enabled(user):
+            otp = request.data.get("otp")
+            if not otp:
+                raise DomainError("Введите код из приложения-аутентификатора", code="otp_required", status_code=401)
+            if not verify(user, otp):
+                record(action="user.login_bad_otp", subject_type="user", subject_id=user.pk, actor=user, ip=_ip(request))
+                raise DomainError("Неверный код подтверждения", code="invalid_otp", status_code=400)
         login(request, user)  # rotates session key (session fixation protection)
         record(action="user.login", subject_type="user", subject_id=user.pk, actor=user, ip=_ip(request))
         return Response(MeSerializer(user).data)
@@ -202,3 +211,27 @@ class StaffUserRolesView(APIView):
         services.set_roles(target=target, roles=s.validated_data["roles"], actor=request.user,
                            comment=s.validated_data["comment"])
         return Response(MeSerializer(target).data)
+
+
+class TwoFactorView(APIView):
+    permission_classes = [IsActiveUser]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "auth"
+
+    def get(self, request):
+        from .twofactor import is_enabled, required_for
+
+        return Response({"enabled": is_enabled(request.user), "required": required_for(request.user)})
+
+    def post(self, request, action):
+        from . import twofactor
+
+        if action == "setup":
+            return Response(twofactor.setup(request.user))
+        if action == "confirm":
+            twofactor.confirm(request.user, request.data.get("code", ""))
+        elif action == "disable":
+            twofactor.disable(request.user, request.data.get("code", ""), request.data.get("password", ""))
+        else:
+            raise DomainError("Неизвестное действие", code="bad_action", status_code=404)
+        return Response({"enabled": twofactor.is_enabled(request.user)})

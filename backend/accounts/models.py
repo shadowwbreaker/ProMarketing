@@ -160,3 +160,12 @@ class EmailToken(BaseModel):
 
     class Meta:
         indexes = [models.Index(fields=["user", "purpose"])]
+
+
+class TwoFactor(BaseModel):
+    """TOTP second factor (RFC 6238). Secret encrypted at rest; last used time-step blocks code replay."""
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="two_factor")
+    secret_enc = models.TextField()
+    confirmed_at = models.DateTimeField(null=True, blank=True)
+    last_step = models.BigIntegerField(default=0)

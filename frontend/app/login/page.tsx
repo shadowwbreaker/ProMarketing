@@ -7,6 +7,7 @@ import { AuthCard, FormError } from "@/components/AuthCard";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { login } from "@/lib/api/auth";
+import { ApiError } from "@/lib/api/client";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { fieldErrors } from "@/lib/forms";
 
@@ -14,6 +15,7 @@ export default function LoginPage() {
   const router = useRouter();
   const { setMe } = useAuth();
   const [busy, setBusy] = useState(false);
+  const [needOtp, setNeedOtp] = useState(false);
   const [err, setErr] = useState<{ form?: string; fields: Record<string, string> }>({ fields: {} });
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
@@ -22,9 +24,10 @@ export default function LoginPage() {
     setBusy(true);
     setErr({ fields: {} });
     try {
-      setMe(await login(String(f.get("email")), String(f.get("password"))));
+      setMe(await login(String(f.get("email")), String(f.get("password")), f.get("otp") ? String(f.get("otp")) : undefined));
       router.push("/account");
     } catch (ex) {
+      if (ex instanceof ApiError && ex.code === "otp_required") setNeedOtp(true);
       setErr(fieldErrors(ex));
     } finally {
       setBusy(false);
@@ -44,6 +47,7 @@ export default function LoginPage() {
         <FormError message={err.form} />
         <Field label="Email" name="email" type="email" autoComplete="email" required error={err.fields.email} />
         <Field label="Пароль" name="password" type="password" autoComplete="current-password" required error={err.fields.password} />
+        {needOtp && <Field label="Код из приложения" name="otp" inputMode="numeric" autoComplete="one-time-code" required />}
         <Button type="submit" loading={busy}>Войти</Button>
         <Link href="/forgot-password" className="text-center text-sm text-muted hover:text-accent">
           Забыли пароль?

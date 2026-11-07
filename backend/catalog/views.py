@@ -40,7 +40,7 @@ class NetworkItemSerializer(serializers.ModelSerializer):
         model = NetworkItem
         fields = ["id", "social_account", "offer", "price_minor", "account"]
 
-    def get_account(self, obj):
+    def get_account(self, obj) -> dict:
         a = obj.social_account
         return {"id": str(a.pk), "platform": a.platform, "handle": a.handle, "title": a.title}
 
@@ -56,7 +56,7 @@ class NetworkSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "currency", "items", "stats", "created_at"]
         extra_kwargs = {"total_price_minor": {"min_value": 100}}
 
-    def get_stats(self, obj):
+    def get_stats(self, obj) -> dict:
         return services.network_stats(obj, for_owner=self.context.get("for_owner", False))
 
 

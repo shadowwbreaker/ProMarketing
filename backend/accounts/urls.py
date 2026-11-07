@@ -14,6 +14,8 @@ urlpatterns = [
     path("auth/password-reset/confirm", views.PasswordResetConfirmView.as_view()),
     path("auth/password-change", views.PasswordChangeView.as_view()),
     path("me", views.MeView.as_view()),
+    path("me/2fa", views.TwoFactorView.as_view()),
+    path("me/2fa/<str:action>", views.TwoFactorView.as_view()),
     path("me/become-seller", views.BecomeSellerView.as_view()),
     path("me/purchases", cabinet.MyPurchases.as_view()),
     path("me/sales", cabinet.MySales.as_view()),

@@ -11,6 +11,9 @@ class IsActiveUser(BasePermission):
         return bool(u and u.is_authenticated and u.is_active and u.status != u.Status.BLOCKED)
 
 
+STAFF_PREFIXES = ("staff.", "dispute.handle", "dispute.decide", "dispute.escalated", "finance.", "moderation.", "user.", "settings.", "audit.")
+
+
 def HasPerm(*codes: str):  # noqa: N802 — factory reads like a class in permission_classes
     """Permission class requiring ALL listed RBAC permission codes (D-012)."""
 
@@ -21,6 +24,14 @@ def HasPerm(*codes: str):  # noqa: N802 — factory reads like a class in permis
             if not super().has_permission(request, view):
                 return False
             u = request.user
+            if any(c.startswith(STAFF_PREFIXES) for c in codes):
+                from accounts.twofactor import is_enabled, required_for
+
+                if required_for(u) and not is_enabled(u):
+                    from common.exceptions import DomainError
+
+                    raise DomainError("Для служебного раздела включите двухфакторную защиту в профиле",
+                                      code="2fa_required", status_code=403)
             if request.method in SAFE_METHODS and u.status == u.Status.LIMITED:
                 from accounts.roles import permissions_for_roles
 

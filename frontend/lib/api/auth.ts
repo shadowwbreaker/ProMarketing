@@ -16,8 +16,13 @@ export type Page<T> = { count: number; next: string | null; previous: string | n
 export const ensureCsrf = () => apiFetch<{ ok: boolean }>("/auth/csrf");
 export const getMe = () => apiFetch<Me>("/me");
 export const getSession = () => apiFetch<{ user: Me | null }>("/auth/session");
-export const login = (email: string, password: string) =>
-  apiFetch<Me>("/auth/login", { method: "POST", body: { email, password } });
+export const login = (email: string, password: string, otp?: string) =>
+  apiFetch<Me>("/auth/login", { method: "POST", body: { email, password, otp } });
+export const get2fa = () => apiFetch<{ enabled: boolean; required: boolean }>("/me/2fa");
+export const setup2fa = () => apiFetch<{ secret: string; otpauth_url: string }>("/me/2fa/setup", { method: "POST" });
+export const confirm2fa = (code: string) => apiFetch<{ enabled: boolean }>("/me/2fa/confirm", { method: "POST", body: { code } });
+export const disable2fa = (code: string, password: string) =>
+  apiFetch<{ enabled: boolean }>("/me/2fa/disable", { method: "POST", body: { code, password } });
 export const register = (data: { email: string; password: string; display_name: string; as_seller: boolean; accept_terms: boolean; ref?: string }) =>
   apiFetch<Me>("/auth/register", { method: "POST", body: data });
 export const logout = () => apiFetch<void>("/auth/logout", { method: "POST" });

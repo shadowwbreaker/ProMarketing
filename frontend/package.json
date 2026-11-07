@@ -12,7 +12,7 @@
     "e2e": "node e2e/run-all.cjs"
   },
   "dependencies": {
-    "next": "15.5.4",
+    "next": "15.5.29",
     "react": "19.1.0",
     "react-dom": "19.1.0"
   },
@@ -27,10 +27,13 @@
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^4.7.0",
     "eslint": "^9",
-    "eslint-config-next": "15.5.4",
+    "eslint-config-next": "15.5.29",
     "jsdom": "^26.1.0",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^3.2.4"
+  },
+  "overrides": {
+    "postcss": "^8.5.32"
   }
 }

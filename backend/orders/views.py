@@ -62,38 +62,38 @@ class ItemSerializer(serializers.ModelSerializer):
                   "account", "proofs", "payout", "refunded_minor", "checks", "review", "expected_followers",
                   "expected_avg_views", "expected_trust_status", "metrics"]
 
-    def get_account(self, o):
+    def get_account(self, o) -> dict:
         a = o.social_account
         return {"id": str(a.pk), "platform": a.platform, "handle": a.handle, "title": a.title, "profile_url": a.profile_url,
                 "ad_format": o.offer.ad_format, "ad_format_label": o.offer.get_ad_format_display()}
 
-    def get_proofs(self, o):
+    def get_proofs(self, o) -> list[dict]:
         return [{"id": str(p.pk), "video_url": p.video_url, "published_at": p.published_at, "notes": p.notes, "created_at": p.created_at}
                 for p in o.proofs.order_by("created_at")]
 
-    def get_payout(self, o):
+    def get_payout(self, o) -> dict | None:
         po = Payout.objects.filter(order_item=o).first()
         if not po or self.context.get("viewer_id") not in (o.order.seller_id, None) and not self.context.get("staff"):
             return None if not po else {"status": po.status, "available_at": po.available_at}
         return {"id": str(po.pk), "status": po.status, "amount_minor": po.amount_minor, "available_at": po.available_at}
 
-    def get_refunded_minor(self, o):
+    def get_refunded_minor(self, o) -> int:
         from payments.services import refunded_amount
 
         return refunded_amount(o.pk, include_pending=False)
 
     metrics = serializers.SerializerMethodField()
 
-    def get_metrics(self, o):
+    def get_metrics(self, o) -> list[dict]:
         return [{"checkpoint": m.checkpoint, "due_at": m.due_at, "status": m.status, "views": m.views, "likes": m.likes,
                  "comments": m.comments, "fetched_at": m.fetched_at} for m in o.metrics.order_by("due_at")]
 
-    def get_review(self, o):
+    def get_review(self, o) -> dict | None:
         r = o.reviews.first()
         return None if not r else {"id": str(r.pk), "rating": r.rating, "text": r.text, "seller_reply": r.seller_reply,
                                    "moderation_status": r.moderation_status}
 
-    def get_checks(self, o):
+    def get_checks(self, o) -> list[dict]:
         return [{"trigger": c.trigger, "result": c.result, "checked_at": c.checked_at} for c in o.publication_checks.order_by("-checked_at")[:5]]
 
 
@@ -110,24 +110,24 @@ class OrderSerializer(serializers.ModelSerializer):
         fields = ["id", "status", "total_minor", "currency", "fee_bps", "created_at", "paid_at", "materials_delivered_at", "results_report",
                   "seller_terms_accepted_at", "network", "items", "terms", "buyer", "seller", "role", "proposals"]
 
-    def get_items(self, o):
+    def get_items(self, o) -> list[dict]:
         return ItemSerializer(o.items.select_related("social_account", "offer", "order").order_by("created_at"), many=True,
                               context=self.context).data
 
     def _party(self, u):
         return {"id": str(u.pk), "display_name": u.profile.display_name, "last_seen_at": u.last_seen_at}
 
-    def get_buyer(self, o):
+    def get_buyer(self, o) -> dict:
         return self._party(o.buyer)
 
-    def get_seller(self, o):
+    def get_seller(self, o) -> dict:
         return self._party(o.seller)
 
-    def get_role(self, o):
+    def get_role(self, o) -> str:
         vid = self.context.get("viewer_id")
         return "buyer" if vid == o.buyer_id else "seller" if vid == o.seller_id else "staff"
 
-    def get_proposals(self, o):
+    def get_proposals(self, o) -> list[dict]:
         return [{"id": str(p.pk), "changes": p.changes, "comment": p.comment, "status": p.status,
                  "proposed_by": str(p.proposed_by_id), "created_at": p.created_at} for p in o.terms_proposals.order_by("-created_at")[:10]]
 

@@ -1,0 +1,13 @@
+# Automatic HTTPS (Let's Encrypt). SITE_DOMAIN=promarketing.ru, API_DOMAIN=api.promarketing.ru
+{$SITE_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy frontend:3000
+}
+
+{$API_DOMAIN} {
+	encode zstd gzip
+	request_body {
+		max_size 25MB
+	}
+	reverse_proxy backend:8000
+}

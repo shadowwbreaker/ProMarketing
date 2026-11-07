@@ -1,0 +1,54 @@
+# Production stack template. DO NOT deploy without explicit owner approval (roadmap 2.4).
+# Usage: cp .env.example .env.prod (fill secrets), then:
+#   docker compose -f infra/docker-compose.prod.yml --env-file .env.prod up -d --build
+name: promarketing-prod
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck: {test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"], interval: 10s, retries: 10}
+    restart: unless-stopped
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes: [redisdata:/data]
+    restart: unless-stopped
+  backend:
+    build: {context: ../backend, dockerfile: Dockerfile.prod}
+    env_file: ../.env.prod
+    depends_on: {db: {condition: service_healthy}, redis: {condition: service_started}}
+    healthcheck: {test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8000/api/v1/health/ready')"], interval: 30s, retries: 3}
+    restart: unless-stopped
+  migrate:
+    build: {context: ../backend, dockerfile: Dockerfile.prod}
+    env_file: ../.env.prod
+    command: ["python", "manage.py", "migrate", "--noinput"]
+    depends_on: {db: {condition: service_healthy}}
+    restart: "no"
+  worker:
+    build: {context: ../backend, dockerfile: Dockerfile.prod}
+    env_file: ../.env.prod
+    command: ["celery", "-A", "config", "worker", "-l", "info", "--concurrency", "2"]
+    depends_on: [backend]
+    restart: unless-stopped
+  beat:
+    build: {context: ../backend, dockerfile: Dockerfile.prod}
+    env_file: ../.env.prod
+    command: ["celery", "-A", "config", "beat", "-l", "info", "--schedule", "/tmp/celerybeat-schedule"]
+    depends_on: [backend]
+    restart: unless-stopped
+  frontend:
+    build: {context: ../frontend, dockerfile: Dockerfile.prod, args: {NEXT_PUBLIC_API_URL: "${PUBLIC_API_URL}"}}
+    restart: unless-stopped
+  caddy:
+    image: caddy:2.8-alpine
+    ports: ["80:80", "443:443"]
+    environment: {SITE_DOMAIN: "${SITE_DOMAIN}", API_DOMAIN: "${API_DOMAIN}"}
+    volumes: ["./Caddyfile:/etc/caddy/Caddyfile:ro", "caddydata:/data"]
+    depends_on: [backend, frontend]
+    restart: unless-stopped
+volumes: {pgdata: {}, redisdata: {}, caddydata: {}}

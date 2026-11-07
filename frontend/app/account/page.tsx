@@ -6,6 +6,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { MineList } from "./MineList";
 import { AnalyticsPanel, FavoritesPanel, RecommendationsPanel, ReferralsPanel, ViewedPanel } from "./InsightsPanels";
 import { PayoutsPanel } from "./PayoutsPanel";
+import { TwoFactorPanel } from "./TwoFactorPanel";
 import { STATUS_LABEL } from "@/lib/api/orders";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -135,6 +136,7 @@ export default function AccountPage() {
             )}
           </Card>
         )}
+        {tab === "profile" && <TwoFactorPanel />}
         {tab === "purchases" && <MineList<OrderBrief> path="purchases" empty="Покупок пока нет" render={orderRow} />}
         {tab === "sales" && <MineList<OrderBrief> path="sales" empty="Продаж пока нет" render={orderRow} />}
         {tab === "accounts" && (
