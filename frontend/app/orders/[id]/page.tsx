@@ -75,6 +75,21 @@ function ItemCard({ o, it, run }: { o: Order; it: Item; run: (fn: () => Promise<
         <p className="text-xs">Выплата продавцу: <b>{PAYOUT_LABEL[it.payout.status] ?? it.payout.status}</b>
           {it.payout.status === "hold" && ` до ${formatDateTime(it.payout.available_at)}`}</p>
       )}
+      {it.expected_avg_views != null && <p className="text-xs text-muted">На момент заказа: {it.expected_followers?.toLocaleString("ru-RU")} подписчиков, в среднем {it.expected_avg_views.toLocaleString("ru-RU")} просмотров</p>}
+      {it.metrics.length > 0 && (
+        <div className="rounded-lg bg-bg p-3 text-sm">
+          <p className="mb-1 font-semibold">Отчёт по просмотрам</p>
+          <ul className="grid grid-cols-3 gap-2">
+            {it.metrics.map((m) => (
+              <li key={m.checkpoint}>
+                <p className="text-xs text-muted">через {m.checkpoint === "24h" ? "24 часа" : m.checkpoint === "7d" ? "7 дней" : "30 дней"}</p>
+                <p className="font-bold">{m.status === "done" && m.views != null ? m.views.toLocaleString("ru-RU") : m.status === "pending" ? "ожидается" : "нет данных"}</p>
+                {m.status === "done" && m.views != null && it.expected_avg_views ? <p className="text-xs text-muted">{Math.round((m.views * 100) / it.expected_avg_views)}% от обещанного среднего</p> : null}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       {proof && (
         <p className="text-sm">Публикация: <a href={proof.video_url} target="_blank" rel="noopener noreferrer nofollow" className="text-accent break-all">{proof.video_url}</a></p>
       )}

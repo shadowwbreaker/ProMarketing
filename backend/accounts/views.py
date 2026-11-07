@@ -71,6 +71,10 @@ class RegisterView(AuthThrottleMixin, APIView):
         d = s.validated_data
         user = services.register_user(email=d["email"], password=d["password"], display_name=d["display_name"],
                                       as_seller=d["as_seller"])
+        if d.get("ref"):
+            from insights.services import attach_referral
+
+            attach_referral(user, d["ref"])
         login(request, user, backend="django.contrib.auth.backends.ModelBackend")
         return Response(MeSerializer(user).data, status=status.HTTP_201_CREATED)
 

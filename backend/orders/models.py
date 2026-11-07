@@ -37,6 +37,7 @@ class Order(BaseModel):
     paid_at = models.DateTimeField(null=True, blank=True)
     materials_delivered_at = models.DateTimeField(null=True, blank=True, help_text="Покупатель передал материалы (сценарий 14)")
     seller_terms_accepted_at = models.DateTimeField(null=True, blank=True, help_text="Продавец принял условия (первое принятие позиции)")
+    results_report = models.BooleanField(default=False, help_text="Покупатель запросил отчёт по просмотрам 24 ч / 7 д / 30 д (D-018)")
 
     class Meta:
         indexes = [models.Index(fields=["buyer", "-created_at"]), models.Index(fields=["seller", "-created_at"])]
@@ -113,6 +114,9 @@ class OrderItem(BaseModel):
     confirm_deadline = models.DateTimeField(null=True, blank=True)
     confirmed_at = models.DateTimeField(null=True, blank=True)
     payout_available_at = models.DateTimeField(null=True, blank=True, help_text="confirmed_at + 48 ч (D-014)")
+    expected_followers = models.PositiveBigIntegerField(null=True, blank=True, help_text="Подписчики на момент заказа")
+    expected_avg_views = models.PositiveBigIntegerField(null=True, blank=True, help_text="Средние просмотры на момент заказа")
+    expected_trust_status = models.CharField(max_length=16, blank=True)
 
     class Meta:
         constraints = [

@@ -20,6 +20,10 @@ export type Item = {
   refunded_minor: number;
   checks: { trigger: string; result: string; checked_at: string }[];
   review: null | { id: string; rating: number; text: string; seller_reply: string; moderation_status: string };
+  expected_followers: number | null;
+  expected_avg_views: number | null;
+  expected_trust_status: string;
+  metrics: { checkpoint: string; due_at: string; status: string; views: number | null; likes: number | null; comments: number | null }[];
 };
 
 export type Order = {

@@ -28,7 +28,8 @@ export default function RegisterPage() {
         display_name: String(f.get("display_name")),
         as_seller: f.get("as_seller") === "on",
         accept_terms: f.get("accept_terms") === "on",
-      });
+        ref: new URLSearchParams(window.location.search).get("ref") ?? undefined,
+      } as Parameters<typeof register>[0]);
       setMe(me);
       router.push("/account");
     } catch (ex) {

@@ -10,6 +10,7 @@ class RegisterSerializer(serializers.Serializer):
     display_name = serializers.CharField(min_length=2, max_length=80)
     as_seller = serializers.BooleanField(default=False)
     accept_terms = serializers.BooleanField()
+    ref = serializers.CharField(max_length=16, required=False, allow_blank=True)
 
     def validate_accept_terms(self, v):
         if not v:

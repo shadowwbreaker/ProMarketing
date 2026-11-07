@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     "reviews",
     "staff",
     "antifraud",
+    "insights",
 ]
 
 MIDDLEWARE = [
@@ -168,6 +169,8 @@ CELERY_BEAT_SCHEDULE = {
     "support-dispute-timeouts": {"task": "support.tasks.process_dispute_timeouts", "schedule": 900},
     "support-close-appeal-windows": {"task": "support.tasks.close_expired_appeal_windows", "schedule": 3600},
     "accounts-expire-sanctions": {"task": "accounts.tasks.expire_sanctions", "schedule": 900},
+    # D-018: pre-planned result checkpoints only (buyer opt-in, at most 3 per order item, never rescheduled).
+    "insights-due-metrics": {"task": "insights.tasks.collect_due_metrics", "schedule": 900},
 }
 
 # --- Email -----------------------------------------------------------------
@@ -187,6 +190,7 @@ SELLER_ACCEPT_TIMEOUT_HOURS = env.int("SELLER_ACCEPT_TIMEOUT_HOURS", default=24)
 BUYER_CONFIRM_WINDOW_HOURS = env.int("BUYER_CONFIRM_WINDOW_HOURS", default=72)
 DISPUTE_RESPONSE_HOURS = env.int("DISPUTE_RESPONSE_HOURS", default=48)
 BUYER_PUBLICATION_CHECKS_LIMIT = env.int("BUYER_PUBLICATION_CHECKS_LIMIT", default=3)
+RESULTS_REPORTS_ENABLED = env.bool("RESULTS_REPORTS_ENABLED", default=True)  # D-018: buyer opt-in, 3 checks max
 
 # Platform feature flags (D-013, D-016)
 PLATFORM_TIKTOK_ENABLED = env.bool("PLATFORM_TIKTOK_ENABLED", default=True)

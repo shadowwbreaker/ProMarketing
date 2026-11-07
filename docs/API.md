@@ -61,3 +61,13 @@
 | GET | `/catalog/home`, `/catalog/accounts`, `/catalog/accounts/{id}`, `/catalog/networks`, `/catalog/networks/{id}`, `/sellers/{id}` | все |
 
 Фильтры `/catalog/accounts`: `q, platform, followers_min/max, avg_min/max, price_min/max (копейки), category, language, geo, ad_format, verified=1, rating_min, sort=new|popular|price_asc|price_desc|followers|views`.
+
+## Реализовано (Phase 6–13), кратко
+
+Заказы: `POST /orders`, `GET /orders/{id}`, `…/events`, `…/terms`, `…/terms/propose`, `…/terms/{p}/decide`, `…/cancel`, `…/materials-delivered`, `…/items/{i}/{accept|decline|ready|proof|confirm|rework|cancel|check-publication|review|report}`.
+Платежи: `POST /orders/{id}/pay`, `POST /payments/webhooks/{provider}`, `GET /me/payouts`, `POST /me/payouts/{id}/{withdraw|retry}`.
+Чат и файлы: `GET/POST /orders/{id}/chat`, `PATCH/DELETE /orders/{id}/chat/{m}`, `POST /files`, `GET /files/{id}`.
+Споры: `GET /dispute-reasons`, `POST /orders/{id}/disputes/open`, `GET /orders/{id}/disputes`, `GET /disputes/{id}`, `POST /disputes/{id}/{reply|appeal}`; поддержка `POST /support/tickets`.
+Сотрудники: `/staff/disputes[/{id}[/{action}]]`, `/staff/tickets`, `/staff/dashboard`, `/staff/users`, `/staff/accounts`, `/staff/orders`, `/staff/audit[/verify]`, `/staff/reviews`, `/staff/fraud-signals`.
+Отзывы: `POST /reviews/{id}/{reply|complain}`. Phase 13: `/me/{favorites|viewed|recommendations|analytics|referrals}`, `GET /catalog/compare?ids=`.
+Полная схема — `/api/schema/` (OpenAPI).

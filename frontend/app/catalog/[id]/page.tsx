@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Metric, SellerLine } from "@/components/catalog/Cards";
+import { OfferExtras } from "@/components/OfferExtras";
 import { TrustBadge } from "@/components/stats/TrustBadge";
 import { Card } from "@/components/ui/Card";
 import { ErrorState, LoadingState } from "@/components/ui/States";
@@ -30,6 +31,7 @@ export default function OfferPage() {
           <a href={o.profile_url} target="_blank" rel="noopener noreferrer nofollow" className="text-accent">@{o.handle}</a>
           {o.ownership_verified && <span className="ml-2 text-xs text-ok">владение подтверждено</span>}
         </div>
+        <OfferExtras accountId={o.id} />
         <Card className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           <Metric label="Подписчики" value={o.followers != null ? formatCount(o.followers) : "—"} />
           <Metric label="Средние просмотры" value={o.avg_views != null ? formatCount(o.avg_views) : "—"} />

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import { MineList } from "./MineList";
+import { AnalyticsPanel, FavoritesPanel, RecommendationsPanel, ReferralsPanel, ViewedPanel } from "./InsightsPanels";
 import { PayoutsPanel } from "./PayoutsPanel";
 import { STATUS_LABEL } from "@/lib/api/orders";
 import { Button } from "@/components/ui/Button";
@@ -25,6 +26,11 @@ const TABS: Tab[] = [
   { key: "accounts", label: "Мои аккаунты", seller: true },
   { key: "networks", label: "Мои сетки", seller: true },
   { key: "payouts", label: "Выплаты", seller: true },
+  { key: "favorites", label: "Избранное" },
+  { key: "viewed", label: "Просмотренные" },
+  { key: "recommendations", label: "Рекомендации" },
+  { key: "analytics", label: "Аналитика" },
+  { key: "referrals", label: "Пригласить" },
   { key: "reviews", label: "Отзывы" },
   { key: "tickets", label: "Обращения" },
   { key: "notifications", label: "Уведомления" },
@@ -161,6 +167,11 @@ export default function AccountPage() {
           </>
         )}
         {tab === "payouts" && <PayoutsPanel />}
+        {tab === "favorites" && <FavoritesPanel />}
+        {tab === "viewed" && <ViewedPanel />}
+        {tab === "recommendations" && <RecommendationsPanel />}
+        {tab === "analytics" && <AnalyticsPanel />}
+        {tab === "referrals" && <ReferralsPanel />}
         {tab === "reviews" && <MineList<Simple> path="reviews" empty="Отзывов пока нет" render={(r) => `${r.rating}★ ${r.text ?? ""}`} />}
         {tab === "tickets" && <MineList<Simple> path="tickets" empty="Обращений нет" render={(t) => `${t.subject} · ${t.status}`} />}
         {tab === "notifications" && (

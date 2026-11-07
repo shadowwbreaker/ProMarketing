@@ -32,6 +32,7 @@ class CreateOrderSerializer(serializers.Serializer):
     offer = serializers.UUIDField(required=False)
     network = serializers.UUIDField(required=False)
     network_items = serializers.ListField(child=serializers.UUIDField(), required=False)
+    results_report = serializers.BooleanField(default=False, help_text="Отчёт по просмотрам через 24 ч, 7 и 30 дней (3 разовые проверки)")
     terms = TermsInSerializer()
 
     def validate(self, attrs):
@@ -58,7 +59,8 @@ class ItemSerializer(serializers.ModelSerializer):
         model = OrderItem
         fields = ["id", "status", "price_minor", "fee_minor", "seller_amount_minor", "accept_deadline", "publish_deadline",
                   "placement_until", "accepted_at", "published_at", "confirm_deadline", "confirmed_at", "payout_available_at",
-                  "account", "proofs", "payout", "refunded_minor", "checks", "review"]
+                  "account", "proofs", "payout", "refunded_minor", "checks", "review", "expected_followers",
+                  "expected_avg_views", "expected_trust_status", "metrics"]
 
     def get_account(self, o):
         a = o.social_account
@@ -80,6 +82,12 @@ class ItemSerializer(serializers.ModelSerializer):
 
         return refunded_amount(o.pk, include_pending=False)
 
+    metrics = serializers.SerializerMethodField()
+
+    def get_metrics(self, o):
+        return [{"checkpoint": m.checkpoint, "due_at": m.due_at, "status": m.status, "views": m.views, "likes": m.likes,
+                 "comments": m.comments, "fetched_at": m.fetched_at} for m in o.metrics.order_by("due_at")]
+
     def get_review(self, o):
         r = o.reviews.first()
         return None if not r else {"id": str(r.pk), "rating": r.rating, "text": r.text, "seller_reply": r.seller_reply,
@@ -99,7 +107,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Order
-        fields = ["id", "status", "total_minor", "currency", "fee_bps", "created_at", "paid_at", "materials_delivered_at",
+        fields = ["id", "status", "total_minor", "currency", "fee_bps", "created_at", "paid_at", "materials_delivered_at", "results_report",
                   "seller_terms_accepted_at", "network", "items", "terms", "buyer", "seller", "role", "proposals"]
 
     def get_items(self, o):
@@ -148,7 +156,8 @@ class OrderCreate(APIView):
         s.is_valid(raise_exception=True)
         d = s.validated_data
         order = services.create_order(buyer=request.user, terms=d["terms"], offer_id=d.get("offer"),
-                                      network_id=d.get("network"), network_item_ids=d.get("network_items"))
+                                      network_id=d.get("network"), network_item_ids=d.get("network_items"),
+                                      results_report=d["results_report"])
         r = _out(request, order)
         r.status_code = 201
         return r

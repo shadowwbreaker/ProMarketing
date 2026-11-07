@@ -18,7 +18,7 @@ export const getMe = () => apiFetch<Me>("/me");
 export const getSession = () => apiFetch<{ user: Me | null }>("/auth/session");
 export const login = (email: string, password: string) =>
   apiFetch<Me>("/auth/login", { method: "POST", body: { email, password } });
-export const register = (data: { email: string; password: string; display_name: string; as_seller: boolean; accept_terms: boolean }) =>
+export const register = (data: { email: string; password: string; display_name: string; as_seller: boolean; accept_terms: boolean; ref?: string }) =>
   apiFetch<Me>("/auth/register", { method: "POST", body: data });
 export const logout = () => apiFetch<void>("/auth/logout", { method: "POST" });
 export const verifyEmail = (token: string) => apiFetch<{ ok: boolean }>("/auth/verify-email", { method: "POST", body: { token } });

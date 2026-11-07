@@ -17,6 +17,7 @@ api_v1 = [
     path("", include("support.urls")),
     path("", include("staff.urls")),
     path("", include("reviews.urls")),
+    path("", include("insights.urls")),
 ]
 
 urlpatterns = [

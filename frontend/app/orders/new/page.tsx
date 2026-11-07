@@ -48,7 +48,7 @@ function NewOrder() {
     setBusy(true);
     setErr({ fields: {} });
     try {
-      const body: Record<string, unknown> = { terms };
+      const body: Record<string, unknown> = { terms, results_report: f.get("results_report") === "on" };
       if (offer) body.offer = offer;
       if (networkId) {
         body.network = networkId;
@@ -117,6 +117,10 @@ function NewOrder() {
             <Field label="Материалы передам до" name="materials_deadline" type="datetime-local" />
           </div>
           <Field label="Дополнительные требования" name="extra_requirements" />
+          <label className="flex items-start gap-2 text-sm">
+            <input type="checkbox" name="results_report" className="mt-1" />
+            <span>Получить отчёт по просмотрам рекламы через 24 часа, 7 и 30 дней. Это ровно три разовые проверки публикации через официальный API — без постоянного отслеживания.</span>
+          </label>
           <Button type="submit" loading={busy} disabled={!me.is_email_verified}>Создать заказ и перейти к оплате</Button>
         </form>
       </Card>

@@ -64,7 +64,7 @@ def distribute(total: int, weights: list[int]) -> list[int]:
 
 # --- creation ---------------------------------------------------------------------
 @transaction.atomic
-def create_order(*, buyer, terms: dict, offer_id=None, network_id=None, network_item_ids=None) -> Order:
+def create_order(*, buyer, terms: dict, offer_id=None, network_id=None, network_item_ids=None, results_report: bool = False) -> Order:
     """Create an order with frozen prices and terms (roadmap 6.1). Ready for payment (AWAITING_PAYMENT)."""
     if not buyer.is_email_verified:
         raise DomainError("Подтвердите email, чтобы оформить заказ", code="email_not_verified", status_code=403)
@@ -101,11 +101,17 @@ def create_order(*, buyer, terms: dict, offer_id=None, network_id=None, network_
         raise DomainError("Нельзя заказать рекламу у самого себя", code="self_order", status_code=400)
     fee_bps = settings.PLATFORM_FEE_BPS
     order = Order.objects.create(buyer=buyer, seller=seller, network=network,
-                                 fee_bps=fee_bps, total_minor=sum(p for _, p in lines), status=S.DRAFT)
+                                 fee_bps=fee_bps, total_minor=sum(p for _, p in lines), status=S.DRAFT,
+                                 results_report=bool(results_report and settings.RESULTS_REPORTS_ENABLED))
     for offer, price in lines:
         fee = platform_fee(price, fee_bps)  # D-015: fee deducted from the seller's part
+        from social_data.services.refresh_service import display_status
+
+        shown = display_status(offer.social_account.current_statistics, offer.social_account.platform, for_owner=False)
         OrderItem.objects.create(order=order, social_account=offer.social_account, offer=offer, price_minor=price,
-                                 fee_minor=fee, seller_amount_minor=price - fee, status=S.DRAFT)
+                                 fee_minor=fee, seller_amount_minor=price - fee, status=S.DRAFT,
+                                 expected_followers=shown["followers"], expected_avg_views=shown["avg_views"],
+                                 expected_trust_status=shown["trust_status"])  # what the buyer saw when ordering
     placement = max(o.placement_days for o, _ in lines)
     data = {k: terms.get(k) for k in TERM_FIELDS if terms.get(k) not in (None, "")}
     data.setdefault("placement_days", placement)
@@ -226,6 +232,10 @@ def submit_proof(order_id, item_id, *, actor, video_url: str, published_at, note
               confirm_deadline=item.confirm_deadline.isoformat())
         notify(order.buyer, "order.published", "Реклама опубликована", "Проверьте публикацию и подтвердите выполнение", order=order.pk)
         transaction.on_commit(lambda: _schedule_check(item.pk, "proof"))
+        if order.results_report:
+            from insights.services import plan_checkpoints
+
+            plan_checkpoints(item)
     return proof
 
 
