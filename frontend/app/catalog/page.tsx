@@ -48,24 +48,29 @@ function Filters({ params, onApply }: { params: URLSearchParams; onApply: (p: UR
         <input name="followers_min" type="number" min={0} defaultValue={v("followers_min")} placeholder="от" className={input} aria-label="Подписчики от" />
         <input name="followers_max" type="number" min={0} defaultValue={v("followers_max")} placeholder="до" className={input} aria-label="Подписчики до" />
       </fieldset>
-      <fieldset className="grid grid-cols-2 gap-2"><legend>Средние просмотры</legend>
-        <input name="avg_min" type="number" min={0} defaultValue={v("avg_min")} placeholder="от" className={input} aria-label="Просмотры от" />
-        <input name="avg_max" type="number" min={0} defaultValue={v("avg_max")} placeholder="до" className={input} aria-label="Просмотры до" />
-      </fieldset>
       <fieldset className="grid grid-cols-2 gap-2"><legend>Цена, ₽</legend>
         <input name="price_min" inputMode="decimal" defaultValue={v("price_min")} placeholder="от" className={input} aria-label="Цена от" />
         <input name="price_max" inputMode="decimal" defaultValue={v("price_max")} placeholder="до" className={input} aria-label="Цена до" />
       </fieldset>
-      <label>Категория<input name="category" defaultValue={v("category")} className={input} /></label>
-      <label>Язык<input name="language" defaultValue={v("language")} placeholder="ru" className={input} /></label>
-      <label>География<input name="geo" defaultValue={v("geo")} className={input} /></label>
-      <label>Формат рекламы
-        <select name="ad_format" defaultValue={v("ad_format")} className={input}>
-          <option value="">Любой</option>
-          {formats.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
-        </select>
-      </label>
-      <label>Рейтинг продавца от<input name="rating_min" type="number" min={1} max={5} step={0.5} defaultValue={v("rating_min")} className={input} /></label>
+      <details className="rounded-lg border border-border p-2" open={["avg_min", "avg_max", "category", "language", "geo", "ad_format", "rating_min"].some((k) => !!v(k))}>
+        <summary className="cursor-pointer select-none font-medium">Ещё фильтры</summary>
+        <div className="mt-3 flex flex-col gap-3">
+        <fieldset className="grid grid-cols-2 gap-2"><legend>Средние просмотры</legend>
+          <input name="avg_min" type="number" min={0} defaultValue={v("avg_min")} placeholder="от" className={input} aria-label="Просмотры от" />
+          <input name="avg_max" type="number" min={0} defaultValue={v("avg_max")} placeholder="до" className={input} aria-label="Просмотры до" />
+        </fieldset>
+        <label>Категория<input name="category" defaultValue={v("category")} className={input} /></label>
+        <label>Язык<input name="language" defaultValue={v("language")} placeholder="ru" className={input} /></label>
+        <label>География<input name="geo" defaultValue={v("geo")} className={input} /></label>
+        <label>Формат рекламы
+          <select name="ad_format" defaultValue={v("ad_format")} className={input}>
+            <option value="">Любой</option>
+            {formats.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
+          </select>
+        </label>
+        <label>Рейтинг продавца от<input name="rating_min" type="number" min={1} max={5} step={0.5} defaultValue={v("rating_min")} className={input} /></label>
+        </div>
+      </details>
       <label className="flex items-center gap-2"><input type="checkbox" name="verified" value="1" defaultChecked={v("verified") === "1"} /> Только подтверждённая статистика</label>
       <label>Сортировка
         <select name="sort" defaultValue={v("sort")} className={input}>

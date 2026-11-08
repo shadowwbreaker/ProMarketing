@@ -3,6 +3,7 @@
 import { useParams, useSearchParams } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { OffersPanel } from "@/components/OffersPanel";
+import { OwnershipCard } from "@/components/OwnershipCard";
 import { TrustBadge } from "@/components/stats/TrustBadge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -144,6 +145,7 @@ export default function AccountDetailPage() {
         </p>
       )}
 
+      <OwnershipCard acc={acc} onVerified={(a) => { setAcc(a); toast("Владение подтверждено", "success"); }} />
       <OffersPanel accountId={acc.id} listed={acc.is_listed} onChanged={() => void load()} />
 
       {hist && hist.results[0] && (

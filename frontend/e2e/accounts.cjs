@@ -39,6 +39,11 @@ const { chromium } = require("playwright");
   const disabled = await page.getByRole("button", { name: "Обновить статистику" }).isDisabled();
   if (!disabled) throw new Error("refresh should be limited right after first fetch");
   await page.getByText("Доступно с").waitFor();
+  // D-020: ownership by a code in the channel description (fake provider accepts it)
+  await page.getByRole("button", { name: "Получить код" }).click();
+  await page.getByText(/PM-[0-9A-F]{6}/).waitFor();
+  await page.getByRole("button", { name: "Проверить" }).click();
+  await page.getByText("владение подтверждено").first().waitFor();
   await page.goto(`${base}/account/networks`);
   await page.getByLabel("Название").fill("Моя сетка");
   await page.getByRole("button", { name: "Создать" }).click();

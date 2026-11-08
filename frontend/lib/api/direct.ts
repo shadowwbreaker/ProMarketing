@@ -2,7 +2,7 @@ import { apiFetch } from "./client";
 
 export type DirectMessage = { id: string; mine: boolean; body: string; created_at: string; warning?: string };
 export type DirectThread = {
-  user: { id: string; display_name: string };
+  user: { id: string; display_name: string; avatar_url?: string | null };
   last_message: string;
   last_message_at: string;
   unread: number;

@@ -67,6 +67,8 @@ def account_payload(account: SocialAccount, *, for_owner: bool) -> dict:
         "statistics": svc.display_status(account.current_statistics, account.platform, for_owner=for_owner),
     }
     if for_owner:
+        data["ownership_code"] = account.ownership_code
+        data["ownership_check_supported"] = account.platform in ("youtube",)
         data["refresh"] = {
             "last_requested_at": account.last_refresh_requested_at,
             "next_allowed_at": nxt if nxt and nxt > timezone.now() else None,
@@ -232,3 +234,24 @@ class TikTokOAuthCallback(APIView):
             svc.request_refresh(account.pk, user=request.user, trigger=StatsRefreshJob.Trigger.ACCOUNT_ADDED)
         account.refresh_from_db()
         return Response(account_payload(account, for_owner=True), status=201)
+
+
+class SocialAccountOwnership(APIView):
+    """POST /social-accounts/{id}/ownership/{start|check} (D-020)."""
+
+    permission_classes = [HasPerm("account.manage_own")]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "ownership"
+
+    def post(self, request, pk, action):
+        from .services import ownership
+
+        account = _owned(request, pk)
+        if action == "start":
+            code = ownership.start(account, user=request.user)
+            return Response({"code": code})
+        if action == "check":
+            ok = ownership.check(account, user=request.user)
+            account.refresh_from_db()
+            return Response({"verified": ok, "account": account_payload(account, for_owner=True)})
+        raise DomainError("Неизвестное действие", code="bad_action", status_code=404)

@@ -91,7 +91,10 @@ class DirectThreads(APIView):
         for t in qs:
             other = t.user_b if t.user_a_id == me.pk else t.user_a
             last = t.messages.order_by("-created_at").first()
-            out.append({"user": {"id": str(other.pk), "display_name": other.profile.display_name},
+            from accounts.avatar import avatar_url
+
+            out.append({"user": {"id": str(other.pk), "display_name": other.profile.display_name,
+                                 "avatar_url": avatar_url(other.profile)},
                         "last_message": last.body[:120] if last else "", "last_message_at": t.last_message_at,
                         "unread": t.messages.filter(read_at__isnull=True).exclude(author=me).count()})
         return Response({"results": out})

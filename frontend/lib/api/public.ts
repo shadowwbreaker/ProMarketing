@@ -2,7 +2,7 @@ import { apiFetch } from "./client";
 import type { Page } from "./auth";
 import type { TrustStatus } from "./social";
 
-export type SellerBrief = { id: string; display_name: string; rating: number | null; reviews_count: number };
+export type SellerBrief = { id: string; display_name: string; rating: number | null; reviews_count: number; avatar_url?: string | null };
 
 export type OfferCard = {
   id: string;

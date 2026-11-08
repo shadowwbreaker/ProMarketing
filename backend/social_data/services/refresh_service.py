@@ -200,7 +200,7 @@ def display_status(stats: SocialAccountStatistics | None, platform: str, *, for_
     data = {"trust_status": status, "followers": stats.followers, "avg_views": stats.avg_views,
             "videos_in_sample": stats.videos_in_sample, "fetched_at": stats.fetched_at, "source": stats.source}
     if platform == "youtube" and not settings.YOUTUBE_DERIVED_METRICS_APPROVED and stats.source != DataSource.MANUAL:
-        if not for_owner:
-            data.update(avg_views=None, trust_status=TrustStatus.UNAVAILABLE)
-        data["derived_metrics_note"] = "Среднее по YouTube показывается покупателям только после одобрения YouTube (D-016)"
+        if not for_owner:  # followers stay verified; only the derived average is hidden from third parties
+            data.update(avg_views=None)
+        data["derived_metrics_note"] = "Среднее просмотров YouTube покупатели увидят после одобрения YouTube; подписчики подтверждены"  # D-016
     return data

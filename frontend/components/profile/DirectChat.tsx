@@ -8,10 +8,10 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 import { fieldErrors } from "@/lib/forms";
 import { reviewsWord } from "@/lib/format";
 
-type Props = { userId: string; name: string; online: boolean; rating: number | null; reviews: number };
+type Props = { userId: string; avatar?: string | null; name: string; online: boolean; rating: number | null; reviews: number };
 
 /** Right-hand panel on a profile: "write to the seller before paying" (FunPay-style). */
-export function DirectChat({ userId, name, online, rating, reviews }: Props) {
+export function DirectChat({ userId, avatar, name, online, rating, reviews }: Props) {
   const { me, loading } = useAuth();
   const [msgs, setMsgs] = useState<DirectMessage[]>([]);
   const [text, setText] = useState("");
@@ -56,7 +56,7 @@ export function DirectChat({ userId, name, online, rating, reviews }: Props) {
   return (
     <aside className="flex h-[32rem] flex-col rounded-xl border border-border bg-surface lg:sticky lg:top-4">
       <div className="flex items-center gap-3 border-b border-border p-4">
-        <Avatar id={userId} name={name} size={44} />
+        <Avatar id={userId} name={name} size={44} src={avatar} />
         <div className="min-w-0">
           <p className="truncate font-bold">{name}</p>
           <p className={`text-xs font-semibold ${online ? "text-ok" : "text-muted"}`}>{online ? "Онлайн" : "Не в сети"}</p>

@@ -95,6 +95,8 @@ class UserProfile(BaseModel):
     country = models.CharField(max_length=2, blank=True, default="RU")
     language = models.CharField(max_length=8, blank=True, default="ru")
     timezone = models.CharField(max_length=64, default="Europe/Moscow")
+    avatar_key = models.CharField(max_length=255, blank=True, default="", help_text="Ключ файла аватара в хранилище")
+    avatar_updated_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return self.display_name

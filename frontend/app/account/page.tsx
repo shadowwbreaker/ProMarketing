@@ -9,12 +9,13 @@ import { MessagesPanel } from "./MessagesPanel";
 import { PayoutsPanel } from "./PayoutsPanel";
 import { TwoFactorPanel } from "./TwoFactorPanel";
 import { STATUS_LABEL } from "@/lib/api/orders";
+import { Avatar } from "@/components/profile/Avatar";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Field } from "@/components/ui/Field";
 import { LoadingState } from "@/components/ui/States";
 import { useToast } from "@/components/ui/Toast";
-import { becomeSeller, resendVerification, updateProfile } from "@/lib/api/auth";
+import { becomeSeller, deleteAvatar, resendVerification, updateProfile, uploadAvatar } from "@/lib/api/auth";
 import { readAll } from "@/lib/api/chat";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { fieldErrors } from "@/lib/forms";
@@ -58,7 +59,7 @@ export default function AccountPageWrapper() {
 
 function AccountPage() {
   const qsTab = useSearchParams().get("tab");
-  const { me, loading, setMe, signOut } = useAuth();
+  const { me, loading, setMe, signOut, refresh } = useAuth();
   const router = useRouter();
   const toast = useToast();
   const [tab, setTab] = useState("purchases");
@@ -141,6 +142,25 @@ function AccountPage() {
         {tab === "profile" && (
           <Card>
             <h2 className="mb-4 text-lg font-bold">Личные данные</h2>
+            <div className="mb-5 flex items-center gap-4">
+              <Avatar id={me.id} name={me.profile.display_name} size={72} src={me.profile.avatar_url} />
+              <div className="flex flex-col gap-1 text-sm">
+                <label className="cursor-pointer font-semibold text-accent">
+                  {me.profile.avatar_url ? "Заменить фото" : "Загрузить фото"}
+                  <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" aria-label="Фото профиля"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (!f) return;
+                      uploadAvatar(f).then(refresh).then(() => toast("Фото обновлено", "success"))
+                        .catch((ex) => toast(fieldErrors(ex).form ?? "Не удалось загрузить", "error"));
+                    }} />
+                </label>
+                {me.profile.avatar_url && (
+                  <button className="self-start text-muted hover:text-danger" onClick={() => void deleteAvatar().then(refresh)}>Удалить фото</button>
+                )}
+                <span className="text-xs text-muted">JPG, PNG или WEBP до 5 МБ</span>
+              </div>
+            </div>
             <p className="mb-4 text-sm text-muted">{me.email} · роли: {me.roles.join(", ")}</p>
             <form onSubmit={saveProfile} className="flex max-w-md flex-col gap-4">
               <Field label="Имя или название" name="display_name" defaultValue={me.profile.display_name} required />

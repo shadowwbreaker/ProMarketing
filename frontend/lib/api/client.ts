@@ -34,7 +34,8 @@ export async function apiFetch<T>(
 ): Promise<T> {
   const method = options.method ?? "GET";
   const headers: Record<string, string> = { Accept: "application/json" };
-  if (options.body !== undefined) headers["Content-Type"] = "application/json";
+  const isForm = typeof FormData !== "undefined" && options.body instanceof FormData;
+  if (options.body !== undefined && !isForm) headers["Content-Type"] = "application/json";
   if (method !== "GET") {
     const csrf = readCookie("csrftoken");
     if (csrf) headers["X-CSRFToken"] = decodeURIComponent(csrf);
@@ -46,7 +47,7 @@ export async function apiFetch<T>(
     res = await fetch(`${API_URL}/api/v1${path}`, {
       method,
       headers,
-      body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+      body: isForm ? (options.body as FormData) : options.body !== undefined ? JSON.stringify(options.body) : undefined,
       credentials: "include",
       signal: options.signal,
     });

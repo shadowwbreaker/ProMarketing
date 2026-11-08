@@ -2,7 +2,7 @@
 
 Behaviour is driven by the handle so tests can simulate platform responses:
   *_unavailable -> ProviderUnavailable, *_ratelimit -> ProviderRateLimited,
-  *_notpro -> NotProfessionalAccount, *_fewvideos -> 3 videos, *_novideos -> 0 videos.
+  *_notpro -> NotProfessionalAccount, *_notmine -> ownership code not found, *_fewvideos -> 3 videos, *_novideos -> 0 videos.
 """
 import hashlib
 from datetime import datetime, timedelta, timezone
@@ -64,6 +64,12 @@ class FakeProvider(SocialDataProvider):
                                      views=1_000 * (i + 1) + _seed(vid) % 1000, published_at=base - timedelta(days=i),
                                      duration_s=30, is_short_heuristic=self.platform == "youtube"))
         return videos
+
+    def profile_contains(self, account, code):
+        """Dev/test: handles ending with _notmine never contain the code; everything else does."""
+        self.calls.append(f"ownership:{account.handle}")
+        self._raise_for(account.handle)
+        return not account.handle.endswith("_notmine")
 
     def get_video_statistics(self, video_url, *, credentials=None):
         self.calls.append(f"video:{video_url}")

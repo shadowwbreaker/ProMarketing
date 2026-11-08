@@ -48,7 +48,8 @@ class SocialAccount(BaseModel):
     description = models.TextField(blank=True, max_length=4000)
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.ACTIVE)
     is_listed = models.BooleanField(default=False, help_text="Показывается в каталоге")
-    ownership_verified = models.BooleanField(default=False, help_text="Владение подтверждено OAuth")
+    ownership_verified = models.BooleanField(default=False, help_text="Владение подтверждено (OAuth или код в описании, D-020)")
+    ownership_code = models.CharField(max_length=16, blank=True, default="", help_text="Код для описания профиля (D-020)")
     current_statistics = models.ForeignKey(
         "SocialAccountStatistics", null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
     )

@@ -23,6 +23,10 @@ function Block({ title, href, children }: { title: string; href?: string; childr
 export default function HomePage() {
   const router = useRouter();
   const [home, setHome] = useState<Home>();
+  const shown = new Set(home?.popular.map((o) => o.id) ?? []);
+  const recommended = (home?.recommended ?? []).filter((o) => !shown.has(o.id));
+  recommended.forEach((o) => shown.add(o.id));
+  const fresh = (home?.new ?? []).filter((o) => !shown.has(o.id));
   const [err, setErr] = useState<string>();
 
   useEffect(() => {
@@ -85,8 +89,9 @@ export default function HomePage() {
             </div>
           )}
           {home.popular.length > 0 && <Block title="Популярные предложения" href="/catalog?sort=popular"><CardGrid>{home.popular.map((o) => <OfferCard key={o.id} o={o} />)}</CardGrid></Block>}
-          {home.recommended.length > 0 && <Block title="Рекомендуем: подтверждённая статистика" href="/catalog?verified=1&sort=views"><CardGrid>{home.recommended.map((o) => <OfferCard key={o.id} o={o} />)}</CardGrid></Block>}
-          {home.new.length > 0 && <Block title="Новые" href="/catalog?sort=new"><CardGrid>{home.new.map((o) => <OfferCard key={o.id} o={o} />)}</CardGrid></Block>}
+          {/* each block shows only items not already shown above — no repeating the same cards three times */}
+          {recommended.length > 0 && <Block title="Рекомендуем: подтверждённая статистика" href="/catalog?verified=1&sort=views"><CardGrid>{recommended.map((o) => <OfferCard key={o.id} o={o} />)}</CardGrid></Block>}
+          {fresh.length > 0 && <Block title="Новые" href="/catalog?sort=new"><CardGrid>{fresh.map((o) => <OfferCard key={o.id} o={o} />)}</CardGrid></Block>}
           {home.networks.length > 0 && <Block title="Рекламные сетки" href="/catalog?kind=networks"><CardGrid>{home.networks.map((n) => <NetworkCard key={n.id} n={n} />)}</CardGrid></Block>}
           {!home.popular.length && !home.networks.length && (
             <p className="mt-10 text-center text-muted">Каталог пока пуст. <Link href="/register" className="text-accent">Станьте первым продавцом</Link>.</p>

@@ -13,6 +13,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from accounts.avatar import avatar_url
 from accounts.models import User
 from common.exceptions import DomainError
 from common.pagination import StandardPagination
@@ -122,15 +123,16 @@ def offer_card(acc: SocialAccount, ratings: dict, *, with_offers=False) -> dict:
         "stats_updated_at": st["fetched_at"], "trust_status": st["trust_status"], "ownership_verified": acc.ownership_verified,
         "min_price_minor": min((o.price_minor for o in offers), default=None), "currency": "RUB",
         "formats": sorted({o.get_ad_format_display() for o in offers}),
-        "seller": {"id": str(acc.owner_id), "display_name": acc.owner.profile.display_name, **r},
+        "seller": {"id": str(acc.owner_id), "display_name": acc.owner.profile.display_name,
+                   "avatar_url": avatar_url(acc.owner.profile), **r},
     }
     if with_offers:
         card["description"] = acc.description
         card["offers"] = [{"id": str(o.pk), "ad_format": o.ad_format, "ad_format_label": o.get_ad_format_display(),
                            "price_minor": o.price_minor, "conditions": o.conditions, "placement_days": o.placement_days,
                            "publish_within_days": o.publish_within_days} for o in offers]
-        if st.get("derived_metrics_note"):
-            card["derived_metrics_note"] = st["derived_metrics_note"]
+    if st.get("derived_metrics_note"):
+        card["derived_metrics_note"] = st["derived_metrics_note"]
     return card
 
 
@@ -139,7 +141,8 @@ def network_card(net: AccountNetwork, ratings: dict) -> dict:
     return {"id": str(net.pk), "title": net.title, "description": net.description, "conditions": net.conditions,
             "allow_partial_purchase": net.allow_partial_purchase, "stats": network_stats(net, for_owner=False),
             "platforms": sorted({i.social_account.platform for i in net.items.all()}),
-            "seller": {"id": str(net.owner_id), "display_name": net.owner.profile.display_name, **r}}
+            "seller": {"id": str(net.owner_id), "display_name": net.owner.profile.display_name,
+                       "avatar_url": avatar_url(net.owner.profile), **r}}
 
 
 def sellable_networks():
@@ -253,6 +256,7 @@ class SellerPage(APIView):
             "rating_distribution": {str(k): dist.get(k, 0) for k in (5, 4, 3, 2, 1)}, "online": online,
             "is_seller": seller.has_role("seller"),
             "id": str(seller.pk), "display_name": seller.profile.display_name, "bio": seller.profile.bio,
+            "avatar_url": avatar_url(seller.profile),
             "member_since": seller.date_joined, "last_seen_at": seller.last_seen_at, "selling_since": first_listed,
             "completed_orders": completed_orders_count(seller.pk), **rating,
             "accounts": [offer_card(a, ratings) for a in accounts],

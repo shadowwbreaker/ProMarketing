@@ -63,3 +63,35 @@ def test_youtube_shorts_links_including_cyrillic_handles():
     assert detect_platform("https://www.youtube.com/@MrBeast/shorts") == ("youtube", "MrBeast")
     assert detect_platform("https://www.youtube.com/@%D0%BA%D0%B0%D0%BD%D0%B0%D0%BB/shorts") == ("youtube", "канал")
     assert detect_platform("https://www.youtube.com/@канал/shorts") == ("youtube", "канал")
+
+
+def _yt_account(api, user, handle):
+    api.force_authenticate(user)
+    r = api.post("/api/v1/social-accounts", {"profile_url": f"https://www.youtube.com/@{handle}/shorts"}, format="json")
+    assert r.status_code == 201, r.json()
+    assert r.json()["ownership_verified"] is False and r.json()["ownership_check_supported"] is True
+    return r.json()["id"]
+
+
+def test_youtube_ownership_by_code_in_description(api, user_factory):
+    seller = user_factory(roles=("buyer", "seller"))
+    acc_id = _yt_account(api, seller, "mychannel")
+    code = api.post(f"/api/v1/social-accounts/{acc_id}/ownership/start").json()["code"]
+    assert code.startswith("PM-")
+    assert api.post(f"/api/v1/social-accounts/{acc_id}/ownership/start").json()["code"] == code  # stable until verified
+    r = api.post(f"/api/v1/social-accounts/{acc_id}/ownership/check")
+    assert r.json()["verified"] is True and r.json()["account"]["ownership_verified"] is True
+    assert r.json()["account"]["ownership_code"] == ""
+    assert api.post(f"/api/v1/social-accounts/{acc_id}/ownership/start").status_code == 400  # already verified
+
+
+def test_youtube_ownership_code_not_found(api, user_factory):
+    seller = user_factory(roles=("buyer", "seller"))
+    acc_id = _yt_account(api, seller, "someone_notmine")
+    assert api.post(f"/api/v1/social-accounts/{acc_id}/ownership/check").status_code == 400  # no code yet
+    api.post(f"/api/v1/social-accounts/{acc_id}/ownership/start")
+    r = api.post(f"/api/v1/social-accounts/{acc_id}/ownership/check")
+    assert r.status_code == 200 and r.json()["verified"] is False
+    other = user_factory(roles=("buyer", "seller"))
+    api.force_authenticate(other)
+    assert api.post(f"/api/v1/social-accounts/{acc_id}/ownership/start").status_code == 404  # only the owner

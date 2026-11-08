@@ -63,6 +63,7 @@ function OffersTable({ title, items }: { title: string; items: OfferCard[] }) {
             <tr key={o.id} className="border-b border-border last:border-0 hover:bg-bg">
               <td className="px-4 py-3">
                 <Link href={`/catalog/${o.id}`} className="font-semibold hover:text-accent">{o.title}</Link>
+                {o.ownership_verified && <span title="Владение подтверждено" className="ml-1 text-xs text-ok">✓</span>}
                 <p className="text-xs text-muted">
                   @{o.handle}
                   <span className="sm:hidden"> · {o.followers != null ? formatCount(o.followers) : "—"} подп.</span>
@@ -103,7 +104,7 @@ export default function ProfilePage() {
         <div className="h-28 bg-gradient-to-r from-accent via-[#7c4dff] to-[#00a3ff] sm:h-36" style={{ borderBottomLeftRadius: "50% 30%", borderBottomRightRadius: "50% 30%" }} />
         <div className="-mt-14 px-5 pb-6 sm:px-8">
           <div className="rounded-full border-4 border-surface bg-surface" style={{ width: 120 }}>
-            <Avatar id={s.id} name={s.display_name} size={112} />
+            <Avatar id={s.id} name={s.display_name} size={112} src={s.avatar_url} />
           </div>
           <div className="mt-3 flex flex-wrap items-baseline gap-3">
             <h1 className="break-all text-3xl font-extrabold">{s.display_name}</h1>
@@ -171,7 +172,7 @@ export default function ProfilePage() {
             <p className="text-sm text-muted">Отзывов пока нет</p>
           )}
         </div>
-        <DirectChat userId={s.id} name={s.display_name} online={s.online} rating={s.rating} reviews={s.reviews_count} />
+        <DirectChat userId={s.id} avatar={s.avatar_url} name={s.display_name} online={s.online} rating={s.rating} reviews={s.reviews_count} />
       </div>
     </div>
   );

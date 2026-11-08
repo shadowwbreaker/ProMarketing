@@ -28,6 +28,12 @@ const { chromium } = require("playwright");
   const seller = await login(`demo-seller${n}@example.com`);
   await seller.goto(`${base}/account?tab=messages`);
   await seller.getByText(text).first().waitFor();
+  // profile photo upload (re-encoded by the server) shows up in the header
+  const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAFklEQVR4nGP8z8DAwMDAxMDAwMDAAAANHQEDK+mmyAAAAABJRU5ErkJggg==", "base64");
+  await seller.goto(`${base}/account?tab=profile`);
+  await seller.getByLabel("Фото профиля").setInputFiles({ name: "me.png", mimeType: "image/png", buffer: png });
+  await seller.getByText("Фото обновлено").waitFor();
+  await seller.locator("header img").waitFor();
   await seller.goto(sellerUrl);
   await browser.close();
   console.log("E2E PROFILE OK");

@@ -192,7 +192,7 @@ def test_stale_and_youtube_derived_metric_rules(seller, settings):
     settings.YOUTUBE_DERIVED_METRICS_APPROVED = False
     assert display_status(s, "youtube", for_owner=True)["avg_views"] == 500
     public = display_status(s, "youtube", for_owner=False)
-    assert public["avg_views"] is None and public["trust_status"] == "UNAVAILABLE"
+    assert public["avg_views"] is None and public["trust_status"] == "VERIFIED" and public["derived_metrics_note"]
     settings.YOUTUBE_DERIVED_METRICS_APPROVED = True
     assert display_status(s, "youtube", for_owner=False)["avg_views"] == 500
     with freeze_time(now + timedelta(days=31)):

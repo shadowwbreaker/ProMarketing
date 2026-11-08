@@ -32,6 +32,16 @@ class SocialDataProvider(ABC):
     def get_video_statistics(self, video_url: str, *, credentials=None) -> VideoStats | None:
         """One-off lookup of a single video (used by publication checks, D-010)."""
 
+    def profile_contains(self, account: ResolvedAccount, code: str) -> bool:
+        """Ownership check: does the public profile description contain `code`? (D-020)
+
+        Only platforms whose official API exposes the description support it; others raise.
+        """
+        from .errors import ProviderError
+
+        raise ProviderError("ownership check not supported",
+                            user_message="Для этой платформы владение подтверждается входом через платформу")
+
     def normalize_response(self, raw: dict) -> dict:
         return raw
 

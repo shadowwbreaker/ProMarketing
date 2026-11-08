@@ -43,9 +43,17 @@ class PasswordChangeSerializer(serializers.Serializer):
 
 
 class ProfileSerializer(serializers.ModelSerializer):
+    avatar_url = serializers.SerializerMethodField()
+
     class Meta:
         model = UserProfile
-        fields = ["display_name", "bio", "country", "language", "timezone"]
+        fields = ["display_name", "bio", "country", "language", "timezone", "avatar_url"]
+        read_only_fields = ["avatar_url"]
+
+    def get_avatar_url(self, obj) -> str | None:
+        from .avatar import avatar_url
+
+        return avatar_url(obj)
 
 
 class MeSerializer(serializers.ModelSerializer):

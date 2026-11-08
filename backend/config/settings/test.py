@@ -11,4 +11,4 @@ SOCIAL_PROVIDER_MODE = "fake"
 PAYMENT_PROVIDER = "mock"
 FIELD_ENCRYPTION_KEY = "NDK-a6EEtVUQ79LstiJBL-0ub4XuhNWx-2Mcxu2FAq8="  # test-only key
 REST_FRAMEWORK = {**REST_FRAMEWORK, "DEFAULT_THROTTLE_RATES": {  # noqa: F405
-    k: "10000/min" for k in ("auth", "stats_refresh", "chat", "dispute_open", "ticket", "review")}}
+    k: "10000/min" for k in REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"]}}  # noqa: F405

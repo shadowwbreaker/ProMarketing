@@ -23,7 +23,7 @@ export function MessagesPanel() {
     <Card className="flex flex-col divide-y divide-border p-0">
       {items.map((t) => (
         <Link key={t.user.id} href={`/sellers/${t.user.id}`} className="flex items-center gap-3 p-4 hover:bg-bg">
-          <Avatar id={t.user.id} name={t.user.display_name} size={40} />
+          <Avatar id={t.user.id} name={t.user.display_name} size={40} src={t.user.avatar_url} />
           <div className="min-w-0 flex-1">
             <p className="flex justify-between gap-2 text-sm">
               <b className="truncate">{t.user.display_name}</b>

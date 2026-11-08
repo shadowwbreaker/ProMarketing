@@ -40,7 +40,7 @@ function UserMenu() {
     <div ref={ref} className="relative">
       <button onClick={() => setOpen((v) => !v)} aria-expanded={open} aria-haspopup="menu"
         className="flex min-w-0 items-center gap-2 font-semibold hover:text-accent">
-        <Avatar id={me.id} name={me.profile.display_name} size={28} />
+        <Avatar id={me.id} name={me.profile.display_name} size={28} src={me.profile.avatar_url} />
         <span className="hidden max-w-[9rem] truncate sm:inline">{me.profile.display_name}</span>
         <span className="text-xs">▾</span>
       </button>

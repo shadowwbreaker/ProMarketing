@@ -25,6 +25,8 @@ export type SocialAccount = {
   status: string;
   is_listed: boolean;
   ownership_verified: boolean;
+  ownership_code?: string;
+  ownership_check_supported?: boolean;
   statistics: StatsView;
   refresh?: {
     last_requested_at: string | null;
@@ -62,3 +64,6 @@ export const finishTikTokOAuth = (code: string, state: string) =>
   apiFetch<SocialAccount>("/social-accounts/oauth/tiktok/callback", { method: "POST", body: { code, state } });
 
 export const PLATFORM_LABEL: Record<string, string> = { tiktok: "TikTok", instagram: "Instagram Reels", youtube: "YouTube Shorts" };
+export const startOwnership = (id: string) => apiFetch<{ code: string }>(`/social-accounts/${id}/ownership/start`, { method: "POST" });
+export const checkOwnership = (id: string) =>
+  apiFetch<{ verified: boolean; account: SocialAccount }>(`/social-accounts/${id}/ownership/check`, { method: "POST" });

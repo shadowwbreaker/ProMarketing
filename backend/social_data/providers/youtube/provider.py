@@ -92,6 +92,11 @@ class YouTubeProvider(SocialDataProvider):
         return ResolvedAccount(platform="youtube", external_id=ch["id"], handle=handle, profile_url=url,
                                title=ch["snippet"].get("title", handle))
 
+    def profile_contains(self, account, code):
+        """Channel description via channels.list (official API, one call per user click)."""
+        ch = self._channel(account.external_id)
+        return code in (ch.get("snippet", {}).get("description") or "")
+
     def get_account_statistics(self, account, *, credentials=None):
         ch = self._channel(account.external_id)
         st = ch.get("statistics", {})

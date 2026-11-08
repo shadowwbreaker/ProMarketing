@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import cabinet, views
+from . import avatar, cabinet, views
 
 urlpatterns = [
     path("auth/csrf", views.CsrfView.as_view()),
@@ -15,6 +15,8 @@ urlpatterns = [
     path("auth/password-change", views.PasswordChangeView.as_view()),
     path("me", views.MeView.as_view()),
     path("me/2fa", views.TwoFactorView.as_view()),
+    path("me/avatar", avatar.MyAvatar.as_view()),
+    path("users/<uuid:user_id>/avatar", avatar.UserAvatar.as_view()),
     path("me/2fa/<str:action>", views.TwoFactorView.as_view()),
     path("me/become-seller", views.BecomeSellerView.as_view()),
     path("me/purchases", cabinet.MyPurchases.as_view()),

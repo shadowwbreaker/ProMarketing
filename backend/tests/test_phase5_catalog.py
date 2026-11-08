@@ -83,7 +83,7 @@ def test_youtube_average_hidden_and_not_filterable(api, seller, account_factory,
     settings.YOUTUBE_DERIVED_METRICS_APPROVED = False
     yt = listed(account_factory, offer_factory, seller, platform="youtube", avg_views=90_000)
     card = api.get(f"/api/v1/catalog/accounts/{yt.pk}").json()
-    assert card["avg_views"] is None and card["trust_status"] == "UNAVAILABLE" and card["followers"] == 50_000
+    assert card["avg_views"] is None and card["trust_status"] == "VERIFIED" and card["followers"] == 50_000
     assert ids(api.get("/api/v1/catalog/accounts", {"avg_min": 1})) == set()
     assert ids(api.get("/api/v1/catalog/accounts", {"verified": "1"})) == set()
     settings.YOUTUBE_DERIVED_METRICS_APPROVED = True

@@ -22,7 +22,7 @@ const { chromium } = require("playwright");
   await page.goto(`${base}/catalog?platform=youtube`);
   await page.getByText("Гаджеты без воды").click();
   await page.waitForURL("**/catalog/*");
-  await page.getByText("Недоступно").waitFor();
+  await page.getByText("скрыто до одобрения YouTube").first().waitFor();
   await page.getByRole("link", { name: "Заказать" }).first().waitFor();
   await page.getByRole("link", { name: /Демо-продавец/ }).click();
   await page.waitForURL("**/sellers/*");
