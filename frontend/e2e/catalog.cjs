@@ -18,6 +18,17 @@ const { chromium } = require("playwright");
   await page.goto(`${base}/catalog?category=${encodeURIComponent("Юмор")}&price_max=2000000`);
   await page.getByText("Мемы про учёбу").waitFor();
   if (await page.getByText("Мемы про офис").count()) throw new Error("price filter not applied");
+  // filter sheet: opens from the top, applies, closes; active filters counted on the button
+  await page.goto(`${base}/catalog`);
+  await page.getByRole("button", { name: /Фильтры/ }).click();
+  const sheet = page.getByRole("dialog", { name: "Фильтры каталога" });
+  await sheet.waitFor({ state: "visible" });
+  await sheet.getByLabel("Платформа").selectOption("youtube");
+  await sheet.getByRole("button", { name: "Применить" }).click();
+  await page.waitForURL(/platform=youtube/);
+  await sheet.waitFor({ state: "hidden" });
+  await page.getByText("Гаджеты без воды").waitFor();
+  if (await page.getByText("Мемы про офис").count()) throw new Error("platform filter not applied");
   // YouTube average hidden until approval (D-016)
   await page.goto(`${base}/catalog?platform=youtube`);
   await page.getByText("Гаджеты без воды").click();

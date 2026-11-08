@@ -1,8 +1,9 @@
 /** Money is stored in minor units (kopecks) — D-005. */
 export function formatMoney(amountMinor: number, currency = "RUB"): string {
-  return new Intl.NumberFormat("ru-RU", { style: "currency", currency, maximumFractionDigits: 2 }).format(
-    amountMinor / 100,
-  );
+  const whole = amountMinor % 100 === 0; // "9 000 ₽", not "9 000,00 ₽"
+  return new Intl.NumberFormat("ru-RU", {
+    style: "currency", currency, minimumFractionDigits: whole ? 0 : 2, maximumFractionDigits: 2,
+  }).format(amountMinor / 100);
 }
 
 export function formatCount(n: number): string {
