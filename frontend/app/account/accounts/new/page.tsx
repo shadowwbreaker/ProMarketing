@@ -10,7 +10,7 @@ import { Field } from "@/components/ui/Field";
 import { becomeSeller } from "@/lib/api/auth";
 import { createOffer, getAdFormats, rublesToMinor, setListing } from "@/lib/api/catalog";
 import { ApiError } from "@/lib/api/client";
-import { createSocialAccount, getSocialAccount, saveManualStats, SocialAccount, startTikTokOAuth } from "@/lib/api/social";
+import { checkClaim, createSocialAccount, getSocialAccount, saveManualStats, SocialAccount, startClaim, startTikTokOAuth } from "@/lib/api/social";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { fieldErrors } from "@/lib/forms";
 import { Platform, validateProfileUrl } from "@/lib/profile-url";
@@ -57,6 +57,7 @@ function NewAccountWizard() {
   const [account, setAccount] = useState<SocialAccount>();
   const [manual, setManual] = useState(false);
   const [oauthOffer, setOauthOffer] = useState(false);
+  const [claim, setClaim] = useState<{ id: string; code?: string; failed?: boolean }>();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<{ form?: string; fields: Record<string, string> }>({ fields: {} });
   const [formats, setFormats] = useState<{ value: string; label: string }[]>([]);
@@ -100,6 +101,7 @@ function NewAccountWizard() {
       setStep(3);
     } catch (ex) {
       if (ex instanceof ApiError && (ex.code === "oauth_required" || ex.details?.manual_allowed)) setOauthOffer(true);
+      if (ex instanceof ApiError && ex.code === "account_claimable") setClaim({ id: String(ex.details?.account_id) });
       setErr(fieldErrors(ex));
     } finally {
       setBusy(false);
@@ -219,6 +221,27 @@ function NewAccountWizard() {
               <div className="flex flex-col gap-2 rounded-lg border border-border p-3">
                 <Button type="button" onClick={connectTikTok}>Войти через TikTok</Button>
                 <p className="text-center text-xs text-muted">или</p>
+              </div>
+            )}
+            {claim && (
+              <div className="flex flex-col gap-2 rounded-lg border border-warn/60 p-3 text-sm">
+                {!claim.code ? (
+                  <Button type="button" variant="secondary" onClick={() => startClaim(claim.id).then((r) => setClaim({ ...claim, code: r.code })).catch((e) => setErr(fieldErrors(e)))}>
+                    Это мой канал — получить код
+                  </Button>
+                ) : (
+                  <>
+                    <p>
+                      Вставьте код <code className="rounded bg-bg px-1.5 font-mono font-bold">{claim.code}</code> в описание канала
+                      (YouTube Studio → «Настройка» → «Основные сведения»), опубликуйте и нажмите «Проверить».
+                    </p>
+                    {claim.failed && <p className="text-danger">Код в описании не найден. Изменения на YouTube иногда появляются через пару минут.</p>}
+                    <Button type="button" onClick={() => checkClaim(claim.id).then((r) => {
+                      if (r.claimed && r.account) { setAccount(r.account); setErr({ fields: {} }); setStep(3); }
+                      else setClaim({ ...claim, failed: true });
+                    }).catch((e) => setErr(fieldErrors(e)))}>Проверить</Button>
+                  </>
+                )}
               </div>
             )}
             <label className="flex items-start gap-2 text-sm">

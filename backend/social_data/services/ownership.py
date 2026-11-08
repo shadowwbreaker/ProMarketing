@@ -46,3 +46,77 @@ def check(account: SocialAccount, *, user) -> bool:
     record(action="social_account.ownership_check", subject_type="social_account", subject_id=account.pk, actor=user,
            after={"verified": found})
     return found
+
+
+def find_claimable(platform: str, external_id: str, user) -> SocialAccount | None:
+    """An account someone else added without proof of ownership can be claimed by its real owner."""
+    acc = SocialAccount.objects.filter(platform=platform, external_id=external_id).first()
+    if acc and acc.owner_id != user.pk and not acc.ownership_verified and platform in SUPPORTED:
+        return acc
+    return None
+
+
+def start_claim(account: SocialAccount, *, user) -> str:
+    from django.db import IntegrityError, transaction
+
+    from social_data.models import OwnershipClaim
+
+    if account.owner_id == user.pk or account.ownership_verified or account.platform not in SUPPORTED:
+        raise DomainError("Этот аккаунт нельзя забрать", code="not_claimable", status_code=400)
+    claim = OwnershipClaim.objects.filter(account=account, claimant=user, resolved_at__isnull=True).first()
+    if not claim:
+        try:
+            with transaction.atomic():
+                claim = OwnershipClaim.objects.create(account=account, claimant=user, code="PM-" + secrets.token_hex(3).upper())
+        except IntegrityError:
+            claim = OwnershipClaim.objects.get(account=account, claimant=user, resolved_at__isnull=True)
+        record(action="social_account.claim_started", subject_type="social_account", subject_id=account.pk, actor=user)
+    return claim.code
+
+
+def check_claim(account: SocialAccount, *, user) -> bool:
+    """On success the account moves to the claimant: unlisted, previous offers deactivated, previous owner notified."""
+    from django.db import transaction
+    from django.utils import timezone
+
+    from catalog.services import ACTIVE_ORDER_STATUSES
+    from notifications.services import notify
+    from social_data.models import OwnershipClaim
+
+    claim = OwnershipClaim.objects.filter(account=account, claimant=user, resolved_at__isnull=True).first()
+    if not claim:
+        raise DomainError("Сначала получите код", code="no_code", status_code=400)
+    if account.ownership_verified:
+        raise DomainError("Владение этим аккаунтом уже подтверждено другим пользователем — обратитесь в поддержку",
+                          code="already_verified", status_code=400)
+    resolved = ResolvedAccount(platform=account.platform, external_id=account.external_id, handle=account.handle,
+                               profile_url=account.profile_url, title=account.title)
+    try:
+        found = get_provider(account.platform).profile_contains(resolved, claim.code)
+    except errors.ProviderError as e:
+        raise DomainError(e.user_message, code=e.code, status_code=400) from e
+    record(action="social_account.claim_check", subject_type="social_account", subject_id=account.pk, actor=user,
+           after={"found": found})
+    if not found:
+        return False
+    if account.order_items.filter(status__in=ACTIVE_ORDER_STATUSES).exists():
+        raise DomainError("По аккаунту идут заказы — передача после их завершения, напишите в поддержку",
+                          code="active_orders", status_code=400)
+    with transaction.atomic():
+        previous = account.owner
+        account.offers.filter(is_active=True).update(is_active=False)
+        from catalog.models import NetworkItem
+
+        NetworkItem.objects.filter(social_account=account).delete()  # drop it from the previous owner's networks
+        account.owner = user
+        account.ownership_verified = True
+        account.ownership_code = ""
+        account.is_listed = False
+        account.status = SocialAccount.Status.ACTIVE
+        account.save(update_fields=["owner", "ownership_verified", "ownership_code", "is_listed", "status", "updated_at"])
+        OwnershipClaim.objects.filter(account=account, resolved_at__isnull=True).update(resolved_at=timezone.now())
+        record(action="social_account.claimed", subject_type="social_account", subject_id=account.pk, actor=user,
+               before={"owner": str(previous.pk)}, after={"owner": str(user.pk)})
+        notify(previous, "account.claimed", "Аккаунт передан владельцу",
+               f"Владелец @{account.handle} подтвердил права на аккаунт, он удалён из ваших объявлений.")
+    return True

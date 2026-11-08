@@ -67,3 +67,6 @@ export const PLATFORM_LABEL: Record<string, string> = { tiktok: "TikTok", instag
 export const startOwnership = (id: string) => apiFetch<{ code: string }>(`/social-accounts/${id}/ownership/start`, { method: "POST" });
 export const checkOwnership = (id: string) =>
   apiFetch<{ verified: boolean; account: SocialAccount }>(`/social-accounts/${id}/ownership/check`, { method: "POST" });
+export const startClaim = (id: string) => apiFetch<{ code: string }>(`/social-accounts/${id}/claim/start`, { method: "POST" });
+export const checkClaim = (id: string) =>
+  apiFetch<{ claimed: boolean; account: SocialAccount | null }>(`/social-accounts/${id}/claim/check`, { method: "POST" });

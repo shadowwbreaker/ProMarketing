@@ -112,6 +112,13 @@ class SocialAccountListCreate(APIView):
             except errors.ProviderError as e:
                 raise DomainError(e.user_message, code=e.code, status_code=400,
                                   details={"manual_allowed": True}) from e
+        existing = SocialAccount.objects.filter(platform=resolved.platform, external_id=resolved.external_id).first()
+        if existing and existing.owner_id != request.user.pk:
+            from .services.ownership import find_claimable
+
+            if find_claimable(resolved.platform, resolved.external_id, request.user):
+                raise DomainError("Этот канал уже добавил другой пользователь, не подтвердив владение. Если канал ваш — подтвердите это кодом в описании, и он перейдёт к вам.",
+                                  code="account_claimable", status_code=409, details={"account_id": str(existing.pk)})
         account = _create_account(request.user, resolved, d, manual=d["manual"])
         if not d["manual"]:
             svc.request_refresh(account.pk, user=request.user, trigger=StatsRefreshJob.Trigger.ACCOUNT_ADDED)
@@ -254,4 +261,24 @@ class SocialAccountOwnership(APIView):
             ok = ownership.check(account, user=request.user)
             account.refresh_from_db()
             return Response({"verified": ok, "account": account_payload(account, for_owner=True)})
+        raise DomainError("Неизвестное действие", code="bad_action", status_code=404)
+
+
+class SocialAccountClaim(APIView):
+    """POST /social-accounts/{id}/claim/{start|check} — the real owner takes over an unverified account (D-020)."""
+
+    permission_classes = [HasPerm("account.manage_own")]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "ownership"
+
+    def post(self, request, pk, action):
+        from .services import ownership
+
+        account = get_object_or_404(SocialAccount, pk=pk)
+        if action == "start":
+            return Response({"code": ownership.start_claim(account, user=request.user)})
+        if action == "check":
+            ok = ownership.check_claim(account, user=request.user)
+            account.refresh_from_db()
+            return Response({"claimed": ok, "account": account_payload(account, for_owner=True) if ok else None})
         raise DomainError("Неизвестное действие", code="bad_action", status_code=404)

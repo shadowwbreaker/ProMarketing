@@ -95,3 +95,39 @@ def test_youtube_ownership_code_not_found(api, user_factory):
     other = user_factory(roles=("buyer", "seller"))
     api.force_authenticate(other)
     assert api.post(f"/api/v1/social-accounts/{acc_id}/ownership/start").status_code == 404  # only the owner
+
+
+def test_real_owner_claims_unverified_channel(api, user_factory):
+    from social_data.models import SocialAccount
+
+    squatter = user_factory(roles=("buyer", "seller"))
+    acc_id = _yt_account(api, squatter, "famouschannel")
+    owner = user_factory(roles=("buyer", "seller"))
+    api.force_authenticate(owner)
+    r = api.post("/api/v1/social-accounts", {"profile_url": "https://www.youtube.com/@famouschannel/shorts"}, format="json")
+    assert r.status_code == 409 and r.json()["error"]["code"] == "account_claimable"
+    assert r.json()["error"]["details"]["account_id"] == acc_id
+    assert api.post(f"/api/v1/social-accounts/{acc_id}/claim/check").status_code == 400  # code first
+    code = api.post(f"/api/v1/social-accounts/{acc_id}/claim/start").json()["code"]
+    assert code.startswith("PM-")
+    r = api.post(f"/api/v1/social-accounts/{acc_id}/claim/check")
+    assert r.status_code == 200 and r.json()["claimed"] is True
+    acc = SocialAccount.objects.get(pk=acc_id)
+    assert acc.owner_id == owner.pk and acc.ownership_verified and not acc.is_listed
+    assert squatter.notifications.filter(type="account.claimed").exists()
+    # verified now: nobody else can claim it
+    third = user_factory(roles=("buyer", "seller"))
+    api.force_authenticate(third)
+    assert api.post(f"/api/v1/social-accounts/{acc_id}/claim/start").status_code == 400
+
+
+def test_claim_rejected_when_code_missing(api, user_factory):
+    squatter = user_factory(roles=("buyer", "seller"))
+    acc_id = _yt_account(api, squatter, "other_notmine")
+    claimant = user_factory(roles=("buyer", "seller"))
+    api.force_authenticate(claimant)
+    api.post(f"/api/v1/social-accounts/{acc_id}/claim/start")
+    r = api.post(f"/api/v1/social-accounts/{acc_id}/claim/check")
+    assert r.status_code == 200 and r.json()["claimed"] is False
+    api.force_authenticate(squatter)
+    assert api.post(f"/api/v1/social-accounts/{acc_id}/claim/start").status_code == 400  # own account

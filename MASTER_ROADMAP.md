@@ -18,7 +18,7 @@
 | Мастер «Добавить аккаунт» (платформа → ссылка → статистика → объявление) | `[v] VERIFIED` — e2e `accounts` |
 | Публичный профиль по образцу FunPay, сообщения до оплаты | `[v] VERIFIED` — e2e `profile`, pytest |
 | Меню пользователя, сгруппированный кабинет, упрощённые фильтры каталога, карточки без обрезки | `[v] VERIFIED` — e2e `responsive` |
-| Подтверждение владения YouTube кодом в описании (D-020) | `[v] VERIFIED` — pytest, e2e `accounts` |
+| Подтверждение владения YouTube кодом в описании и передача канала настоящему владельцу (D-020) | `[v] VERIFIED` — pytest, e2e `accounts` |
 | Фото профиля | `[v] VERIFIED` — pytest `test_avatar`, e2e `profile` |
 | Скиллы дизайна в `.claude/skills` (jakubkrehel/skills, oil-ui, logo-design, scroll-world) | `[v] DONE` — список и заметки в `.claude/skills/README.md` |
 | Новая карточка каталога (платформа, 2 цифры, цена, продавец) и фильтры отдельной панелью сверху с плавным появлением/скрытием | `[v] VERIFIED` — e2e `catalog` (открыть → применить → закрыто) |

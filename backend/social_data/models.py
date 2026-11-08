@@ -1,3 +1,5 @@
+import uuid
+
 from django.conf import settings
 from django.db import models
 
@@ -155,3 +157,21 @@ class SocialVideo(BaseModel):
         constraints = [
             models.UniqueConstraint(fields=["statistics", "external_video_id"], name="video_unique_per_snapshot")
         ]
+
+
+class OwnershipClaim(models.Model):
+    """A user says an account added by someone else (without proof) is theirs (D-020).
+
+    Resolved by the same code-in-description check; on success the account moves to the claimant.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    account = models.ForeignKey(SocialAccount, on_delete=models.CASCADE, related_name="claims")
+    claimant = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="+")
+    code = models.CharField(max_length=16)
+    created_at = models.DateTimeField(auto_now_add=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["account", "claimant"], condition=models.Q(resolved_at__isnull=True),
+                                               name="one_open_claim_per_user_account")]
