@@ -15,6 +15,24 @@ const Label = ({ children }: { children: React.ReactNode }) => (
   <h2 className="mb-2 text-[11px] font-bold uppercase tracking-wider text-muted">{children}</h2>
 );
 
+/** Raw views of the latest videos as the platform returned them (oldest → newest), no averaging. */
+function RecentViews({ views }: { views: number[] }) {
+  const series = [...views].reverse();
+  const max = Math.max(...series, 1);
+  return (
+    <figure className="mt-4">
+      <figcaption className="mb-2 text-xs text-muted">Просмотры последних {series.length} видео — данные платформы, от старых к новым</figcaption>
+      <div className="flex h-20 items-end gap-1" aria-hidden>
+        {series.map((v, i) => (
+          <span key={i} title={formatCount(v)} style={{ height: `${Math.max(4, (v / max) * 100)}%`, animationDelay: `${i * 25}ms` }}
+            className="page-enter flex-1 rounded-t-md bg-gradient-to-t from-accent/70 to-[#7c4dff]/70 transition-opacity duration-150 hover:opacity-80" />
+        ))}
+      </div>
+      <p className="sr-only">{series.map(formatCount).join(", ")}</p>
+    </figure>
+  );
+}
+
 /** Offer page in FunPay's "Оформление заказа" layout: the deal on the left, the seller chat on the right. */
 export default function OfferPage() {
   const { id } = useParams<{ id: string }>();
@@ -61,6 +79,7 @@ export default function OfferPage() {
                 <dt className="text-xs text-muted">{o.avg_views != null ? `просмотров на видео, среднее по ${o.videos_in_sample}` : "просмотры скрыты до одобрения YouTube"}</dt>
               </div>
             </dl>
+            {o.recent_views && o.recent_views.length > 1 && <RecentViews views={o.recent_views} />}
             <p className="mt-2 text-xs text-muted">
               {o.trust_status === "VERIFIED" ? "✓ Получено из официального API платформы" : o.trust_status === "MANUAL" ? "Указано продавцом вручную" : "Данные могли устареть"}
               {o.stats_updated_at && ` · ${formatDateTime(o.stats_updated_at)}`}

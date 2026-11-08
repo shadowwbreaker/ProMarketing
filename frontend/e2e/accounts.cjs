@@ -24,8 +24,14 @@ const { chromium } = require("playwright");
   await page.getByText("Нужна ссылка на страницу Shorts").waitFor(); // /shorts is required
   await page.getByLabel("Ссылка на страницу Shorts канала").fill(`https://www.youtube.com/@e2e${Date.now()}/shorts`);
   await page.getByRole("button", { name: "Далее" }).click();
+  // D-024: owner consent before the API request; the button stays disabled until the box is ticked
+  const consent = page.getByRole("dialog", { name: "Разрешите получить статистику канала" });
+  await consent.waitFor();
+  if (await consent.getByRole("button", { name: "Разрешаю и продолжаю" }).isEnabled()) throw new Error("consent must be required");
+  await consent.getByLabel("Разрешаю получить статистику канала").check();
+  await consent.getByRole("button", { name: "Разрешаю и продолжаю" }).click();
   await page.getByText("(15 видео)").waitFor({ timeout: 20000 });
-  await page.getByText("подписчиков").waitFor();
+  await page.getByText("подписчиков", { exact: true }).waitFor();
   await page.getByRole("button", { name: "Далее" }).click();
   await page.getByLabel("Название объявления").fill("Реклама в моих Shorts");
   await page.getByLabel("Условия работы").fill("Интеграция до 30 секунд, одна правка");

@@ -17,6 +17,7 @@ from .core import errors
 from .core.registry import get_provider, platform_enabled
 from .core.url_parser import detect_platform
 from .models import SocialAccount, SocialAccountConnection, SocialAccountStatistics, StatsRefreshJob
+from . import consent
 from .services import refresh_service as svc
 
 
@@ -99,6 +100,8 @@ class SocialAccountListCreate(APIView):
             raise DomainError(e.user_message, code=e.code, status_code=400) from e
         if not platform_enabled(platform):
             raise DomainError("Платформа недоступна на сервисе", code="platform_disabled", status_code=400)
+        if not d["manual"]:
+            consent.require(request.data)  # D-024: the owner allows the API request before it is made
         if d["manual"]:
             from .providers.manual.provider import ManualProvider
 
@@ -121,6 +124,8 @@ class SocialAccountListCreate(APIView):
                                   code="account_claimable", status_code=409, details={"account_id": str(existing.pk)})
         account = _create_account(request.user, resolved, d, manual=d["manual"])
         if not d["manual"]:
+            consent.record_consent(user=request.user, request=request, platform=account.platform,
+                                   profile_url=account.profile_url, purpose="add", account=account)
             svc.request_refresh(account.pk, user=request.user, trigger=StatsRefreshJob.Trigger.ACCOUNT_ADDED)
             account.refresh_from_db()
         return Response(account_payload(account, for_owner=True), status=status.HTTP_201_CREATED)
@@ -157,7 +162,10 @@ class SocialAccountRefresh(APIView):
     @extend_schema(request=None, responses={202: dict})
     def post(self, request, pk):
         account = _owned(request, pk)
+        consent.require(request.data)
         job = svc.request_refresh(account.pk, user=request.user)
+        consent.record_consent(user=request.user, request=request, platform=account.platform,
+                               profile_url=account.profile_url, purpose="refresh", account=account)
         account.refresh_from_db()
         return Response({"job_id": str(job.pk), "account": account_payload(account, for_owner=True)}, status=202)
 
@@ -201,6 +209,9 @@ class TikTokOAuthStart(APIView):
             provider = TikTokProvider.from_settings()
         except errors.ProviderNotConfigured as e:
             raise DomainError(e.user_message, code=e.code, status_code=503) from e
+        if request.query_params.get("consent") != "1":
+            consent.require({})
+        consent.record_consent(user=request.user, request=request, platform="tiktok", profile_url="", purpose="add")
         url, state = provider.authorize_url()
         request.session[SESSION_STATE_KEY] = state
         return Response({"authorize_url": url})

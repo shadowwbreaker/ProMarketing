@@ -137,6 +137,11 @@ def offer_card(acc: SocialAccount, ratings: dict, *, with_offers=False) -> dict:
     }
     if with_offers:
         card["description"] = acc.description
+        # Raw per-video views exactly as the platform API returned them (not a derived metric, D-024):
+        # buyers can judge the channel even while the YouTube average is hidden (D-016).
+        cur = acc.current_statistics
+        card["recent_views"] = ([v.views for v in cur.videos.order_by("-published_at", "-views")[:15]]
+                                if cur and cur.trust_status in ("VERIFIED", "STALE") else [])
         card["offers"] = [{"id": str(o.pk), "ad_format": o.ad_format, "ad_format_label": o.get_ad_format_display(),
                            "price_minor": o.price_minor, "conditions": o.conditions, "placement_days": o.placement_days,
                            "publish_within_days": o.publish_within_days} for o in offers]

@@ -67,7 +67,7 @@ def test_youtube_shorts_links_including_cyrillic_handles():
 
 def _yt_account(api, user, handle):
     api.force_authenticate(user)
-    r = api.post("/api/v1/social-accounts", {"profile_url": f"https://www.youtube.com/@{handle}/shorts"}, format="json")
+    r = api.post("/api/v1/social-accounts", {"profile_url": f"https://www.youtube.com/@{handle}/shorts", "consent": True}, format="json")
     assert r.status_code == 201, r.json()
     assert r.json()["ownership_verified"] is False and r.json()["ownership_check_supported"] is True
     return r.json()["id"]
@@ -104,7 +104,7 @@ def test_real_owner_claims_unverified_channel(api, user_factory):
     acc_id = _yt_account(api, squatter, "famouschannel")
     owner = user_factory(roles=("buyer", "seller"))
     api.force_authenticate(owner)
-    r = api.post("/api/v1/social-accounts", {"profile_url": "https://www.youtube.com/@famouschannel/shorts"}, format="json")
+    r = api.post("/api/v1/social-accounts", {"profile_url": "https://www.youtube.com/@famouschannel/shorts", "consent": True}, format="json")
     assert r.status_code == 409 and r.json()["error"]["code"] == "account_claimable"
     assert r.json()["error"]["details"]["account_id"] == acc_id
     assert api.post(f"/api/v1/social-accounts/{acc_id}/claim/check").status_code == 400  # code first
@@ -147,3 +147,22 @@ def test_display_name_cannot_be_changed_and_password_change(api, user_factory):
     assert ok.status_code == 200
     u.refresh_from_db()
     assert u.check_password("N3w-strong-pass!")
+
+
+def test_stats_need_owner_consent_on_add_and_refresh(api, user_factory):
+    from social_data.models import StatsConsent
+
+    seller = user_factory(roles=("buyer", "seller"))
+    api.force_authenticate(seller)
+    url = "https://www.youtube.com/@consentcheck/shorts"
+    r = api.post("/api/v1/social-accounts", {"profile_url": url}, format="json")
+    assert r.status_code == 400 and r.json()["error"]["code"] == "consent_required"
+    r = api.post("/api/v1/social-accounts", {"profile_url": url, "consent": True}, format="json")
+    assert r.status_code == 201
+    acc_id = r.json()["id"]
+    c = StatsConsent.objects.get(account_id=acc_id)
+    assert c.purpose == "add" and c.text_version and c.user_id == seller.pk
+    assert api.post(f"/api/v1/social-accounts/{acc_id}/refresh").json()["error"]["code"] == "consent_required"
+    # manual entry does not touch the platform API, so no consent is asked
+    r = api.post("/api/v1/social-accounts", {"profile_url": "https://www.youtube.com/@manualonly/shorts", "manual": True}, format="json")
+    assert r.status_code == 201

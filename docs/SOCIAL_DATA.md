@@ -132,3 +132,7 @@ API: `POST /social-accounts`, `GET /social-accounts/{id}`, `POST /social-account
 - YouTube Derived Metrics Policy: https://developers.google.cn/youtube/terms/derived-metrics-policy
 - YouTube Terms revision history: https://developers.google.com/youtube/terms/revision-history
 - Запрет рекламы в Instagram (РБК): https://rbc.ru/society/07/04/2025/67f3c1569a79478b85f9f1ec
+
+## Согласие владельца (D-024, 2026-11-09)
+
+Перед каждым запросом к API платформы (добавление канала, «Обновить статистику», вход через TikTok) владелец ставит галочку согласия; сервер без `consent: true` запрос не выполняет и сохраняет запись `StatsConsent`. Покупатели видят сырые просмотры последних 15 видео; среднее по YouTube — после одобрения сценария Analytics & Reporting (D-016).

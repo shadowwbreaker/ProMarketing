@@ -29,6 +29,7 @@ export type OfferCard = {
   description?: string;
   derived_metrics_note?: string;
   offers?: { id: string; ad_format: string; ad_format_label: string; price_minor: number; conditions: string; placement_days: number; publish_within_days: number }[];
+  recent_views?: number[];
 };
 
 export type NetworkCard = {

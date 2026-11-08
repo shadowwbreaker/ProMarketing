@@ -143,3 +143,16 @@ def test_counts_online_filter_and_seller_brief(api, seller, account_factory, off
     assert str(tt.pk) not in ids(api.get("/api/v1/catalog/accounts", {"online": "1"}))
     type(seller).objects.filter(pk=seller.pk).update(last_seen_at=timezone.now())
     assert str(tt.pk) in ids(api.get("/api/v1/catalog/accounts", {"online": "1"}))
+
+
+@pytest.mark.django_db
+def test_offer_page_shows_raw_recent_views(api, seller, account_factory, offer_factory):
+    from social_data.models import SocialVideo
+
+    acc = listed(account_factory, offer_factory, seller, platform="youtube")
+    for i, v in enumerate([100, 200, 300]):
+        SocialVideo.objects.create(statistics=acc.current_statistics, external_video_id=f"v{i}", views=v,
+                                        url=f"https://youtube.com/shorts/v{i}")
+    d = api.get(f"/api/v1/catalog/accounts/{acc.pk}").json()
+    assert sorted(d["recent_views"]) == [100, 200, 300]
+    assert d["avg_views"] is None  # the derived average stays hidden (D-016)

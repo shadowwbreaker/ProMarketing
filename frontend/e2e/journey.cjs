@@ -69,7 +69,7 @@ async function login(page, email) {
     await seller.getByText(text).first().click();
     await seller.getByLabel(/Сообщение для/).fill("Да, могу снять в четверг.");
     await seller.getByRole("button", { name: "Отправить" }).click();
-    await seller.getByText("Да, могу снять в четверг.").waitFor();
+    await seller.getByText("Да, могу снять в четверг.").first().waitFor();
   });
   await step("Покупатель оформляет и оплачивает заказ", async () => {
     await buyer.goto(offerUrl);

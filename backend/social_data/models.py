@@ -175,3 +175,27 @@ class OwnershipClaim(models.Model):
     class Meta:
         constraints = [models.UniqueConstraint(fields=["account", "claimant"], condition=models.Q(resolved_at__isnull=True),
                                                name="one_open_claim_per_user_account")]
+
+
+class StatsConsent(models.Model):
+    """The owner's explicit permission to fetch channel statistics from the platform's official API (D-024).
+
+    Asked on adding a channel and on every manual refresh; append-only evidence (who, when, what text, from where).
+    """
+
+    class Purpose(models.TextChoices):
+        ADD = "add", "Добавление канала"
+        REFRESH = "refresh", "Обновление статистики"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="+")
+    account = models.ForeignKey(SocialAccount, null=True, blank=True, on_delete=models.SET_NULL, related_name="consents")
+    platform = models.CharField(max_length=16)
+    profile_url = models.URLField(max_length=500, blank=True)
+    purpose = models.CharField(max_length=16, choices=Purpose.choices)
+    text_version = models.CharField(max_length=16)
+    ip = models.GenericIPAddressField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [models.Index(fields=["account", "created_at"])]

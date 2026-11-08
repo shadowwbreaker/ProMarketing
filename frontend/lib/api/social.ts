@@ -55,11 +55,11 @@ export const createSocialAccount = (body: Record<string, unknown>) =>
   apiFetch<SocialAccount>("/social-accounts", { method: "POST", body });
 export const getSocialAccount = (id: string) => apiFetch<SocialAccount>(`/social-accounts/${id}`);
 export const refreshSocialAccount = (id: string) =>
-  apiFetch<{ job_id: string; account: SocialAccount }>(`/social-accounts/${id}/refresh`, { method: "POST" });
+  apiFetch<{ job_id: string; account: SocialAccount }>(`/social-accounts/${id}/refresh`, { method: "POST", body: { consent: true } });
 export const getStatsHistory = (id: string) => apiFetch<StatsHistory>(`/social-accounts/${id}/statistics`);
 export const saveManualStats = (id: string, followers: number, video_views: number[]) =>
   apiFetch<SocialAccount>(`/social-accounts/${id}/manual-statistics`, { method: "POST", body: { followers, video_views } });
-export const startTikTokOAuth = () => apiFetch<{ authorize_url: string }>("/social-accounts/oauth/tiktok/start");
+export const startTikTokOAuth = () => apiFetch<{ authorize_url: string }>("/social-accounts/oauth/tiktok/start?consent=1");
 export const finishTikTokOAuth = (code: string, state: string) =>
   apiFetch<SocialAccount>("/social-accounts/oauth/tiktok/callback", { method: "POST", body: { code, state } });
 

@@ -29,7 +29,7 @@ def _reset_overrides():
 
 
 def add(api, url=TT, **extra):
-    return api.post("/api/v1/social-accounts", {"profile_url": url, "category": "lifestyle", **extra}, format="json")
+    return api.post("/api/v1/social-accounts", {"profile_url": url, "category": "lifestyle", "consent": True, **extra}, format="json")
 
 
 # --- formula -------------------------------------------------------------------
@@ -90,12 +90,12 @@ def test_refresh_interval_enforced_and_shown(api, seller):
     api.force_login(seller)
     with freeze_time("2026-11-07 10:00:00"):
         acc_id = add(api).json()["id"]
-        r = api.post(f"/api/v1/social-accounts/{acc_id}/refresh")
+        r = api.post(f"/api/v1/social-accounts/{acc_id}/refresh", {"consent": True}, format="json")
         assert r.status_code == 429
         assert r.json()["error"]["code"] == "rate_limited"
         assert r.json()["error"]["details"]["next_allowed_at"].startswith("2026-11-08T10:00")
     with freeze_time("2026-11-08 10:00:01"):
-        r = api.post(f"/api/v1/social-accounts/{acc_id}/refresh")
+        r = api.post(f"/api/v1/social-accounts/{acc_id}/refresh", {"consent": True}, format="json")
         assert r.status_code == 202
     assert SocialAccountStatistics.objects.filter(social_account_id=acc_id).count() == 2  # history kept
 
@@ -107,7 +107,7 @@ def test_concurrent_refresh_rejected(api, seller):
     acc_id = add(api).json()["id"]
     SocialAccount.objects.filter(pk=acc_id).update(last_refresh_requested_at=timezone.now() - timedelta(days=2))
     StatsRefreshJob.objects.create(social_account_id=acc_id, requested_by=seller, trigger="user_refresh")  # running elsewhere
-    r = api.post(f"/api/v1/social-accounts/{acc_id}/refresh")
+    r = api.post(f"/api/v1/social-accounts/{acc_id}/refresh", {"consent": True}, format="json")
     assert r.status_code == 409 and r.json()["error"]["code"] == "refresh_in_progress"
 
 
@@ -138,7 +138,7 @@ def test_error_does_not_destroy_previous_statistics(api, seller):
     before = SocialAccount.objects.get(pk=acc_id).current_statistics_id
     SocialAccount.objects.filter(pk=acc_id).update(last_refresh_requested_at=timezone.now() - timedelta(days=2))
     set_provider_override("tiktok", FailingProvider("tiktok"))
-    assert api.post(f"/api/v1/social-accounts/{acc_id}/refresh").status_code == 202
+    assert api.post(f"/api/v1/social-accounts/{acc_id}/refresh", {"consent": True}, format="json").status_code == 202
     acc = SocialAccount.objects.get(pk=acc_id)
     assert acc.current_statistics_id == before
     detail = api.get(f"/api/v1/social-accounts/{acc_id}").json()
@@ -161,7 +161,7 @@ def test_suspicious_growth_hides_account_for_review(api, seller):
     acc_id = add(api).json()["id"]
     SocialAccount.objects.filter(pk=acc_id).update(last_refresh_requested_at=timezone.now() - timedelta(days=2))
     set_provider_override("tiktok", GrowthProvider("tiktok"))
-    api.post(f"/api/v1/social-accounts/{acc_id}/refresh")
+    api.post(f"/api/v1/social-accounts/{acc_id}/refresh", {"consent": True}, format="json")
     acc = SocialAccount.objects.get(pk=acc_id)
     assert acc.current_statistics.trust_status == "SUSPICIOUS"
     assert acc.status == "under_review"
@@ -228,7 +228,7 @@ def test_access_rules(api, seller, user_factory):
     api.force_login(other)
     for path in ["", "/statistics"]:
         assert api.get(f"/api/v1/social-accounts/{acc_id}{path}").status_code == 404
-    assert api.post(f"/api/v1/social-accounts/{acc_id}/refresh").status_code == 404
+    assert api.post(f"/api/v1/social-accounts/{acc_id}/refresh", {"consent": True}, format="json").status_code == 404
     r = add(api, url="https://www.instagram.com/some_brand")
     assert r.status_code == 400 and r.json()["error"]["code"] == "platform_disabled"  # D-013
     assert add(api, url="https://evil.example.com/@x").json()["error"]["code"] == "invalid_profile_url"
@@ -341,12 +341,12 @@ def test_tiktok_oauth_flow_verifies_ownership_and_encrypts_tokens(api, seller, s
                         real_init(self, k, s, http=httpx.Client(transport=tiktok_transport(calls)), redirect_uri="http://x/cb"))
     settings.SOCIAL_PROVIDER_MODE = "official"
     api.force_login(seller)
-    start = api.get("/api/v1/social-accounts/oauth/tiktok/start").json()
+    start = api.get("/api/v1/social-accounts/oauth/tiktok/start?consent=1").json()
     state = start["authorize_url"].split("state=")[1]
     bad = api.post("/api/v1/social-accounts/oauth/tiktok/callback", {"code": "C", "state": "forged"}, format="json")
     assert bad.json()["error"]["code"] == "oauth_state_mismatch"
-    api.get("/api/v1/social-accounts/oauth/tiktok/start")
-    state = api.get("/api/v1/social-accounts/oauth/tiktok/start").json()["authorize_url"].split("state=")[1]
+    api.get("/api/v1/social-accounts/oauth/tiktok/start?consent=1")
+    state = api.get("/api/v1/social-accounts/oauth/tiktok/start?consent=1").json()["authorize_url"].split("state=")[1]
     r = api.post("/api/v1/social-accounts/oauth/tiktok/callback", {"code": "C", "state": state}, format="json")
     assert r.status_code == 201, r.content
     acc = SocialAccount.objects.get(pk=r.json()["id"])

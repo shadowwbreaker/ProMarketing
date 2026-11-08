@@ -4,6 +4,7 @@ import { useParams, useSearchParams } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { OffersPanel } from "@/components/OffersPanel";
 import { OwnershipCard } from "@/components/OwnershipCard";
+import { ConsentDialog } from "@/components/ConsentDialog";
 import { TrustBadge } from "@/components/stats/TrustBadge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -25,6 +26,7 @@ import { formatCount, formatDateTime } from "@/lib/format";
 export default function AccountDetailPage() {
   const { id } = useParams<{ id: string }>();
   const toast = useToast();
+  const [askConsent, setAskConsent] = useState(false);
   const qs = useSearchParams();
   const created = qs.get("created") === "1";
   const listingError = qs.get("listing_error");
@@ -111,7 +113,9 @@ export default function AccountDetailPage() {
           {acc.ownership_verified && <span className="ml-2 text-xs text-ok">владение подтверждено</span>}
         </div>
         <div className="text-right">
-          <Button onClick={refresh} loading={busy || running} disabled={!!acc.refresh?.next_allowed_at}>
+          <ConsentDialog open={askConsent} platform={acc.platform} title="Обновить статистику канала?"
+            onConfirm={() => { setAskConsent(false); void refresh(); }} onCancel={() => setAskConsent(false)} />
+          <Button onClick={() => setAskConsent(true)} loading={busy || running} disabled={!!acc.refresh?.next_allowed_at}>
             Обновить статистику
           </Button>
           <p className="mt-1 text-xs text-muted">

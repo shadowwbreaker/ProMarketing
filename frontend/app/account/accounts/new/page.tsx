@@ -7,6 +7,7 @@ import { FormError } from "@/components/AuthCard";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Field } from "@/components/ui/Field";
+import { ConsentDialog } from "@/components/ConsentDialog";
 import { becomeSeller } from "@/lib/api/auth";
 import { createOffer, getAdFormats, rublesToMinor, setListing } from "@/lib/api/catalog";
 import { ApiError } from "@/lib/api/client";
@@ -91,19 +92,29 @@ function NewAccountWizard() {
     }
   }
 
-  async function submitLink(e: FormEvent) {
+  // D-024: the owner allows the API request first (checkbox dialog), manual entry needs no permission
+  const [askConsent, setAskConsent] = useState(false);
+
+  function submitLink(e: FormEvent) {
     e.preventDefault();
     const problem = validateProfileUrl(platform, url);
     if (problem) return setErr({ fields: { profile_url: problem } });
+    if (manual) void createAccount(false);
+    else setAskConsent(true);
+  }
+
+  async function createAccount(consent: boolean) {
+    setAskConsent(false);
     setBusy(true);
     setErr({ fields: {} });
     try {
       await ensureSeller();
-      const acc = await createSocialAccount({ profile_url: url.trim(), manual });
+      const acc = await createSocialAccount({ profile_url: url.trim(), manual, consent });
       setAccount(acc);
       setStep(3);
     } catch (ex) {
-      if (ex instanceof ApiError && (ex.code === "oauth_required" || ex.details?.manual_allowed)) setOauthOffer(true);
+      if (ex instanceof ApiError && ex.code === "oauth_required") return void connectTikTok(); // consent already given
+      if (ex instanceof ApiError && ex.details?.manual_allowed) setOauthOffer(true);
       if (ex instanceof ApiError && ex.code === "account_claimable") setClaim({ id: String(ex.details?.account_id) });
       setErr(fieldErrors(ex));
     } finally {
@@ -201,6 +212,9 @@ function NewAccountWizard() {
         </Card>
       )}
 
+      <ConsentDialog open={askConsent} platform={platform} title="Разрешите получить статистику канала"
+        onConfirm={() => void createAccount(true)} onCancel={() => setAskConsent(false)} />
+
       {step === 2 && (
         <Card>
           <form onSubmit={submitLink} className="flex flex-col gap-4" noValidate>
@@ -222,7 +236,7 @@ function NewAccountWizard() {
             )}
             {(oauthOffer || manual) && platform === "tiktok" && (
               <div className="flex flex-col gap-2 rounded-lg border border-border p-3">
-                <Button type="button" onClick={connectTikTok}>Войти через TikTok</Button>
+                <Button type="button" onClick={() => setAskConsent(true)}>Войти через TikTok</Button>
                 <p className="text-center text-xs text-muted">или</p>
               </div>
             )}
