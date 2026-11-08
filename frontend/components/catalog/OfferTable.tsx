@@ -34,6 +34,18 @@ export function SellerCell({ s }: { s: SellerBrief }) {
   );
 }
 
+/** @handle opens the channel itself on TikTok/YouTube (new tab), above the row's stretched link. */
+export function ChannelLink({ url, handle, verified }: { url: string; handle: string; verified?: boolean }) {
+  return (
+    <a href={url} target="_blank" rel="noopener noreferrer nofollow" title="Открыть канал на платформе"
+      className="relative z-10 inline-flex items-center gap-0.5 underline decoration-border underline-offset-2 transition-colors duration-150 hover:text-accent hover:decoration-accent">
+      @{handle}
+      {verified && <span className="text-ok no-underline" title="Владение каналом подтверждено"> ✓</span>}
+      <span aria-hidden className="text-[10px]">↗</span>
+    </a>
+  );
+}
+
 function PlatformTag({ p }: { p: string }) {
   return (
     <span className="inline-flex items-center gap-1 text-xs text-muted">
@@ -52,7 +64,7 @@ export function OfferRow({ o }: { o: OfferCard }) {
         <Link href={`/catalog/${o.id}`} className={`line-clamp-2 font-medium ${stretched}`}>{o.title}</Link>
         <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-muted">
           <PlatformTag p={o.platform} />
-          <span>@{o.handle}{o.ownership_verified && <span className="text-ok" title="Владение каналом подтверждено"> ✓</span>}</span>
+          <ChannelLink url={o.profile_url} handle={o.handle} verified={o.ownership_verified} />
           {o.trust_status === "MANUAL" && <span className="text-warn">цифры указаны вручную</span>}
           {o.trust_status === "STALE" && <span>данные устарели</span>}
           <span className="sm:hidden">· {o.followers != null ? formatCount(o.followers) : "—"} подп.</span>

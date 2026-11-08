@@ -1,4 +1,18 @@
 # Automatic HTTPS (Let's Encrypt). SITE_DOMAIN=promarketing.ru, API_DOMAIN=api.promarketing.ru
+# Slow-client protection (slowloris): short header/body read timeouts, small headers.
+# Volumetric DDoS must be absorbed before this server (DDoS-Guard / Qrator / Yandex Cloud DDoS Protection) — see docs/DEPLOYMENT.md.
+{
+	servers {
+		timeouts {
+			read_header 10s
+			read_body 30s
+			write 60s
+			idle 2m
+		}
+		max_header_size 16KB
+	}
+}
+
 {$SITE_DOMAIN} {
 	encode zstd gzip
 	reverse_proxy frontend:3000

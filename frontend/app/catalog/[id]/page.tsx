@@ -37,11 +37,14 @@ export default function OfferPage() {
         <div className="mt-6 flex flex-col gap-6">
           <section>
             <Label>Канал</Label>
-            <p className="text-sm">
-              {PLATFORM_LABEL[o.platform]} ·{" "}
-              <a href={o.profile_url} target="_blank" rel="noopener noreferrer nofollow" className="font-semibold text-accent hover:underline">@{o.handle}</a>
-              {o.ownership_verified && <span className="ml-2 text-xs text-ok">✓ владение подтверждено</span>}
-            </p>
+            <a href={o.profile_url} target="_blank" rel="noopener noreferrer nofollow"
+              className="group flex items-center justify-between gap-3 rounded-xl border border-border px-4 py-3 transition-[border-color,box-shadow] duration-150 hover:border-accent/50 hover:shadow-sm">
+              <span className="min-w-0">
+                <span className="block font-semibold">@{o.handle}{o.ownership_verified && <span className="ml-2 text-xs font-normal text-ok">✓ владение подтверждено</span>}</span>
+                <span className="block truncate text-xs text-muted">{o.profile_url}</span>
+              </span>
+              <span className="shrink-0 text-sm font-semibold text-accent">Открыть в {PLATFORM_LABEL[o.platform]} ↗</span>
+            </a>
           </section>
 
           <section>

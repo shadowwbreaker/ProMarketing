@@ -82,12 +82,12 @@ def test_csrf_enforced_for_session_requests(user_factory):
     u = user_factory()
     c = APIClient(enforce_csrf_checks=True)
     c.force_login(u)
-    r = c.patch("/api/v1/me", {"profile": {"display_name": "Hack"}}, format="json")
+    r = c.patch("/api/v1/me", {"profile": {"bio": "Hack"}}, format="json")
     assert r.status_code == 403
     c.get("/api/v1/auth/csrf")
     token = c.cookies["csrftoken"].value
-    r = c.patch("/api/v1/me", {"profile": {"display_name": "Ок"}}, format="json", HTTP_X_CSRFTOKEN=token)
-    assert r.status_code == 200 and r.json()["profile"]["display_name"] == "Ок"
+    r = c.patch("/api/v1/me", {"profile": {"bio": "Ок"}}, format="json", HTTP_X_CSRFTOKEN=token)
+    assert r.status_code == 200 and r.json()["profile"]["bio"] == "Ок"
 
 
 @pytest.mark.django_db(transaction=True)

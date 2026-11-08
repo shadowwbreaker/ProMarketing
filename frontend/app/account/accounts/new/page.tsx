@@ -298,6 +298,12 @@ function NewAccountWizard() {
       {step === 4 && account && (
         <Card>
           <form onSubmit={submitOffer} className="flex flex-col gap-4" noValidate>
+            <div className="flex flex-col gap-1 text-sm">
+              <span className="font-medium">Ссылка на канал</span>
+              <a href={account.profile_url} target="_blank" rel="noopener noreferrer nofollow"
+                className="truncate rounded-lg border border-border bg-bg px-3 py-2 text-accent hover:underline">{account.profile_url}</a>
+              <span className="text-xs text-muted">Покупатели увидят её в объявлении и смогут сразу открыть канал.</span>
+            </div>
             <Field label="Название объявления" name="title" required maxLength={120} placeholder="Реклама в моих Shorts" error={err.fields.title} />
             <label className="flex flex-col gap-1 text-sm font-medium">
               Формат рекламы

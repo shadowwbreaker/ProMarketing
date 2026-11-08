@@ -48,7 +48,7 @@ class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserProfile
         fields = ["display_name", "bio", "country", "language", "timezone", "avatar_url"]
-        read_only_fields = ["avatar_url"]
+        read_only_fields = ["avatar_url", "display_name"]  # the user name is fixed at registration (owner decision)
 
     def get_avatar_url(self, obj) -> str | None:
         from .avatar import avatar_url

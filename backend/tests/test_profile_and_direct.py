@@ -131,3 +131,19 @@ def test_claim_rejected_when_code_missing(api, user_factory):
     assert r.status_code == 200 and r.json()["claimed"] is False
     api.force_authenticate(squatter)
     assert api.post(f"/api/v1/social-accounts/{acc_id}/claim/start").status_code == 400  # own account
+
+
+def test_display_name_cannot_be_changed_and_password_change(api, user_factory):
+    u = user_factory()
+    api.force_authenticate(u)
+    r = api.patch("/api/v1/me", {"profile": {"display_name": "Другое имя", "bio": "Обо мне"}}, format="json")
+    assert r.status_code == 200
+    assert r.json()["profile"]["display_name"] == u.profile.display_name and r.json()["profile"]["bio"] == "Обо мне"
+    bad = api.post("/api/v1/auth/password-change", {"old_password": "wrong-one-123", "new_password": "N3w-strong-pass!"}, format="json")
+    assert bad.status_code == 400
+    weak = api.post("/api/v1/auth/password-change", {"old_password": "Str0ng-pass-123", "new_password": "123"}, format="json")
+    assert weak.status_code == 400
+    ok = api.post("/api/v1/auth/password-change", {"old_password": "Str0ng-pass-123", "new_password": "N3w-strong-pass!"}, format="json")
+    assert ok.status_code == 200
+    u.refresh_from_db()
+    assert u.check_password("N3w-strong-pass!")

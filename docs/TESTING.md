@@ -23,7 +23,7 @@ cd frontend && npm test && npm run typecheck && npm run lint && npm run build
 # e2e: backend + celery worker + seed + frontend
 cd backend
 python manage.py seed_demo
-THROTTLE_AUTH=300/min python manage.py runserver      # e2e логинится чаще, чем разрешает защита (10/мин)
+THROTTLE_AUTH=300/min THROTTLE_ANON=100000/min python manage.py runserver   # e2e логинится и ходит по страницам чаще, чем разрешает защита
 celery -A config worker -l warning                     # в другом терминале
 cd ../frontend && npm run build && npm start           # в третьем
 npm i -D playwright && npx playwright install chromium # один раз

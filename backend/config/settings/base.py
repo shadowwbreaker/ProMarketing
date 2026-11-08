@@ -131,7 +131,14 @@ REST_FRAMEWORK = {
     "EXCEPTION_HANDLER": "common.exceptions.api_exception_handler",
     "DEFAULT_PAGINATION_CLASS": "common.pagination.StandardPagination",
     "PAGE_SIZE": 20,
+    # Baseline flood protection for every endpoint (shared through Redis across workers); scoped limits below are stricter.
+    "DEFAULT_THROTTLE_CLASSES": ["rest_framework.throttling.AnonRateThrottle", "common.throttles.SignedInUserThrottle"],
+    # Client IP: behind exactly one reverse proxy (Caddy) take the address it appended; 0 = use REMOTE_ADDR (dev).
+    # Never trust a client-supplied X-Forwarded-For chain (NUM_PROXIES=None would).
+    "NUM_PROXIES": env.int("NUM_PROXIES", default=0),
     "DEFAULT_THROTTLE_RATES": {
+        "anon": env("THROTTLE_ANON", default="300/min"),
+        "user": env("THROTTLE_USER", default="1200/min"),
         "auth": env("THROTTLE_AUTH", default="10/min"),
         "stats_refresh": env("THROTTLE_STATS_REFRESH", default="10/hour"),
         "chat": env("THROTTLE_CHAT", default="30/min"),

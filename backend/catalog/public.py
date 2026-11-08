@@ -183,9 +183,14 @@ class CatalogCounts(APIView):
     authentication_classes = []
 
     def get(self, request):
+        from django.core.cache import cache
+
+        return Response(cache.get_or_set("catalog:counts", self._build, PUBLIC_CACHE_SECONDS))
+
+    def _build(self):
         rows = dict(sellable_accounts().order_by().values_list("platform").annotate(n=Count("id", distinct=True)))
-        return Response({"accounts": sum(rows.values()), "tiktok": rows.get("tiktok", 0), "youtube": rows.get("youtube", 0),
-                         "networks": sellable_networks().count()})
+        return {"accounts": sum(rows.values()), "tiktok": rows.get("tiktok", 0), "youtube": rows.get("youtube", 0),
+                "networks": sellable_networks().count()}
 
 
 class CatalogAccountDetail(APIView):
@@ -226,6 +231,9 @@ class CatalogNetworkDetail(APIView):
         return Response(card)
 
 
+PUBLIC_CACHE_SECONDS = 30  # the same for every visitor; a short cache absorbs traffic spikes
+
+
 class CatalogHome(APIView):
     """Home page blocks (roadmap 5.1)."""
 
@@ -233,6 +241,15 @@ class CatalogHome(APIView):
     authentication_classes = []
 
     def get(self, request):
+        from django.core.cache import cache
+
+        data = cache.get("catalog:home")
+        if data is None:
+            data = self._build().data
+            cache.set("catalog:home", data, PUBLIC_CACHE_SECONDS)
+        return Response(data)
+
+    def _build(self):
         base = sellable_accounts().prefetch_related("offers")
         popular = list(base.order_by("-completed_count", "-created_at")[:8])
         new = list(base.order_by("-created_at")[:8])

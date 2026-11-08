@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { OfferTable } from "@/components/catalog/OfferTable";
+import { ChannelLink, OfferTable } from "@/components/catalog/OfferTable";
 import { Avatar } from "@/components/profile/Avatar";
 import { DirectChat } from "@/components/profile/DirectChat";
 import { ErrorState, LoadingState } from "@/components/ui/States";
@@ -63,9 +63,8 @@ function OffersTable({ title, items }: { title: string; items: OfferCard[] }) {
             <tr key={o.id} className="border-b border-border last:border-0 hover:bg-bg">
               <td className="px-4 py-3">
                 <Link href={`/catalog/${o.id}`} className="font-semibold hover:text-accent">{o.title}</Link>
-                {o.ownership_verified && <span title="Владение подтверждено" className="ml-1 text-xs text-ok">✓</span>}
                 <p className="text-xs text-muted">
-                  @{o.handle}
+                  <ChannelLink url={o.profile_url} handle={o.handle} verified={o.ownership_verified} />
                   <span className="sm:hidden"> · {o.followers != null ? formatCount(o.followers) : "—"} подп.</span>
                 </p>
               </td>

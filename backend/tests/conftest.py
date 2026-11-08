@@ -97,3 +97,12 @@ def _reference_data(request):
 
     importlib.import_module("support.migrations.0002_seed_reasons").seed(apps, None)
     importlib.import_module("accounts.migrations.0003_seed_roles").seed(apps, None)
+
+
+@pytest.fixture(autouse=True)
+def _fresh_cache():
+    """Public endpoints are cached for a few seconds; every test starts from an empty cache."""
+    from django.core.cache import cache
+
+    cache.clear()
+    yield

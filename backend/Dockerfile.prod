@@ -9,4 +9,4 @@ COPY --chown=app:app . .
 USER app
 EXPOSE 8000
 # collectstatic runs at container start because prod settings require real secrets
-CMD ["sh", "-c", "python manage.py collectstatic --noinput && gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers ${GUNICORN_WORKERS:-3} --timeout 30 --access-logfile - --forwarded-allow-ips='*'"]
+CMD ["sh", "-c", "python manage.py collectstatic --noinput && gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers ${GUNICORN_WORKERS:-3} --timeout 30 --graceful-timeout 20 --max-requests 1000 --max-requests-jitter 100 --limit-request-line 4094 --limit-request-fields 100 --access-logfile - --forwarded-allow-ips='*'"]

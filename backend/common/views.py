@@ -9,6 +9,7 @@ from rest_framework.views import APIView
 class LiveView(APIView):
     permission_classes = [AllowAny]
     authentication_classes = []
+    throttle_classes = []  # monitoring and load balancers must always get an answer
 
     @extend_schema(responses={200: dict})
     def get(self, request):
@@ -18,6 +19,7 @@ class LiveView(APIView):
 class ReadyView(APIView):
     permission_classes = [AllowAny]
     authentication_classes = []
+    throttle_classes = []  # monitoring and load balancers must always get an answer
 
     @extend_schema(responses={200: dict, 503: dict})
     def get(self, request):

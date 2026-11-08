@@ -6,16 +6,15 @@ import { FormEvent, Suspense, useEffect, useState } from "react";
 import { MineList } from "./MineList";
 import { AnalyticsPanel, ReferralsPanel } from "./InsightsPanels";
 import { PayoutsPanel } from "./PayoutsPanel";
+import { PasswordPanel } from "./PasswordPanel";
 import { TwoFactorPanel } from "./TwoFactorPanel";
 import { STATUS_LABEL } from "@/lib/api/orders";
 import { Avatar } from "@/components/profile/Avatar";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { Field } from "@/components/ui/Field";
 import { LoadingState } from "@/components/ui/States";
 import { useToast } from "@/components/ui/Toast";
 import { becomeSeller, deleteAvatar, resendVerification, updateProfile, uploadAvatar } from "@/lib/api/auth";
-import { readAll } from "@/lib/api/chat";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { fieldErrors } from "@/lib/forms";
 import { formatDateTime, formatMoney } from "@/lib/format";
@@ -30,11 +29,11 @@ const GROUPS: { title: string; tabs: Tab[] }[] = [
     { key: "analytics", label: "Аналитика" },
   ] },
   { title: "Общение", tabs: [
-    { key: "notifications", label: "Уведомления" },
     { key: "tickets", label: "Обращения в поддержку" },
   ] },
   { title: "Прочее", tabs: [
     { key: "profile", label: "Настройки профиля" },
+    { key: "security", label: "Безопасность" },
     { key: "reviews", label: "Мои отзывы" },
     { key: "referrals", label: "Пригласить друга" },
   ] },
@@ -76,7 +75,7 @@ function AccountPage() {
     const f = new FormData(e.currentTarget);
     setBusy(true);
     try {
-      setMe(await updateProfile({ display_name: String(f.get("display_name")), bio: String(f.get("bio")) }));
+      setMe(await updateProfile({ bio: String(f.get("bio")) }));
       toast("Профиль сохранён", "success");
     } catch (ex) {
       toast(fieldErrors(ex).form ?? "Проверьте поля", "error");
@@ -158,7 +157,11 @@ function AccountPage() {
             </div>
             <p className="mb-4 text-sm text-muted">{me.email} · роли: {me.roles.join(", ")}</p>
             <form onSubmit={saveProfile} className="flex max-w-md flex-col gap-4">
-              <Field label="Имя или название" name="display_name" defaultValue={me.profile.display_name} required />
+              <div className="flex flex-col gap-1 text-sm">
+                <span className="font-medium">Имя пользователя</span>
+                <p className="rounded-lg border border-border bg-bg px-3 py-2 font-semibold">{me.profile.display_name}</p>
+                <span className="text-xs text-muted">Имя задаётся при регистрации и не меняется — по нему вас узнают покупатели и продавцы.</span>
+              </div>
               <label className="flex flex-col gap-1 text-sm font-medium">
                 О себе
                 <textarea name="bio" defaultValue={me.profile.bio} rows={4} className="rounded-lg border border-border bg-surface px-3 py-2 font-normal" />
@@ -173,7 +176,8 @@ function AccountPage() {
             )}
           </Card>
         )}
-        {tab === "profile" && <TwoFactorPanel />}
+        {tab === "security" && <PasswordPanel />}
+        {tab === "security" && <TwoFactorPanel />}
         {tab === "sales" && <MineList<OrderBrief> path="sales" empty="Продаж пока нет" render={orderRow} />}
         {tab === "accounts" && (
           <>
@@ -209,21 +213,6 @@ function AccountPage() {
         {tab === "referrals" && <ReferralsPanel />}
         {tab === "reviews" && <MineList<Simple> path="reviews" empty="Отзывов пока нет" render={(r) => `${r.rating}★ ${r.text ?? ""}`} />}
         {tab === "tickets" && <MineList<Simple> path="tickets" empty="Обращений нет" render={(t) => `${t.subject} · ${t.status}`} />}
-        {tab === "notifications" && (
-          <>
-            <button className="self-start text-sm text-accent" onClick={() => readAll().then(() => toast("Все прочитаны", "success"))}>Отметить все прочитанными</button>
-            <MineList<Simple>
-              path="notifications"
-              empty="Уведомлений нет"
-              render={(n) => {
-                const p = n.payload as Record<string, string> | undefined;
-                const inner = <><b className={n.read_at ? "font-normal" : ""}>{String(n.title)}</b> {n.body ? `· ${String(n.body)}` : ""} <span className="text-xs text-muted">{formatDateTime(String(n.created_at))}</span></>;
-                const href = p?.order ? `/orders/${p.order}` : p?.sender ? `/sellers/${p.sender}` : null;
-                return href ? <Link href={href} className="hover:text-accent">{inner}</Link> : inner;
-              }}
-            />
-          </>
-        )}
       </section>
     </div>
   );

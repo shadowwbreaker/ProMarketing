@@ -41,3 +41,5 @@ export const uploadAvatar = (file: File) => {
 export const deleteAvatar = () => apiFetch<void>("/me/avatar", { method: "DELETE" });
 export const becomeSeller = () => apiFetch<Me>("/me/become-seller", { method: "POST" });
 export const listMine = <T,>(path: string) => apiFetch<Page<T>>(`/me/${path}`);
+export const changePassword = (old_password: string, new_password: string) =>
+  apiFetch<{ ok: boolean }>("/auth/password-change", { method: "POST", body: { old_password, new_password } });

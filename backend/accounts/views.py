@@ -34,7 +34,10 @@ class AuthThrottleMixin:
 
 
 def _ip(request):
-    return request.META.get("REMOTE_ADDR")
+    """Client address as the throttles see it (respects NUM_PROXIES), for the audit log."""
+    from rest_framework.throttling import BaseThrottle
+
+    return BaseThrottle().get_ident(request)
 
 
 @method_decorator(ensure_csrf_cookie, name="dispatch")

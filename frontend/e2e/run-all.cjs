@@ -1,7 +1,7 @@
 // Runs every e2e scenario sequentially. Requires: backend :8000 (+ celery worker), `python manage.py seed_demo`, frontend :3000.
 const { execFileSync } = require("node:child_process");
 const path = require("node:path");
-const suites = ["smoke", "auth", "accounts", "catalog", "order", "dispute", "staff", "insights", "profile", "responsive"];
+const suites = ["smoke", "auth", "accounts", "catalog", "order", "dispute", "staff", "insights", "profile", "journey", "responsive"];
 let failed = 0;
 for (const s of suites) {
   try {

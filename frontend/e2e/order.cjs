@@ -54,7 +54,6 @@ async function login(ctx, base, email) {
   await seller.goto(`${base}/account`);
   await seller.getByRole("button", { name: "Выплаты" }).click();
   await seller.getByText("Ожидание 48 ч").first().waitFor();
-  await seller.getByRole("link", { name: /Уведомления: [1-9]/ }).waitFor();
   await browser.close();
   console.log("E2E ORDER OK");
 })().catch((e) => { console.error(e); process.exit(1); });

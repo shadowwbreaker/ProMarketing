@@ -5,27 +5,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Logo } from "@/components/Logo";
 import { Avatar } from "@/components/profile/Avatar";
-import { unreadCount } from "@/lib/api/chat";
 import { directUnread } from "@/lib/api/direct";
 import { useAuth } from "@/lib/auth/AuthProvider";
-
-function Bell() {
-  const [n, setN] = useState(0);
-  useEffect(() => {
-    const load = () => unreadCount().then((r) => setN(r.unread)).catch(() => {});
-    load();
-    const t = setInterval(load, 30000);
-    return () => clearInterval(t);
-  }, []);
-  return (
-    <Link href="/account?tab=notifications" aria-label={`Уведомления: ${n}`} className="relative text-muted hover:text-text">
-      <svg aria-hidden width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
-      </svg>
-      {n > 0 && <span className="absolute -right-2 -top-1 rounded-full bg-accent px-1 text-[10px] font-bold text-accent-ink">{n > 99 ? "99+" : n}</span>}
-    </Link>
-  );
-}
 
 function UserMenu() {
   const { me, signOut } = useAuth();
@@ -77,8 +58,13 @@ function MessagesLink() {
     return () => clearInterval(t);
   }, [path]);
   return (
-    <NavLink href="/messages">
-      Сообщения{n > 0 && <span className="ml-1 rounded-full bg-accent px-1.5 text-[11px] font-bold text-accent-ink">{n}</span>}
+    <NavLink href="/messages" className="relative">
+      Сообщения
+      {n > 0 && (
+        <span className="page-enter absolute right-0.5 top-0 h-2 w-2 rounded-full bg-[#e5243b] ring-2 ring-surface">
+          <span className="sr-only">{`, непрочитанных: ${n}`}</span>
+        </span>
+      )}
     </NavLink>
   );
 }
@@ -108,7 +94,6 @@ export function SiteHeader() {
               <MessagesLink />
               <NavLink href="/favorites" className="hidden sm:inline">Избранное</NavLink>
               {me.permissions.includes("staff.access") && <NavLink href="/staff" className="hidden lg:inline">Служебный раздел</NavLink>}
-              <Bell />
               <UserMenu />
             </>
           ) : (
