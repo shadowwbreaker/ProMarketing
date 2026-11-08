@@ -1,5 +1,5 @@
 import re
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
 
 from .errors import InvalidProfileUrl
 
@@ -14,7 +14,7 @@ _PATTERNS = {
     ),
     "youtube": (
         {"youtube.com", "www.youtube.com", "m.youtube.com"},
-        re.compile(r"^/(?:@(?P<handle>[A-Za-z0-9_.\-]{3,30})|channel/(?P<channel>UC[A-Za-z0-9_\-]{22}))/?(?:shorts/?)?$"),
+        re.compile(r"^/(?:@(?P<handle>[\w.\-·]{3,30})|channel/(?P<channel>UC[A-Za-z0-9_\-]{22}))/?(?:shorts/?)?$"),
     ),
 }
 _RESERVED_INSTAGRAM = {"p", "reel", "reels", "explore", "stories", "accounts", "direct"}
@@ -30,7 +30,7 @@ def detect_platform(url: str) -> tuple[str, str]:
     host = (parsed.hostname or "").lower()
     for platform, (hosts, pattern) in _PATTERNS.items():
         if host in hosts:
-            m = pattern.match(parsed.path)
+            m = pattern.match(unquote(parsed.path))
             if not m:
                 raise InvalidProfileUrl("path")
             ident = m.groupdict().get("handle") or m.groupdict().get("channel")

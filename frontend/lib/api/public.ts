@@ -55,6 +55,9 @@ export type SellerPage = SellerBrief & {
   last_seen_at: string | null;
   selling_since: string | null;
   completed_orders: number;
+  online: boolean;
+  is_seller: boolean;
+  rating_distribution: Record<"5" | "4" | "3" | "2" | "1", number>;
   accounts: OfferCard[];
   networks: NetworkCard[];
   reviews: { id: string; rating: number; text: string; seller_reply: string; author: string; created_at: string }[];

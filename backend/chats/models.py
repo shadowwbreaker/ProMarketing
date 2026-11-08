@@ -42,3 +42,31 @@ class ChatMessageRevision(BaseModel):
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=["message", "revision"], name="message_revision_unique")]
+
+
+class DirectThread(BaseModel):
+    """Pre-order conversation between two users ("напишите продавцу перед оплатой").
+
+    Pair is stored ordered (user_a < user_b) so there is exactly one thread per pair.
+    """
+
+    user_a = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="+")
+    user_b = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="+")
+    last_message_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["user_a", "user_b"], name="direct_thread_pair_unique"),
+            models.CheckConstraint(condition=models.Q(user_a__lt=models.F("user_b")), name="direct_thread_ordered_pair"),
+        ]
+
+
+class DirectMessage(BaseModel):
+    thread = models.ForeignKey(DirectThread, on_delete=models.CASCADE, related_name="messages")
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+")
+    body = models.TextField(max_length=2000)
+    read_at = models.DateTimeField(null=True, blank=True)
+    contact_signal = models.BooleanField(default=False)
+
+    class Meta:
+        indexes = [models.Index(fields=["thread", "created_at"])]

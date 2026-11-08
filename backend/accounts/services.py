@@ -67,7 +67,11 @@ def register_user(*, email: str, password: str, display_name: str, as_seller: bo
     if as_seller:
         assign_role(user, "seller")
     record(action="user.registered", subject_type="user", subject_id=user.pk, actor=user, after={"as_seller": as_seller})
-    transaction.on_commit(lambda: send_verification_email(user))
+    if settings.DEV_AUTO_VERIFY_EMAIL:  # local development only; production refuses to start with it
+        user.is_email_verified = True
+        user.save(update_fields=["is_email_verified", "updated_at"])
+    else:
+        transaction.on_commit(lambda: send_verification_email(user))
     return user
 
 

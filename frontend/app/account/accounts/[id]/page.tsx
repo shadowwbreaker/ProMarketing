@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { OffersPanel } from "@/components/OffersPanel";
 import { TrustBadge } from "@/components/stats/TrustBadge";
@@ -24,6 +24,9 @@ import { formatCount, formatDateTime } from "@/lib/format";
 export default function AccountDetailPage() {
   const { id } = useParams<{ id: string }>();
   const toast = useToast();
+  const qs = useSearchParams();
+  const created = qs.get("created") === "1";
+  const listingError = qs.get("listing_error");
   const [acc, setAcc] = useState<SocialAccount>();
   const [hist, setHist] = useState<StatsHistory>();
   const [error, setError] = useState<string>();
@@ -93,6 +96,10 @@ export default function AccountDetailPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      {created && <Card className="border-ok text-sm font-semibold">Объявление создано и опубликовано в каталоге.</Card>}
+      {listingError && (
+        <Card className="border-danger text-sm">Объявление сохранено, но пока не опубликовано. {listingError}</Card>
+      )}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-sm text-muted">{PLATFORM_LABEL[acc.platform]}</p>

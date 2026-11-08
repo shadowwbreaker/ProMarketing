@@ -9,10 +9,10 @@
 ```bash
 cp .env.example .env        # заполните FIELD_ENCRYPTION_KEY
 docker compose -f infra/docker-compose.yml up --build
-docker compose -f infra/docker-compose.yml exec backend python manage.py seed_demo   # демо-данные
 ```
-Сервисы: db, redis, backend, worker (фоновые задачи), beat (таймеры заказов и выплат), frontend.
+Демо-данные создаются автоматически при старте backend. Сервисы: db, redis, backend, worker (фоновые задачи), beat (таймеры заказов и выплат), frontend.
 Демо-входы: `demo-buyer@example.com`, `demo-seller1@example.com`, `demo-admin@example.com`, `demo-support@example.com`, пароль `Demo-password-1`.
+В dev (`DEV_AUTO_VERIFY_EMAIL=true`) новые аккаунты подтверждаются сразу. Подтвердить уже созданный: `docker compose -f infra/docker-compose.yml exec backend python manage.py verify_email you@example.com`.
 Backend: http://localhost:8000/api/v1/health/ready · Frontend: http://localhost:3000 · Статус: http://localhost:3000/status
 
 ## Запуск без Docker

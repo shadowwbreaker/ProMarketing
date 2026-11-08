@@ -1,6 +1,6 @@
 # Dev environment (D-017): Docker Desktop + WSL2. Usage from repo root:
 #   copy .env.example .env   (then fill FIELD_ENCRYPTION_KEY)
-#   docker compose -f infra/docker-compose.yml exec backend python manage.py seed_demo
+#   (demo data is seeded automatically on start; logins in README)
 #   docker compose -f infra/docker-compose.yml up --build
 name: promarketing
 services:
@@ -26,7 +26,7 @@ services:
   backend:
     build: ../backend
     env_file: ../.env
-    command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    command: sh -c "python manage.py migrate && python manage.py seed_demo && python manage.py runserver 0.0.0.0:8000"
     ports: ["8000:8000"]
     volumes: ["../backend:/app"]
     depends_on:

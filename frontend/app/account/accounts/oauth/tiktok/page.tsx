@@ -22,7 +22,7 @@ function Callback() {
       return;
     }
     finishTikTokOAuth(code, state)
-      .then((acc) => router.replace(`/account/accounts/${acc.id}`))
+      .then((acc) => router.replace(`/account/accounts/new?account=${acc.id}`))
       .catch((e) => setErr(fieldErrors(e).form));
   }, [q, router]);
 

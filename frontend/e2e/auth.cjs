@@ -13,7 +13,6 @@ const { chromium } = require("playwright");
   await page.getByText("Принимаю пользовательское").click();
   await page.getByRole("button", { name: "Создать аккаунт" }).click();
   await page.waitForURL("**/account");
-  await page.getByText("Личные данные").waitFor();
   await page.getByText("Подтвердите email").waitFor();
   await page.getByRole("button", { name: "Мои аккаунты" }).waitFor(); // seller tabs visible
   await page.getByRole("button", { name: "Мои покупки" }).click();
@@ -28,7 +27,11 @@ const { chromium } = require("playwright");
   await page.getByLabel("Пароль").fill("E2e-strong-pass-1");
   await page.getByRole("button", { name: "Войти" }).click();
   await page.waitForURL("**/account");
-  await page.getByRole("link", { name: "E2E Продавец" }).waitFor();
+  await page.getByRole("button", { name: /E2E Продавец/ }).click();
+  await page.getByRole("menuitem", { name: "Мой профиль" }).click();
+  await page.waitForURL("**/sellers/*");
+  await page.getByText("Редактировать профиль").waitFor();
+  await page.getByText("Добавьте первый аккаунт").waitFor();
   await browser.close();
   console.log("E2E AUTH OK");
 })().catch((e) => {

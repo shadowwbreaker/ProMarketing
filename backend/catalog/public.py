@@ -245,7 +245,13 @@ class SellerPage(APIView):
                    .select_related("author__profile").order_by("-created_at")[:20])
         ratings = {seller.pk: rating}
         first_listed = SocialAccount.objects.filter(owner=seller).aggregate(m=Min("created_at"))["m"]
+        dist = dict(Review.objects.filter(target_user=seller, moderation_status="published",
+                                          order_item__status__in=["COMPLETED", "PARTIALLY_REFUNDED"])
+                    .values_list("rating").annotate(n=Count("id")).values_list("rating", "n"))
+        online = bool(seller.last_seen_at and timezone.now() - seller.last_seen_at < timedelta(minutes=10))
         return Response({
+            "rating_distribution": {str(k): dist.get(k, 0) for k in (5, 4, 3, 2, 1)}, "online": online,
+            "is_seller": seller.has_role("seller"),
             "id": str(seller.pk), "display_name": seller.profile.display_name, "bio": seller.profile.bio,
             "member_since": seller.date_joined, "last_seen_at": seller.last_seen_at, "selling_since": first_listed,
             "completed_orders": completed_orders_count(seller.pk), **rating,

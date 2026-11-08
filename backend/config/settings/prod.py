@@ -54,6 +54,8 @@ if PAYMENT_PROVIDER == "mock":
     _errors.append("Mock payment provider is forbidden in production (D-008)")
 if SOCIAL_PROVIDER_MODE == "fake":
     _errors.append("Fake social providers are forbidden in production")
+if env.bool("DEV_AUTO_VERIFY_EMAIL", default=False):
+    _errors.append("DEV_AUTO_VERIFY_EMAIL must be false in production")
 if not FIELD_ENCRYPTION_KEY:
     _errors.append("FIELD_ENCRYPTION_KEY must be set in production")
 if not S3_BUCKET:

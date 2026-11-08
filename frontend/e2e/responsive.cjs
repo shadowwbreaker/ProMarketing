@@ -1,7 +1,7 @@
 // E2E: key pages render without horizontal scroll or runtime errors at phone (375) and desktop (1280) widths.
 const { chromium } = require("playwright");
 const PUBLIC = ["/", "/catalog", "/catalog?kind=networks", "/login", "/register", "/forgot-password", "/support", "/compare", "/status"];
-const PRIVATE = ["/account", "/account?tab=analytics", "/account/accounts/new", "/account/networks", "/orders/new?offer=x", "/staff", "/staff/disputes", "/staff/users", "/staff/accounts", "/staff/orders", "/staff/audit", "/staff/fraud", "/staff/reviews", "/staff/tickets"];
+const PRIVATE = ["/account", "/account?tab=analytics", "/account?tab=messages", "/account/accounts/new", "/account/networks", "/orders/new?offer=x", "/staff", "/staff/disputes", "/staff/users", "/staff/accounts", "/staff/orders", "/staff/audit", "/staff/fraud", "/staff/reviews", "/staff/tickets"];
 (async () => {
   const base = process.env.E2E_BASE_URL ?? "http://localhost:3000";
   const browser = await chromium.launch();

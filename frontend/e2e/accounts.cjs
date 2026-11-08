@@ -1,4 +1,4 @@
-// E2E: seller adds a YouTube account (dev fake provider), sees statistics, refresh limit, history.
+// E2E: seller adds a YouTube account via the wizard (dev fake provider), sees statistics, refresh limit, history.
 // Requires backend :8000, celery worker, frontend :3000.
 const { chromium } = require("playwright");
 (async () => {
@@ -14,23 +14,31 @@ const { chromium } = require("playwright");
   await page.getByText("Принимаю пользовательское").click();
   await page.getByRole("button", { name: "Создать аккаунт" }).click();
   await page.waitForURL("**/account");
+  // Wizard: platform -> link -> statistics -> offer -> create
   await page.goto(`${base}/account/accounts/new`);
-  await page.getByLabel("Ссылка на профиль").fill(`https://www.youtube.com/@e2e${Date.now()}`);
-  await page.getByLabel("Название").fill("Мой канал");
-  await page.getByRole("button", { name: "Добавить", exact: true }).click();
+  await page.getByLabel("Платформа").selectOption("youtube");
+  if (!(await page.locator("option[value=instagram]").evaluate((o) => o.disabled))) throw new Error("instagram must be unavailable");
+  await page.getByRole("button", { name: "Далее" }).click();
+  await page.getByLabel("Ссылка на страницу Shorts канала").fill(`https://www.youtube.com/@e2e${Date.now()}`);
+  await page.getByRole("button", { name: "Далее" }).click();
+  await page.getByText("Нужна ссылка на страницу Shorts").waitFor(); // /shorts is required
+  await page.getByLabel("Ссылка на страницу Shorts канала").fill(`https://www.youtube.com/@e2e${Date.now()}/shorts`);
+  await page.getByRole("button", { name: "Далее" }).click();
+  await page.getByText("(15 видео)").waitFor({ timeout: 20000 });
+  await page.getByText("подписчиков").waitFor();
+  await page.getByRole("button", { name: "Далее" }).click();
+  await page.getByLabel("Название объявления").fill("Реклама в моих Shorts");
+  await page.getByLabel("Условия работы").fill("Интеграция до 30 секунд, одна правка");
+  await page.getByLabel("Цена, ₽").fill("15000");
+  await page.getByRole("button", { name: "Создать" }).click();
   await page.waitForURL("**/account/accounts/*");
-  await page.getByText("по 15 видео").waitFor({ timeout: 20000 });
+  await page.getByText("подтвердите email").waitFor(); // unverified seller: offer saved, not listed
+  await page.getByText("Интеграция внутри ролика · 15").waitFor();
   await page.getByText("Подтверждено").first().waitFor();
   await page.getByText("История статистики").waitFor();
   const disabled = await page.getByRole("button", { name: "Обновить статистику" }).isDisabled();
   if (!disabled) throw new Error("refresh should be limited right after first fetch");
   await page.getByText("Доступно с").waitFor();
-  // Phase 4: offer + listing rules + network
-  await page.getByLabel("Цена, ₽").fill("15000");
-  await page.getByRole("button", { name: "Добавить предложение" }).click();
-  await page.getByText("Интеграция внутри ролика · 15").waitFor();
-  await page.getByRole("button", { name: "Опубликовать в каталоге" }).click();
-  await page.getByText("подтвердите email").waitFor(); // unverified seller cannot list
   await page.goto(`${base}/account/networks`);
   await page.getByLabel("Название").fill("Моя сетка");
   await page.getByRole("button", { name: "Создать" }).click();
