@@ -76,10 +76,10 @@ function NewOrder() {
       {!me.is_email_verified && <p role="alert" className="mb-4 rounded-lg bg-warn/10 p-3 text-sm">Подтвердите email, чтобы оформить заказ.</p>}
       {net && (
         <Card className="mb-4">
-          <p className="mb-2 font-semibold">Сетка «{net.title}» — {formatMoney(net.stats.price_minor)} за все аккаунты</p>
+          <p className="mb-2 font-semibold">Сетка «{net.title}» — {formatMoney(net.stats.price_minor)} за все каналы</p>
           {net.allow_partial_purchase && (
             <>
-              <p className="mb-2 text-sm text-muted">Можно выбрать отдельные аккаунты (по их цене). Ничего не выбрано — вся сетка.</p>
+              <p className="mb-2 text-sm text-muted">Можно выбрать отдельные каналы (по их цене). Ничего не выбрано — вся сетка.</p>
               <ul className="grid gap-1 text-sm">
                 {net.items?.map((i) => (
                   <li key={i.id}>

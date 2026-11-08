@@ -30,12 +30,12 @@ class ProviderRateLimited(ProviderError):
 
 class AuthorizationRequired(ProviderError):
     code = "authorization_required"
-    user_message = "Нужно подключить аккаунт через вход на платформе"
+    user_message = "Нужно подключить канал через вход на платформе"
 
 
 class AuthorizationExpired(ProviderError):
     code = "authorization_expired"
-    user_message = "Доступ к аккаунту истёк, подключите аккаунт заново"
+    user_message = "Доступ к каналу истёк, подключите канал заново"
 
 
 class NotProfessionalAccount(ProviderError):
@@ -45,7 +45,7 @@ class NotProfessionalAccount(ProviderError):
 
 class AccountNotFound(ProviderError):
     code = "account_not_found"
-    user_message = "Аккаунт не найден или недоступен"
+    user_message = "Канал не найден или недоступен"
 
 
 class PlatformDisabled(ProviderError):

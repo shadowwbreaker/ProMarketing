@@ -36,6 +36,17 @@ SORTS = {
 }
 
 
+ONLINE_WINDOW = timedelta(minutes=10)
+
+
+def seller_brief(user, ratings: dict) -> dict:
+    """Seller as shown next to an offer: name, photo, rating, online, time on the platform."""
+    r = ratings.get(user.pk, {"rating": None, "reviews_count": 0})
+    return {"id": str(user.pk), "display_name": user.profile.display_name, "avatar_url": avatar_url(user.profile),
+            "online": bool(user.last_seen_at and timezone.now() - user.last_seen_at < ONLINE_WINDOW),
+            "member_since": user.date_joined, **r}
+
+
 def enabled_platforms() -> list[str]:
     return [p for p in ("tiktok", "instagram", "youtube") if platform_enabled(p)]
 
@@ -94,8 +105,8 @@ def apply_filters(qs, params):
     if params.get("verified") == "1":
         fresh = timezone.now() - timedelta(days=settings.STATS_STALE_AFTER_DAYS)
         qs = qs.filter(current_statistics__trust_status="VERIFIED", current_statistics__fetched_at__gte=fresh)
-        if yt_hidden:
-            qs = qs.exclude(platform="youtube")
+    if params.get("online") == "1":
+        qs = qs.filter(owner__last_seen_at__gte=timezone.now() - ONLINE_WINDOW)
     if (v := params.get("rating_min")) not in (None, ""):
         try:
             rmin = float(v)
@@ -115,7 +126,6 @@ def apply_filters(qs, params):
 def offer_card(acc: SocialAccount, ratings: dict, *, with_offers=False) -> dict:
     offers = [o for o in acc.offers.all() if o.is_active]
     st = display_status(acc.current_statistics, acc.platform, for_owner=False)
-    r = ratings.get(acc.owner_id, {"rating": None, "reviews_count": 0})
     card = {
         "id": str(acc.pk), "title": acc.title, "platform": acc.platform, "handle": acc.handle, "profile_url": acc.profile_url,
         "category": acc.category, "language": acc.language, "geo": acc.geo,
@@ -123,8 +133,7 @@ def offer_card(acc: SocialAccount, ratings: dict, *, with_offers=False) -> dict:
         "stats_updated_at": st["fetched_at"], "trust_status": st["trust_status"], "ownership_verified": acc.ownership_verified,
         "min_price_minor": min((o.price_minor for o in offers), default=None), "currency": "RUB",
         "formats": sorted({o.get_ad_format_display() for o in offers}),
-        "seller": {"id": str(acc.owner_id), "display_name": acc.owner.profile.display_name,
-                   "avatar_url": avatar_url(acc.owner.profile), **r},
+        "seller": seller_brief(acc.owner, ratings),
     }
     if with_offers:
         card["description"] = acc.description
@@ -137,12 +146,10 @@ def offer_card(acc: SocialAccount, ratings: dict, *, with_offers=False) -> dict:
 
 
 def network_card(net: AccountNetwork, ratings: dict) -> dict:
-    r = ratings.get(net.owner_id, {"rating": None, "reviews_count": 0})
     return {"id": str(net.pk), "title": net.title, "description": net.description, "conditions": net.conditions,
             "allow_partial_purchase": net.allow_partial_purchase, "stats": network_stats(net, for_owner=False),
             "platforms": sorted({i.social_account.platform for i in net.items.all()}),
-            "seller": {"id": str(net.owner_id), "display_name": net.owner.profile.display_name,
-                       "avatar_url": avatar_url(net.owner.profile), **r}}
+            "seller": seller_brief(net.owner, ratings)}
 
 
 def sellable_networks():
@@ -169,6 +176,18 @@ class CatalogAccounts(APIView):
         return pager.get_paginated_response([offer_card(a, ratings) for a in page])
 
 
+class CatalogCounts(APIView):
+    """Counts for the platform bubbles at the top of the catalog."""
+
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def get(self, request):
+        rows = dict(sellable_accounts().order_by().values_list("platform").annotate(n=Count("id", distinct=True)))
+        return Response({"accounts": sum(rows.values()), "tiktok": rows.get("tiktok", 0), "youtube": rows.get("youtube", 0),
+                         "networks": sellable_networks().count()})
+
+
 class CatalogAccountDetail(APIView):
     permission_classes = [AllowAny]
     authentication_classes = []
@@ -186,6 +205,8 @@ class CatalogNetworks(APIView):
         qs = sellable_networks().order_by("-created_at")
         if p := request.query_params.get("platform"):
             qs = qs.filter(items__social_account__platform__in=p.split(",")).distinct()
+        if request.query_params.get("online") == "1":
+            qs = qs.filter(owner__last_seen_at__gte=timezone.now() - ONLINE_WINDOW)
         pager = StandardPagination()
         page = pager.paginate_queryset(qs, request, view=self)
         ratings = ratings_for({n.owner_id for n in page})

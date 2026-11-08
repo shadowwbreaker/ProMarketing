@@ -55,14 +55,14 @@ export default function NetworksPage() {
           ))}
         </ul>
       ) : (
-        <EmptyState title="Сеток пока нет">Объедините несколько своих аккаунтов, чтобы продавать рекламу пакетом.</EmptyState>
+        <EmptyState title="Сеток пока нет">Объедините несколько своих каналов, чтобы продавать рекламу пакетом.</EmptyState>
       )}
       <Card>
         <h2 className="mb-3 font-bold">Новая сетка</h2>
         <form onSubmit={create} className="flex max-w-md flex-col gap-3">
           <Field label="Название" name="title" required />
           <Field label="Описание" name="description" />
-          <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="partial" defaultChecked /> Разрешить покупку отдельных аккаунтов</label>
+          <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="partial" defaultChecked /> Разрешить покупку отдельных каналов</label>
           <Button type="submit">Создать</Button>
         </form>
       </Card>

@@ -16,7 +16,7 @@ async function login(ctx, base, email) {
   await buyer.goto(`${base}/catalog?q=${encodeURIComponent("Кухня")}`);
   await buyer.getByText("Кухня за 60 секунд").click();
   await buyer.waitForURL("**/catalog/*");
-  await buyer.getByRole("link", { name: "Заказать" }).first().click();
+  await buyer.getByRole("link", { name: /Купить за/ }).click();
   await buyer.waitForURL("**/orders/new*");
   await buyer.getByLabel("Бренд или продукт").fill("Кофейня Зерно");
   await buyer.getByLabel("Техническое задание").fill("Показать латте, упомянуть скидку 20%");

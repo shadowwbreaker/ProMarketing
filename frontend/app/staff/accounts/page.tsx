@@ -25,9 +25,9 @@ export default function StaffAccounts() {
   const sel = "rounded-lg border border-border bg-surface px-2 text-sm";
   return (
     <div className="flex flex-col gap-3">
-      <h1 className="text-2xl font-bold">Рекламные аккаунты</h1>
+      <h1 className="text-2xl font-bold">Рекламные каналы</h1>
       <div className="flex flex-wrap gap-2">
-        <SearchBar value={q} onChange={setQ} placeholder="@аккаунт, название или email владельца" />
+        <SearchBar value={q} onChange={setQ} placeholder="@канал, название или email владельца" />
         <select aria-label="Статус" className={sel} value={status} onChange={(e) => setStatus(e.target.value)}>
           <option value="">Все статусы</option><option value="active">Активные</option><option value="under_review">На проверке</option><option value="blocked">Заблокированы</option><option value="hidden">Скрыты</option>
         </select>
@@ -36,7 +36,7 @@ export default function StaffAccounts() {
         </select>
       </div>
       <StaffTable path="/staff/accounts" nonce={nonce} params={{ q, status, trust }} columns={[
-        { title: "Аккаунт", render: (a) => <a className="text-accent" href={`https://www.${a.platform}.com/@${a.handle}`} target="_blank" rel="noopener noreferrer nofollow">{a.platform} @{a.handle}</a> },
+        { title: "Канал", render: (a) => <a className="text-accent" href={`https://www.${a.platform}.com/@${a.handle}`} target="_blank" rel="noopener noreferrer nofollow">{a.platform} @{a.handle}</a> },
         { title: "Владелец", render: (a) => a.owner },
         { title: "Подписчики / среднее", render: (a) => `${a.followers != null ? formatCount(a.followers) : "—"} / ${a.avg_views != null ? formatCount(a.avg_views) : "—"}` },
         { title: "Статистика", render: (a) => a.trust_status ? <TrustBadge status={a.trust_status} /> : "—" },

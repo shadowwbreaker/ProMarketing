@@ -69,7 +69,7 @@ class Command(BaseCommand):
                                                 conditions="Сценарий согласуем до съёмки.")
                 AdvertisingOffer.objects.create(social_account=acc, ad_format="mention", price_minor=price // 2)
             created.append(acc)
-        net, made = AccountNetwork.objects.get_or_create(owner=sellers[0], title="Сетка юмора", defaults={"description": "Два юмористических аккаунта"})
+        net, made = AccountNetwork.objects.get_or_create(owner=sellers[0], title="Сетка юмора", defaults={"description": "Два юмористических канала"})
         if made:
             for acc in created[3:5]:
                 acc.owner = sellers[0]

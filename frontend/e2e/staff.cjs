@@ -23,7 +23,7 @@ const { chromium } = require("playwright");
   await page.getByText("Статус: blocked").waitFor();
   await page.getByRole("button", { name: "Разблокировать" }).click();
   await page.getByText("Статус: active").waitFor();
-  await page.getByRole("link", { name: "Аккаунты" }).click();
+  await page.getByRole("link", { name: "Каналы" }).click();
   await page.getByText("Найдено:").waitFor();
   await page.getByRole("button", { name: "На проверку" }).first().click();
   await page.getByText("under_review").first().waitFor();

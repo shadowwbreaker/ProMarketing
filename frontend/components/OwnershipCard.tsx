@@ -29,7 +29,7 @@ export function OwnershipCard({ acc, onVerified }: { acc: SocialAccount; onVerif
     <Card className="border-warn/60">
       <h2 className="text-lg font-bold">Подтвердите, что канал ваш</h2>
       <p className="mt-1 text-sm text-muted">
-        Покупатели больше доверяют аккаунтам с отметкой «владение подтверждено». Это займёт минуту.
+        Покупатели больше доверяют каналам с отметкой «владение подтверждено». Это займёт минуту.
       </p>
       {!code ? (
         <Button className="mt-3" loading={busy} onClick={() => run(async () => setCode((await startOwnership(acc.id)).code))}>

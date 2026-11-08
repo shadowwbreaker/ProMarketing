@@ -4,8 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useEffect, useState } from "react";
 import { MineList } from "./MineList";
-import { AnalyticsPanel, FavoritesPanel, RecommendationsPanel, ReferralsPanel, ViewedPanel } from "./InsightsPanels";
-import { MessagesPanel } from "./MessagesPanel";
+import { AnalyticsPanel, RecommendationsPanel, ReferralsPanel } from "./InsightsPanels";
 import { PayoutsPanel } from "./PayoutsPanel";
 import { TwoFactorPanel } from "./TwoFactorPanel";
 import { STATUS_LABEL } from "@/lib/api/orders";
@@ -25,19 +24,16 @@ type Tab = { key: string; label: string; seller?: boolean };
 const GROUPS: { title: string; tabs: Tab[] }[] = [
   { title: "Покупки", tabs: [
     { key: "purchases", label: "Мои покупки" },
-    { key: "favorites", label: "Избранное" },
-    { key: "viewed", label: "Просмотренные" },
     { key: "recommendations", label: "Рекомендации" },
   ] },
   { title: "Продажи", tabs: [
-    { key: "accounts", label: "Мои аккаунты" },
+    { key: "accounts", label: "Мои каналы" },
     { key: "sales", label: "Мои продажи", seller: true },
-    { key: "networks", label: "Сетки аккаунтов", seller: true },
+    { key: "networks", label: "Сетки каналов", seller: true },
     { key: "payouts", label: "Выплаты", seller: true },
     { key: "analytics", label: "Аналитика" },
   ] },
   { title: "Общение", tabs: [
-    { key: "messages", label: "Сообщения" },
     { key: "notifications", label: "Уведомления" },
     { key: "tickets", label: "Обращения в поддержку" },
   ] },
@@ -64,8 +60,11 @@ function AccountPage() {
   const toast = useToast();
   const [tab, setTab] = useState("purchases");
   useEffect(() => {
-    if (qsTab) setTab(qsTab);
-  }, [qsTab]);
+    // old links: messages and favorites moved to their own pages in the header
+    if (qsTab === "messages") router.replace("/messages");
+    else if (qsTab === "favorites") router.replace("/favorites");
+    else if (qsTab) setTab(qsTab);
+  }, [qsTab, router]);
   const [busy, setBusy] = useState(false);
   const [leaving, setLeaving] = useState(false);
 
@@ -131,7 +130,7 @@ function AccountPage() {
         {!me.is_email_verified && (
           <Card className="border-warn/50">
             <p className="text-sm">
-              Подтвердите email — без этого нельзя оплачивать заказы и выставлять аккаунты.{" "}
+              Подтвердите email — без этого нельзя оплачивать заказы и выставлять каналы.{" "}
               <button className="font-semibold underline" onClick={() => resendVerification().then(() => toast("Письмо отправлено", "success"))}>
                 Отправить письмо ещё раз
               </button>
@@ -172,7 +171,7 @@ function AccountPage() {
             </form>
             {!isSeller && (
               <div className="mt-6 border-t border-border pt-4">
-                <p className="mb-2 text-sm">Хотите продавать рекламу в своих аккаунтах?</p>
+                <p className="mb-2 text-sm">Хотите продавать рекламу в своих каналах?</p>
                 <Button variant="secondary" onClick={() => becomeSeller().then(setMe)}>Стать продавцом</Button>
               </div>
             )}
@@ -184,11 +183,11 @@ function AccountPage() {
         {tab === "accounts" && (
           <>
             <Link href="/account/accounts/new" className="self-start rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-ink">
-              + Добавить аккаунт
+              + Добавить канал
             </Link>
             {isSeller && <MineList<AccountBrief>
               path="accounts"
-              empty="Аккаунтов пока нет"
+              empty="Каналов пока нет"
               render={(a) => (
                 <Link href={`/account/accounts/${a.id}`} className="flex justify-between hover:text-accent">
                   <span>{a.title} · {a.platform} @{a.handle}</span>
@@ -211,9 +210,6 @@ function AccountPage() {
           </>
         )}
         {tab === "payouts" && <PayoutsPanel />}
-        {tab === "messages" && <MessagesPanel />}
-        {tab === "favorites" && <FavoritesPanel />}
-        {tab === "viewed" && <ViewedPanel />}
         {tab === "recommendations" && <RecommendationsPanel />}
         {tab === "analytics" && <AnalyticsPanel />}
         {tab === "referrals" && <ReferralsPanel />}

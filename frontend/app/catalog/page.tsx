@@ -3,16 +3,16 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useEffect, useRef, useState } from "react";
-import { CardGrid, NetworkCard, OfferCard } from "@/components/catalog/Cards";
+import { OfferTable } from "@/components/catalog/OfferTable";
 import { EmptyState, ErrorState, LoadingState } from "@/components/ui/States";
 import type { Page } from "@/lib/api/auth";
 import { getAdFormats } from "@/lib/api/catalog";
-import { listCatalogNetworks, NetworkCard as NetT, OfferCard as OfferT, searchCatalog } from "@/lib/api/public";
+import { getCatalogCounts, listCatalogNetworks, NetworkCard as NetT, OfferCard as OfferT, searchCatalog } from "@/lib/api/public";
 import { fieldErrors } from "@/lib/forms";
 
 const RUB_FIELDS = new Set(["price_min", "price_max"]);
 /** Keys controlled outside the filter sheet (search box, sort, accounts/networks tabs). */
-const OUTSIDE = new Set(["q", "sort", "kind", "page"]);
+const OUTSIDE = new Set(["q", "sort", "kind", "page", "online", "verified"]);
 
 const input = "w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm";
 
@@ -114,7 +114,6 @@ function FilterSheet({ open, params, onApply, onClose }: {
             <label className="flex flex-col gap-1">Язык<input name="language" defaultValue={v("language")} placeholder="ru" className={input} /></label>
             <label className="flex flex-col gap-1">Рейтинг продавца от<input name="rating_min" type="number" min={1} max={5} step={0.5} defaultValue={v("rating_min")} className={input} /></label>
           </div>
-          <label className="flex items-center gap-2"><input type="checkbox" name="verified" value="1" defaultChecked={v("verified") === "1"} /> Только данные, подтверждённые платформой</label>
           <div className="sticky bottom-0 -mx-4 -mb-5 flex gap-2 border-t border-border bg-surface px-4 py-4">
             <button type="button" onClick={reset} className="rounded-lg border border-border px-4 py-2 font-semibold">Сбросить</button>
             <button className="flex-1 rounded-lg bg-accent px-4 py-2 font-semibold text-accent-ink">Применить</button>
@@ -125,6 +124,47 @@ function FilterSheet({ open, params, onApply, onClose }: {
   );
 }
 
+function Toggle({ label, on, onChange }: { label: string; on: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-border px-3 py-2 text-sm font-semibold">
+      {label}
+      <input type="checkbox" role="switch" checked={on} onChange={(e) => onChange(e.target.checked)} className="peer sr-only" />
+      <span aria-hidden className="relative h-5 w-9 rounded-full bg-border transition-colors duration-150 peer-checked:bg-accent peer-focus-visible:ring-2 peer-focus-visible:ring-accent
+        after:absolute after:left-0.5 after:top-0.5 after:h-4 after:w-4 after:rounded-full after:bg-surface after:shadow after:transition-[translate] after:duration-150 peer-checked:after:translate-x-4" />
+    </label>
+  );
+}
+
+type Counts = { accounts: number; tiktok: number; youtube: number; networks: number };
+
+/** Category bubbles as on FunPay: the bigger the section, the bigger the circle. */
+function Bubbles({ counts, active }: { counts?: Counts; active: string }) {
+  const items: { key: string; label: string; href: string; n?: number }[] = [
+    { key: "all", label: "Все каналы", href: "/catalog", n: counts?.accounts },
+    { key: "tiktok", label: "TikTok", href: "/catalog?platform=tiktok", n: counts?.tiktok },
+    { key: "youtube", label: "YouTube Shorts", href: "/catalog?platform=youtube", n: counts?.youtube },
+    { key: "networks", label: "Сетки", href: "/catalog?kind=networks", n: counts?.networks },
+  ];
+  const max = Math.max(1, ...items.map((i) => i.n ?? 0));
+  return (
+    <nav aria-label="Разделы каталога" className="flex flex-wrap items-center gap-2 sm:gap-5">
+      {items.map((i) => {
+        const on = i.key === active;
+        const size = 84 + Math.round(40 * Math.sqrt((i.n ?? 0) / max));
+        return (
+          <Link key={i.key} href={i.href} aria-current={on ? "page" : undefined}
+            style={{ "--s": `${Math.round(size * 0.7)}px`, "--l": `${size}px` } as React.CSSProperties}
+            className={`flex h-[var(--s)] w-[var(--s)] shrink-0 flex-col sm:h-[var(--l)] sm:w-[var(--l)] items-center justify-center rounded-full text-center text-sm font-bold transition-colors duration-150
+              ${on ? "bg-text text-surface" : "bg-bg text-accent hover:bg-border"}`}>
+            <span className="px-2 text-xs leading-tight sm:text-sm">{i.label}</span>
+            <span className={`mt-1 text-xs font-medium ${on ? "text-surface/80" : "text-muted"}`}>{i.n ?? "…"}</span>
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
 function CatalogInner() {
   const params = useSearchParams();
   const router = useRouter();
@@ -132,9 +172,11 @@ function CatalogInner() {
   const qs = params.toString();
   const isNetworks = params.get("kind") === "networks";
   const [open, setOpen] = useState(false);
+  const [counts, setCounts] = useState<Counts>();
   const filtersBtn = useRef<HTMLButtonElement>(null);
   const [state, setState] = useState<{ loading: boolean; offers?: Page<OfferT>; nets?: Page<NetT>; error?: string }>({ loading: true });
 
+  useEffect(() => void getCatalogCounts().then(setCounts).catch(() => {}), []);
   useEffect(() => {
     let alive = true;
     setState({ loading: true });
@@ -157,54 +199,71 @@ function CatalogInner() {
     p.delete("page");
     go(p);
   };
+  const sortLink = (asc: string, desc: string) => {
+    const p = new URLSearchParams(qs);
+    p.set("sort", params.get("sort") === desc ? asc : desc);
+    return `${pathname}?${p}`;
+  };
   const close = () => {
     setOpen(false);
     filtersBtn.current?.focus({ preventScroll: true });
   };
-  const active = [...params.keys()].filter((k) => !OUTSIDE.has(k)).length;
+  const active = [...params.keys()].filter((k) => !OUTSIDE.has(k) && k !== "platform").length;
   const count = state.offers?.count ?? state.nets?.count ?? 0;
-  const tab = (on: boolean) => `rounded-lg px-3 py-1.5 font-semibold ${on ? "bg-surface shadow-sm" : "text-muted hover:text-text"}`;
+  const section = isNetworks ? "networks" : params.get("platform") === "tiktok" ? "tiktok" : params.get("platform") === "youtube" ? "youtube" : "all";
+  const titles: Record<string, string> = {
+    all: "Реклама в коротких видео", tiktok: "Реклама в TikTok", youtube: "Реклама в YouTube Shorts", networks: "Рекламные сетки",
+  };
 
   return (
-    <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-baseline justify-between gap-3">
-        <h1 className="text-2xl font-bold">
-          {isNetworks ? "Рекламные сетки" : "Каталог"} {!state.loading && <span className="text-base font-normal text-muted">{count}</span>}
-        </h1>
-        <nav aria-label="Что показывать" className="flex rounded-xl bg-bg p-1 text-sm">
-          <Link href="/catalog" className={tab(!isNetworks)} aria-current={!isNetworks ? "page" : undefined}>Аккаунты</Link>
-          <Link href="/catalog?kind=networks" className={tab(isNetworks)} aria-current={isNetworks ? "page" : undefined}>Сетки</Link>
-        </nav>
-      </div>
+    <div className="flex flex-col gap-6">
+      <section className="relative -mt-8 overflow-hidden pt-8">
+        {/* decorative disc, FunPay-style; clipped by the section so the page never scrolls sideways */}
+        <div aria-hidden className="pointer-events-none absolute -right-24 -top-28 hidden h-[24rem] w-[24rem] rounded-full bg-[conic-gradient(from_200deg,#ff3d5a,#7c4dff,#00a3ff,#ff3d5a)] lg:block" />
+        <div aria-hidden className="pointer-events-none absolute -right-10 -top-14 hidden h-[20rem] w-[20rem] rounded-full border-[18px] border-surface/25 lg:block" />
+        <div className="relative max-w-2xl">
+          <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">{titles[section]}</h1>
+          <p className="mt-3 text-sm leading-relaxed text-muted">
+            Покупайте рекламу напрямую у авторов TikTok и YouTube Shorts — подписчики и просмотры получены из самих платформ.{" "}
+            <b className="text-text">Продавец получает оплату только после того, как вы подтвердите выполнение заказа</b>{" "}
+            (подробнее — в разделе <Link href="/support" className="text-accent hover:underline">«Помощь»</Link>).
+          </p>
+        </div>
+        <div className="relative mt-6"><Bubbles counts={counts} active={section} /></div>
+      </section>
 
-      <div className="flex flex-wrap gap-2 text-sm">
+      <div className="flex flex-wrap items-center gap-2">
+        <Toggle label="Только продавцы онлайн" on={params.get("online") === "1"} onChange={(v) => setParam("online", v ? "1" : "")} />
+        {!isNetworks && <Toggle label="✓ Данные платформы" on={params.get("verified") === "1"} onChange={(v) => setParam("verified", v ? "1" : "")} />}
         <form
           key={params.get("q") ?? ""}
           onSubmit={(e) => {
             e.preventDefault();
             setParam("q", String(new FormData(e.currentTarget).get("q") ?? "").trim());
           }}
-          className="flex min-w-0 flex-[1_1_16rem] gap-2"
+          className="relative min-w-0 flex-[1_1_14rem]"
+          role="search"
         >
-          <input name="q" defaultValue={params.get("q") ?? ""} placeholder="Тематика, название, @аккаунт" aria-label="Поиск по каталогу" className={`${input} min-w-0`} />
-          <button className="shrink-0 rounded-lg bg-text px-4 py-2 font-semibold text-surface">Найти</button>
+          <input name="q" defaultValue={params.get("q") ?? ""} placeholder="Поиск по описанию" aria-label="Поиск по каталогу" className={`${input} pr-9`} />
+          <button aria-label="Найти" className="absolute right-1 top-1/2 -translate-y-1/2 p-2 text-muted hover:text-text">
+            <svg aria-hidden width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+          </button>
         </form>
-        <select aria-label="Сортировка" value={params.get("sort") ?? ""} onChange={(e) => setParam("sort", e.target.value)} className="rounded-lg border border-border bg-surface px-3 py-2 text-sm">
-          <option value="">Сначала новые</option><option value="popular">Популярные</option><option value="price_asc">Дешевле</option>
-          <option value="price_desc">Дороже</option><option value="followers">Больше подписчиков</option><option value="views">Больше просмотров</option>
-        </select>
         <button
           ref={filtersBtn}
           type="button"
           onClick={() => setOpen(true)}
           aria-expanded={open}
           aria-haspopup="dialog"
-          className="flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2 font-semibold hover:border-accent"
+          className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-semibold hover:border-accent"
         >
           <svg aria-hidden width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M4 6h16M7 12h10M10 18h4" /></svg>
           Фильтры
           {active > 0 && <span className="rounded-full bg-accent px-1.5 text-xs text-accent-ink">{active}</span>}
         </button>
+        <Link href="/account/accounts/new" className="ml-auto rounded-lg border border-border px-4 py-2 text-sm font-semibold text-accent hover:border-accent">
+          Продать рекламу
+        </Link>
       </div>
 
       <FilterSheet
@@ -220,10 +279,16 @@ function CatalogInner() {
       {state.loading && <LoadingState />}
       {state.error && <ErrorState message={state.error} />}
       {!state.loading && !state.error && count === 0 && <EmptyState title="Ничего не найдено">Попробуйте ослабить фильтры.</EmptyState>}
-      <CardGrid>
-        {state.offers?.results.map((o) => <OfferCard key={o.id} o={o} />)}
-        {state.nets?.results.map((n) => <NetworkCard key={n.id} n={n} />)}
-      </CardGrid>
+      {!state.loading && count > 0 && (
+        <OfferTable
+          offers={state.offers?.results}
+          networks={state.nets?.results}
+          sortHref={isNetworks ? undefined : {
+            price: sortLink("price_asc", "price_desc"), followers: sortLink("followers", "followers"),
+            views: sortLink("views", "views"), active: params.get("sort") ?? "",
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -2,7 +2,10 @@ import { apiFetch } from "./client";
 import type { Page } from "./auth";
 import type { TrustStatus } from "./social";
 
-export type SellerBrief = { id: string; display_name: string; rating: number | null; reviews_count: number; avatar_url?: string | null };
+export type SellerBrief = {
+  id: string; display_name: string; rating: number | null; reviews_count: number; avatar_url?: string | null;
+  online?: boolean; member_since?: string;
+};
 
 export type OfferCard = {
   id: string;
@@ -69,3 +72,4 @@ export const getOfferCard = (id: string) => apiFetch<OfferCard>(`/catalog/accoun
 export const listCatalogNetworks = (qs = "") => apiFetch<Page<NetworkCard>>(`/catalog/networks${qs ? `?${qs}` : ""}`);
 export const getNetworkCard = (id: string) => apiFetch<NetworkCard>(`/catalog/networks/${id}`);
 export const getSeller = (id: string) => apiFetch<SellerPage>(`/sellers/${id}`);
+export const getCatalogCounts = () => apiFetch<{ accounts: number; tiktok: number; youtube: number; networks: number }>("/catalog/counts");

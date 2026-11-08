@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CardGrid, NetworkCard, OfferCard } from "@/components/catalog/Cards";
+import { OfferTable } from "@/components/catalog/OfferTable";
 import { Card } from "@/components/ui/Card";
 import { EmptyState, ErrorState, LoadingState } from "@/components/ui/States";
 import { fieldErrors } from "@/lib/forms";
-import { Analytics, getAnalytics, getFavorites, getRecommendations, getReferrals, getViewed } from "@/lib/api/insights";
-import type { NetworkCard as N, OfferCard as O } from "@/lib/api/public";
+import { Analytics, getAnalytics, getRecommendations, getReferrals } from "@/lib/api/insights";
+import type { OfferCard as O } from "@/lib/api/public";
 import { formatMoney } from "@/lib/format";
 
 function Grid({ load, empty }: { load: () => Promise<O[]>; empty: string }) {
@@ -16,21 +16,10 @@ function Grid({ load, empty }: { load: () => Promise<O[]>; empty: string }) {
   if (err) return <ErrorState message={err} />;
   if (!rows) return <LoadingState />;
   if (!rows.length) return <EmptyState title={empty} />;
-  return <CardGrid>{rows.map((o) => <OfferCard key={o.id} o={o} />)}</CardGrid>;
+  return <OfferTable offers={rows} />;
 }
 
-export const ViewedPanel = () => <Grid load={getViewed} empty="Вы ещё не открывали предложения" />;
 export const RecommendationsPanel = () => <Grid load={getRecommendations} empty="Пока нечего рекомендовать — откройте несколько предложений в каталоге" />;
-
-export function FavoritesPanel() {
-  const [d, setD] = useState<{ accounts: O[]; networks: N[] }>();
-  const [err, setErr] = useState<string>();
-  useEffect(() => void getFavorites().then(setD).catch((e) => setErr(fieldErrors(e).form)), []);
-  if (err) return <ErrorState message={err} />;
-  if (!d) return <LoadingState />;
-  if (!d.accounts.length && !d.networks.length) return <EmptyState title="В избранном пусто" />;
-  return <CardGrid>{d.accounts.map((o) => <OfferCard key={o.id} o={o} />)}{d.networks.map((n) => <NetworkCard key={n.id} n={n} />)}</CardGrid>;
-}
 
 const Stat = ({ label, value }: { label: string; value: string }) => (
   <Card><p className="text-xs text-muted">{label}</p><p className="text-xl font-bold">{value}</p></Card>

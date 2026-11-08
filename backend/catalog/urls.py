@@ -5,6 +5,7 @@ from . import public, views
 urlpatterns = [
     path("catalog/home", public.CatalogHome.as_view()),
     path("catalog/accounts", public.CatalogAccounts.as_view()),
+    path("catalog/counts", public.CatalogCounts.as_view()),
     path("catalog/accounts/<uuid:pk>", public.CatalogAccountDetail.as_view()),
     path("catalog/networks", public.CatalogNetworks.as_view()),
     path("catalog/networks/<uuid:pk>", public.CatalogNetworkDetail.as_view()),

@@ -15,7 +15,7 @@ async function login(browser, base, email) {
   const buyer = await login(browser, base, "demo-buyer@example.com");
   await buyer.goto(`${base}/catalog?q=${encodeURIComponent("Утренний")}`);
   await buyer.getByText("Утренний фитнес").click();
-  await buyer.getByRole("link", { name: "Заказать" }).first().click();
+  await buyer.getByRole("link", { name: /Купить за/ }).click();
   await buyer.getByLabel("Бренд или продукт").fill("Спортпит");
   await buyer.getByLabel("Техническое задание").fill("Показать протеин в кадре 10 секунд");
   await buyer.getByRole("button", { name: /Создать заказ/ }).click();

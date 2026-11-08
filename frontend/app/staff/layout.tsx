@@ -19,7 +19,7 @@ export default function StaffLayout({ children }: { children: ReactNode }) {
         <Link href="/staff/tickets">Обращения</Link>
         {p.has("staff.view_orders") && <Link href="/staff/orders">Заказы</Link>}
         {(p.has("user.sanction") || p.has("staff.view_personal_data")) && <Link href="/staff/users">Пользователи</Link>}
-        {p.has("moderation.stats") && <Link href="/staff/accounts">Аккаунты</Link>}
+        {p.has("moderation.stats") && <Link href="/staff/accounts">Каналы</Link>}
         {p.has("moderation.content") && <Link href="/staff/reviews">Отзывы</Link>}
         {p.has("moderation.stats") && <Link href="/staff/fraud">Антифрод</Link>}
         <Link href="/staff/audit">Журнал</Link>

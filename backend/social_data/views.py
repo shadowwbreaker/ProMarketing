@@ -107,7 +107,7 @@ class SocialAccountListCreate(APIView):
             try:
                 resolved = get_provider(platform).resolve_account(d["profile_url"])
             except errors.AuthorizationRequired as e:
-                raise DomainError("Для этой платформы подключите аккаунт через вход на платформе",
+                raise DomainError("Для этой платформы подключите канал через вход на платформе",
                                   code="oauth_required", status_code=400, details={"oauth_start": f"/social-accounts/oauth/{platform}/start"}) from e
             except errors.ProviderError as e:
                 raise DomainError(e.user_message, code=e.code, status_code=400,
@@ -136,7 +136,7 @@ def _create_account(user, resolved, d, *, manual: bool, ownership_verified: bool
                 description=d.get("description", ""), ownership_verified=ownership_verified,
             )
     except IntegrityError as e:
-        raise DomainError("Этот аккаунт уже добавлен на платформу", code="account_exists", status_code=400) from e
+        raise DomainError("Этот канал уже добавлен на платформу", code="account_exists", status_code=400) from e
     record(action="social_account.created", subject_type="social_account", subject_id=account.pk, actor=user,
            after={"platform": account.platform, "manual": manual})
     return account
@@ -227,7 +227,7 @@ class TikTokOAuthCallback(APIView):
             raise DomainError(e.user_message, code=e.code, status_code=400) from e
         existing = SocialAccount.objects.filter(platform="tiktok", external_id=resolved.external_id).first()
         if existing and existing.owner_id != request.user.pk:
-            raise DomainError("Этот аккаунт уже добавлен другим пользователем. Обратитесь в поддержку.",
+            raise DomainError("Этот канал уже добавлен другим пользователем. Обратитесь в поддержку.",
                               code="account_owned_by_other", status_code=400)
         account = existing or _create_account(request.user, resolved, {}, manual=False, ownership_verified=True)
         SocialAccountConnection.objects.update_or_create(social_account=account, defaults={

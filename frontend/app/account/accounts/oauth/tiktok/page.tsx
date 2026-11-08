@@ -26,7 +26,7 @@ function Callback() {
       .catch((e) => setErr(fieldErrors(e).form));
   }, [q, router]);
 
-  return err ? <p role="alert" className="text-danger">{err}</p> : <LoadingState text="Подключаем аккаунт TikTok…" />;
+  return err ? <p role="alert" className="text-danger">{err}</p> : <LoadingState text="Подключаем канал TikTok…" />;
 }
 
 export default function TikTokOAuthPage() {

@@ -47,7 +47,7 @@ export default function StaffUser() {
         <Card><h2 className="mb-1 font-bold">Продажи</h2>{orders(u.orders_as_seller)}</Card>
         <Card><h2 className="mb-1 font-bold">Жалобы</h2><p className="text-sm">Открыл {u.disputes.opened}, отклонено {u.disputes.rejected}, против него {u.disputes.against}</p></Card>
         <Card><h2 className="mb-1 font-bold">Санкции</h2><ul className="text-sm">{u.sanctions.map((s: any) => <li key={s.id}>{s.type} · {s.reason} · {formatDateTime(s.starts_at)}{s.revoked_at && " (снята)"}</li>)}</ul></Card>
-        <Card><h2 className="mb-1 font-bold">Аккаунты</h2><ul className="text-sm">{u.accounts.map((a: any) => <li key={a.id}><Link className="text-accent" href={`/staff/accounts?q=${a.handle}`}>{a.platform} @{a.handle}</Link> · {a.status}</li>)}</ul></Card>
+        <Card><h2 className="mb-1 font-bold">Каналы</h2><ul className="text-sm">{u.accounts.map((a: any) => <li key={a.id}><Link className="text-accent" href={`/staff/accounts?q=${a.handle}`}>{a.platform} @{a.handle}</Link> · {a.status}</li>)}</ul></Card>
         <Card><h2 className="mb-1 font-bold">История действий</h2><ul className="max-h-64 overflow-y-auto text-xs">{u.history.map((h: any, i: number) => <li key={i}>{formatDateTime(h.created_at)} · {h.action}</li>)}</ul></Card>
       </div>
     </div>

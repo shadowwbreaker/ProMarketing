@@ -79,7 +79,7 @@ export default function StaffDisputePage() {
         <Card>
           <h2 className="mb-2 font-bold">Позиции и оплата</h2>
           <table className="w-full text-sm">
-            <thead className="text-left text-muted"><tr><th>Аккаунт</th><th>Цена</th><th>Статус</th><th>Можно вернуть</th><th>Выплата</th></tr></thead>
+            <thead className="text-left text-muted"><tr><th>Канал</th><th>Цена</th><th>Статус</th><th>Можно вернуть</th><th>Выплата</th></tr></thead>
             <tbody>
               {o.items.map((it: Any) => (
                 <tr key={it.id} className="border-t border-border align-top">
@@ -132,7 +132,7 @@ export default function StaffDisputePage() {
           <h2 className="mb-2 font-bold">История заказа и проверки</h2>
           <ol className="grid gap-0.5 text-xs">{d.events.map((e: Any) => <li key={e.seq}>{formatDateTime(e.created_at)} · {e.type}{e.to_status && ` → ${e.to_status}`}</li>)}</ol>
           <p className="mt-2 text-xs">Проверки публикаций: {d.publication_checks.map((c: Any) => `${c.trigger}: ${c.result}`).join("; ") || "нет"}</p>
-          {d.account_stats.map((s: Any) => <p key={s.item} className="text-xs">Статистика аккаунта: {s.history.map((h: Any) => `${h.followers}/${h.avg_views ?? "—"} (${h.trust_status})`).join(" → ")}</p>)}
+          {d.account_stats.map((s: Any) => <p key={s.item} className="text-xs">Статистика канала: {s.history.map((h: Any) => `${h.followers}/${h.avg_views ?? "—"} (${h.trust_status})`).join(" → ")}</p>)}
         </Card>
       </div>
 
@@ -150,7 +150,7 @@ export default function StaffDisputePage() {
           {activeItems.map((i: Any) => (
             <div key={i.order_item} className="flex gap-1">
               <Button variant="ghost" onClick={() => act("check-publication", { item: i.order_item }, "Проверка публикации запущена")}>Проверить видео</Button>
-              <Button variant="ghost" onClick={() => act("check-account", { item: i.order_item }, "Проверка аккаунта запущена")}>Проверить аккаунт</Button>
+              <Button variant="ghost" onClick={() => act("check-account", { item: i.order_item }, "Проверка канала запущена")}>Проверить канал</Button>
             </div>
           ))}
         </Card>

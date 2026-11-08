@@ -83,11 +83,11 @@ def create_order(*, buyer, terms: dict, offer_id=None, network_id=None, network_
         items = list(network.items.select_related("offer__social_account").order_by("created_at"))
         if network_item_ids:
             if not network.allow_partial_purchase:
-                raise DomainError("Продавец не разрешил покупать аккаунты сетки по отдельности", code="partial_not_allowed", status_code=400)
+                raise DomainError("Продавец не разрешил покупать каналы сетки по отдельности", code="partial_not_allowed", status_code=400)
             wanted = {str(i) for i in network_item_ids}
             items = [i for i in items if str(i.pk) in wanted]
             if len(items) != len(wanted) or not items:
-                raise DomainError("Выбраны аккаунты не из этой сетки", code="bad_network_items", status_code=400)
+                raise DomainError("Выбраны каналы не из этой сетки", code="bad_network_items", status_code=400)
             prices = [i.price_minor for i in items]
         else:
             prices = distribute(network.total_price_minor, [i.price_minor for i in items]) if network.total_price_minor \
@@ -254,7 +254,7 @@ def _validate_video_url(item: OrderItem, url: str):
     host = (urlparse(url).hostname or "").lower()
     allowed = _VIDEO_HOSTS[item.social_account.platform]
     if urlparse(url).scheme != "https" or not any(host == h or host.endswith("." + h) for h in allowed):
-        raise DomainError("Ссылка должна вести на публикацию на платформе аккаунта", code="bad_video_url", status_code=400)
+        raise DomainError("Ссылка должна вести на публикацию на платформе канала", code="bad_video_url", status_code=400)
 
 
 # --- buyer actions -----------------------------------------------------------------------

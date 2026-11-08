@@ -62,7 +62,7 @@ export default function RegisterPage() {
           error={err.fields.password}
         />
         <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" name="as_seller" /> Я хочу продавать рекламу в своих аккаунтах
+          <input type="checkbox" name="as_seller" /> Я хочу продавать рекламу в своих каналах
         </label>
         <label className="flex items-start gap-2 text-sm">
           <input type="checkbox" name="accept_terms" required className="mt-1" />

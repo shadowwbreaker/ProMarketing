@@ -2,6 +2,8 @@
 
 Same anti-circumvention rule as order chats: contacts/requisites raise a moderator signal and a warning.
 """
+from datetime import timedelta
+
 from django.db import IntegrityError, transaction
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -93,8 +95,24 @@ class DirectThreads(APIView):
             last = t.messages.order_by("-created_at").first()
             from accounts.avatar import avatar_url
 
+            online = bool(other.last_seen_at and timezone.now() - other.last_seen_at < timedelta(minutes=10))
             out.append({"user": {"id": str(other.pk), "display_name": other.profile.display_name,
-                                 "avatar_url": avatar_url(other.profile)},
+                                 "avatar_url": avatar_url(other.profile), "online": online,
+                                 "date_joined": other.date_joined, "blocked": other.status == User.Status.BLOCKED},
                         "last_message": last.body[:120] if last else "", "last_message_at": t.last_message_at,
                         "unread": t.messages.filter(read_at__isnull=True).exclude(author=me).count()})
         return Response({"results": out})
+
+
+class DirectUnread(APIView):
+    """Badge for "Сообщения" in the header."""
+
+    permission_classes = [IsActiveUser]
+
+    def get(self, request):
+        from django.db.models import Q
+
+        me = request.user
+        n = (DirectMessage.objects.filter(Q(thread__user_a=me) | Q(thread__user_b=me), read_at__isnull=True)
+             .exclude(author=me).count())
+        return Response({"unread": n})

@@ -39,7 +39,7 @@ export default function NetworkPage() {
         <p className="text-sm text-muted">{net.description}</p>
       </div>
       <div className="grid gap-4 sm:grid-cols-4">
-        <Card><p className="text-xs text-muted">Аккаунтов</p><p className="text-xl font-bold">{net.stats.accounts}</p></Card>
+        <Card><p className="text-xs text-muted">Каналов</p><p className="text-xl font-bold">{net.stats.accounts}</p></Card>
         <Card><p className="text-xs text-muted">Подписчиков всего</p><p className="text-xl font-bold">{formatCount(net.stats.total_followers)}</p></Card>
         <Card><p className="text-xs text-muted">Сумма средних просмотров</p><p className="text-xl font-bold">{formatCount(net.stats.total_avg_views)}</p></Card>
         <Card><p className="text-xs text-muted">Цена сетки</p><p className="text-xl font-bold">{formatMoney(net.stats.price_minor)}</p>
@@ -51,7 +51,7 @@ export default function NetworkPage() {
         </Card>
       </div>
       <Card>
-        <h2 className="mb-3 font-bold">Аккаунты в сетке</h2>
+        <h2 className="mb-3 font-bold">Каналы в сетке</h2>
         <ul className="divide-y divide-border text-sm">
           {net.items.map((i) => (
             <li key={i.id} className="flex justify-between py-2">

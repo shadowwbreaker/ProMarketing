@@ -71,7 +71,7 @@ def result_report(item) -> dict:
 # --- favorites & history ---------------------------------------------------------------------
 def toggle_favorite(user, *, account_id=None, network_id=None) -> bool:
     if bool(account_id) == bool(network_id):
-        raise DomainError("Укажите аккаунт или сетку", code="bad_target", status_code=400)
+        raise DomainError("Укажите канал или сетку", code="bad_target", status_code=400)
     from catalog.public import sellable_accounts, sellable_networks
 
     if account_id and not sellable_accounts().filter(pk=account_id).exists():

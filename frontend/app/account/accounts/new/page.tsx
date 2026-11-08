@@ -172,7 +172,7 @@ function NewAccountWizard() {
 
   return (
     <div className="mx-auto max-w-xl">
-      <h1 className="mb-4 text-2xl font-bold">Добавить аккаунт</h1>
+      <h1 className="mb-4 text-2xl font-bold">Добавить канал</h1>
       <Steps step={step} />
       <FormError message={err.form} />
 
@@ -213,8 +213,8 @@ function NewAccountWizard() {
             />
             {platform === "tiktok" && (
               <p className="text-xs text-muted">
-                Чтобы подписчики и просмотры посчитались автоматически, TikTok требует входа владельца аккаунта —
-                так же подтверждается, что аккаунт ваш.
+                Чтобы подписчики и просмотры посчитались автоматически, TikTok требует входа владельца канала —
+                так же подтверждается, что канал ваш.
               </p>
             )}
             {(oauthOffer || manual) && platform === "tiktok" && (
@@ -322,7 +322,7 @@ function NewAccountWizard() {
       )}
 
       <p className="mt-6 text-center text-xs text-muted">
-        Статистика собирается один раз сейчас и потом только по кнопке «Обновить». <Link href="/account?tab=accounts" className="underline">Мои аккаунты</Link>
+        Статистика собирается один раз сейчас и потом только по кнопке «Обновить». <Link href="/account?tab=accounts" className="underline">Мои каналы</Link>
       </p>
     </div>
   );

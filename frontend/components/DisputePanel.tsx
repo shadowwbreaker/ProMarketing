@@ -131,7 +131,7 @@ export function DisputePanel({ order, onChanged }: { order: Order; onChanged: ()
               </select>
             </label>
             {order.items.length > 1 && (
-              <fieldset className="text-sm"><legend>Каких аккаунтов касается (ничего не выбрано — всех)</legend>
+              <fieldset className="text-sm"><legend>Каких каналов касается (ничего не выбрано — всех)</legend>
                 {order.items.map((i) => (
                   <label key={i.id} className="flex items-center gap-2"><input type="checkbox" onChange={(e) => {
                     const s = new Set(items);

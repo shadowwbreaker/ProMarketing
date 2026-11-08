@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { CardGrid, Metric, OfferCard, SellerLine } from "@/components/catalog/Cards";
+import { Metric, SellerLine } from "@/components/catalog/Cards";
+import { OfferTable } from "@/components/catalog/OfferTable";
 import { Card } from "@/components/ui/Card";
 import { ErrorState, LoadingState } from "@/components/ui/States";
 import { getNetworkCard, NetworkCard } from "@/lib/api/public";
@@ -22,7 +23,7 @@ export default function NetworkPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <p className="text-sm text-muted">Рекламная сетка · {n.stats.accounts} аккаунтов</p>
+        <p className="text-sm text-muted">Рекламная сетка · {n.stats.accounts} каналов</p>
         <h1 className="text-3xl font-extrabold">{n.title}</h1>
         <SellerLine s={n.seller} />
       </div>
@@ -35,8 +36,8 @@ export default function NetworkPage() {
       {n.description && <p className="whitespace-pre-line">{n.description}</p>}
       {n.conditions && <Card><h2 className="mb-1 font-bold">Условия</h2><p className="whitespace-pre-line text-sm">{n.conditions}</p></Card>}
       <Link href={`/orders/new?network=${n.id}`} className="self-start rounded-lg bg-accent px-5 py-3 font-semibold text-accent-ink">Заказать всю сетку</Link>
-      <h2 className="text-xl font-bold">Аккаунты сетки{n.allow_partial_purchase && <span className="text-sm font-normal text-muted"> — можно заказать по отдельности</span>}</h2>
-      <CardGrid>{n.items?.map((i) => <OfferCard key={i.id} o={i.account} />)}</CardGrid>
+      <h2 className="text-xl font-bold">Каналы сетки{n.allow_partial_purchase && <span className="text-sm font-normal text-muted"> — можно заказать по отдельности</span>}</h2>
+      <OfferTable offers={n.items?.map((i) => i.account) ?? []} />
     </div>
   );
 }

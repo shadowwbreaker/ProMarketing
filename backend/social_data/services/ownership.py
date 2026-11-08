@@ -62,7 +62,7 @@ def start_claim(account: SocialAccount, *, user) -> str:
     from social_data.models import OwnershipClaim
 
     if account.owner_id == user.pk or account.ownership_verified or account.platform not in SUPPORTED:
-        raise DomainError("Этот аккаунт нельзя забрать", code="not_claimable", status_code=400)
+        raise DomainError("Этот канал нельзя забрать", code="not_claimable", status_code=400)
     claim = OwnershipClaim.objects.filter(account=account, claimant=user, resolved_at__isnull=True).first()
     if not claim:
         try:
@@ -87,7 +87,7 @@ def check_claim(account: SocialAccount, *, user) -> bool:
     if not claim:
         raise DomainError("Сначала получите код", code="no_code", status_code=400)
     if account.ownership_verified:
-        raise DomainError("Владение этим аккаунтом уже подтверждено другим пользователем — обратитесь в поддержку",
+        raise DomainError("Владение этим каналом уже подтверждено другим пользователем — обратитесь в поддержку",
                           code="already_verified", status_code=400)
     resolved = ResolvedAccount(platform=account.platform, external_id=account.external_id, handle=account.handle,
                                profile_url=account.profile_url, title=account.title)
@@ -100,7 +100,7 @@ def check_claim(account: SocialAccount, *, user) -> bool:
     if not found:
         return False
     if account.order_items.filter(status__in=ACTIVE_ORDER_STATUSES).exists():
-        raise DomainError("По аккаунту идут заказы — передача после их завершения, напишите в поддержку",
+        raise DomainError("По каналу идут заказы — передача после их завершения, напишите в поддержку",
                           code="active_orders", status_code=400)
     with transaction.atomic():
         previous = account.owner
@@ -117,6 +117,6 @@ def check_claim(account: SocialAccount, *, user) -> bool:
         OwnershipClaim.objects.filter(account=account, resolved_at__isnull=True).update(resolved_at=timezone.now())
         record(action="social_account.claimed", subject_type="social_account", subject_id=account.pk, actor=user,
                before={"owner": str(previous.pk)}, after={"owner": str(user.pk)})
-        notify(previous, "account.claimed", "Аккаунт передан владельцу",
-               f"Владелец @{account.handle} подтвердил права на аккаунт, он удалён из ваших объявлений.")
+        notify(previous, "account.claimed", "Канал передан владельцу",
+               f"Владелец @{account.handle} подтвердил права на канал, он удалён из ваших объявлений.")
     return True

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
-import { CardGrid, NetworkCard, OfferCard } from "@/components/catalog/Cards";
+import { OfferTable } from "@/components/catalog/OfferTable";
 import { ErrorState, LoadingState } from "@/components/ui/States";
 import { getHome, Home } from "@/lib/api/public";
 import { fieldErrors } from "@/lib/forms";
@@ -47,14 +47,14 @@ export default function HomePage() {
             Реклама у авторов коротких видео — <span className="text-accent">с защитой сделки</span>
           </h1>
           <p className="mt-4 max-w-xl text-muted">
-            Аккаунты TikTok и YouTube Shorts с реальной статистикой. Оплата удерживается у платёжного провайдера и
+            Каналы TikTok и YouTube Shorts с реальной статистикой. Оплата удерживается у платёжного провайдера и
             переводится продавцу через 48 часов после того, как вы подтвердите выполнение.
           </p>
           <form onSubmit={search} role="search" className="mt-6 flex max-w-xl gap-2">
             <input
               name="q"
               aria-label="Поиск по каталогу"
-              placeholder="Тематика, название, @аккаунт"
+              placeholder="Тематика, название, @канал"
               className="min-w-0 flex-1 rounded-lg border border-border bg-surface px-4 py-3 outline-none focus:ring-2 focus:ring-accent"
             />
             <button className="rounded-lg bg-accent px-5 py-3 font-semibold text-accent-ink">Найти</button>
@@ -88,11 +88,11 @@ export default function HomePage() {
               ))}
             </div>
           )}
-          {home.popular.length > 0 && <Block title="Популярные предложения" href="/catalog?sort=popular"><CardGrid>{home.popular.map((o) => <OfferCard key={o.id} o={o} />)}</CardGrid></Block>}
+          {home.popular.length > 0 && <Block title="Популярные предложения" href="/catalog?sort=popular"><OfferTable offers={home.popular} /></Block>}
           {/* each block shows only items not already shown above — no repeating the same cards three times */}
-          {recommended.length > 0 && <Block title="Рекомендуем: подтверждённая статистика" href="/catalog?verified=1&sort=views"><CardGrid>{recommended.map((o) => <OfferCard key={o.id} o={o} />)}</CardGrid></Block>}
-          {fresh.length > 0 && <Block title="Новые" href="/catalog?sort=new"><CardGrid>{fresh.map((o) => <OfferCard key={o.id} o={o} />)}</CardGrid></Block>}
-          {home.networks.length > 0 && <Block title="Рекламные сетки" href="/catalog?kind=networks"><CardGrid>{home.networks.map((n) => <NetworkCard key={n.id} n={n} />)}</CardGrid></Block>}
+          {recommended.length > 0 && <Block title="Рекомендуем: подтверждённая статистика" href="/catalog?verified=1&sort=views"><OfferTable offers={recommended} /></Block>}
+          {fresh.length > 0 && <Block title="Новые" href="/catalog?sort=new"><OfferTable offers={fresh} /></Block>}
+          {home.networks.length > 0 && <Block title="Рекламные сетки" href="/catalog?kind=networks"><OfferTable networks={home.networks} /></Block>}
           {!home.popular.length && !home.networks.length && (
             <p className="mt-10 text-center text-muted">Каталог пока пуст. <Link href="/register" className="text-accent">Станьте первым продавцом</Link>.</p>
           )}

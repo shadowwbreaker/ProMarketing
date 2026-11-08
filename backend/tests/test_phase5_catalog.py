@@ -85,7 +85,7 @@ def test_youtube_average_hidden_and_not_filterable(api, seller, account_factory,
     card = api.get(f"/api/v1/catalog/accounts/{yt.pk}").json()
     assert card["avg_views"] is None and card["trust_status"] == "VERIFIED" and card["followers"] == 50_000
     assert ids(api.get("/api/v1/catalog/accounts", {"avg_min": 1})) == set()
-    assert ids(api.get("/api/v1/catalog/accounts", {"verified": "1"})) == set()
+    assert ids(api.get("/api/v1/catalog/accounts", {"verified": "1"})) == {str(yt.pk)}  # followers are verified (D-016 clarification)
     settings.YOUTUBE_DERIVED_METRICS_APPROVED = True
     assert api.get(f"/api/v1/catalog/accounts/{yt.pk}").json()["avg_views"] == 90_000
 
@@ -129,3 +129,17 @@ def test_home_and_seller_page(api, seller, user_factory, account_factory, offer_
     assert page["completed_orders"] == 1 and page["rating"] == 4.0 and page["reviews_count"] == 1
     assert len(page["accounts"]) == 1 and "email" not in page
     assert api.get(f"/api/v1/sellers/{user_factory(status='blocked').pk}").status_code == 404
+
+
+@pytest.mark.django_db
+def test_counts_online_filter_and_seller_brief(api, seller, account_factory, offer_factory):
+    from django.utils import timezone
+
+    tt = listed(account_factory, offer_factory, seller, platform="tiktok")
+    c = api.get("/api/v1/catalog/counts").json()
+    assert c["accounts"] >= 1 and c["tiktok"] >= 1 and "networks" in c
+    card = api.get(f"/api/v1/catalog/accounts/{tt.pk}").json()
+    assert card["seller"]["online"] is False and card["seller"]["member_since"]
+    assert str(tt.pk) not in ids(api.get("/api/v1/catalog/accounts", {"online": "1"}))
+    type(seller).objects.filter(pk=seller.pk).update(last_seen_at=timezone.now())
+    assert str(tt.pk) in ids(api.get("/api/v1/catalog/accounts", {"online": "1"}))

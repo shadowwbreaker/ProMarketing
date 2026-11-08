@@ -68,9 +68,9 @@ def request_refresh(account_id, *, user, trigger: str = StatsRefreshJob.Trigger.
     with transaction.atomic():
         account = SocialAccount.objects.select_for_update().get(pk=account_id)
         if trigger != StatsRefreshJob.Trigger.ADMIN_CHECK and account.owner_id != user.pk:
-            raise DomainError("Нет доступа к аккаунту", code="forbidden", status_code=403)
+            raise DomainError("Нет доступа к каналу", code="forbidden", status_code=403)
         if account.status in (SocialAccount.Status.BLOCKED, SocialAccount.Status.REMOVED):
-            raise DomainError("Аккаунт недоступен для обновления", code="account_unavailable")
+            raise DomainError("Канал недоступен для обновления", code="account_unavailable")
         if StatsRefreshJob.objects.filter(social_account=account, status__in=["queued", "running"]).exists():
             raise DomainError("Обновление уже выполняется", code="refresh_in_progress")
         nxt = next_allowed_at(account)
@@ -173,7 +173,7 @@ def _fail(job: StatsRefreshJob, code: str, message: str) -> StatsRefreshJob:
 def save_manual_statistics(account: SocialAccount, *, user, followers: int, video_views: list[int]) -> SocialAccountStatistics:
     """Owner-entered numbers. Always MANUAL, never VERIFIED (roadmap 3.7)."""
     if account.owner_id != user.pk:
-        raise DomainError("Нет доступа к аккаунту", code="forbidden", status_code=403)
+        raise DomainError("Нет доступа к каналу", code="forbidden", status_code=403)
     if followers < 0 or any(v < 0 for v in video_views) or len(video_views) > settings.STATS_SAMPLE_SIZE:
         raise DomainError("Некорректные значения статистики", code="invalid_manual_stats", status_code=400)
     now = timezone.now()

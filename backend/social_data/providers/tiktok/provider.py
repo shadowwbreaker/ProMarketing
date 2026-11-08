@@ -123,7 +123,7 @@ class TikTokProvider(SocialDataProvider):
             expected = self.validate_profile_url(url)
             if handle and expected.lower() != handle.lower():
                 raise errors.ProviderError("profile url does not match authorized account",
-                                           user_message="Ссылка не совпадает с аккаунтом, в который выполнен вход")
+                                           user_message="Ссылка не совпадает с каналом, в который выполнен вход")
         return ResolvedAccount(platform="tiktok", external_id=user["open_id"], handle=handle,
                                profile_url=url or f"https://www.tiktok.com/@{handle}", title=user.get("display_name") or handle)
 

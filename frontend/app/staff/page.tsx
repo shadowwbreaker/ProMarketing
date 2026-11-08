@@ -10,7 +10,7 @@ type Dash = Record<string, number> & { finance?: { payments_minor: number; refun
 
 const LABELS: [string, string][] = [
   ["users", "Пользователей"], ["sellers", "Продавцов"], ["buyers", "Покупателей"], ["blocked_users", "Заблокировано"],
-  ["accounts", "Рекламных аккаунтов"], ["listed_accounts", "В каталоге"], ["accounts_under_review", "На проверке"], ["networks", "Сеток"],
+  ["accounts", "Рекламных каналов"], ["listed_accounts", "В каталоге"], ["accounts_under_review", "На проверке"], ["networks", "Сеток"],
   ["active_orders", "Активных заказов"], ["completed_orders", "Завершённых"], ["cancelled_orders", "Отмен и возвратов"],
   ["open_disputes", "Открытых споров"], ["orders_last_7d", "Заказов за 7 дней"],
 ];

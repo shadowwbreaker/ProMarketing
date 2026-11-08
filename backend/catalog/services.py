@@ -23,7 +23,7 @@ def _own(obj_owner_id, user):
 def create_offer(account: SocialAccount, *, user, **data) -> AdvertisingOffer:
     _own(account.owner_id, user)
     if account.status in (SocialAccount.Status.REMOVED, SocialAccount.Status.BLOCKED):
-        raise DomainError("Аккаунт недоступен", code="account_unavailable")
+        raise DomainError("Канал недоступен", code="account_unavailable")
     try:
         with transaction.atomic():
             offer = AdvertisingOffer.objects.create(social_account=account, currency="RUB", **data)
@@ -66,7 +66,7 @@ def set_listing(account: SocialAccount, *, user, listed: bool) -> SocialAccount:
         if not platform_enabled(account.platform):
             problems.append("платформа недоступна на сервисе")
         if account.status != SocialAccount.Status.ACTIVE:
-            problems.append("аккаунт на проверке или заблокирован" if account.status in ("under_review", "blocked") else "аккаунт скрыт или удалён")
+            problems.append("канал на проверке или заблокирован" if account.status in ("under_review", "blocked") else "канал скрыт или удалён")
         if account.current_statistics_id is None:
             problems.append("получите статистику или введите её вручную")
         if not account.offers.filter(is_active=True).exists():
@@ -84,7 +84,7 @@ def remove_account(account: SocialAccount, *, user) -> SocialAccount:
     """Remove from catalog permanently (soft delete). Not allowed while orders are active."""
     _own(account.owner_id, user)
     if account.order_items.filter(status__in=ACTIVE_ORDER_STATUSES).exists():
-        raise DomainError("По аккаунту есть активные заказы — завершите их перед удалением", code="active_orders")
+        raise DomainError("По каналу есть активные заказы — завершите их перед удалением", code="active_orders")
     with transaction.atomic():
         account.status = SocialAccount.Status.REMOVED
         account.is_listed = False
@@ -116,15 +116,15 @@ def add_network_item(net: AccountNetwork, *, user, offer: AdvertisingOffer, pric
     _own(net.owner_id, user)
     account = offer.social_account
     if account.owner_id != user.pk:
-        raise DomainError("В сетку можно добавить только свои аккаунты", code="not_own_account", status_code=400)
+        raise DomainError("В сетку можно добавить только свои каналы", code="not_own_account", status_code=400)
     if not offer.is_active or account.status != SocialAccount.Status.ACTIVE:
-        raise DomainError("Предложение или аккаунт неактивны", code="offer_inactive", status_code=400)
+        raise DomainError("Предложение или канал неактивны", code="offer_inactive", status_code=400)
     try:
         with transaction.atomic():
             item = NetworkItem.objects.create(network=net, social_account=account, offer=offer,
                                               price_minor=price_minor or offer.price_minor)
     except IntegrityError as e:
-        raise DomainError("Аккаунт уже есть в сетке", code="already_in_network", status_code=400) from e
+        raise DomainError("Канал уже есть в сетке", code="already_in_network", status_code=400) from e
     record(action="network.item_added", subject_type="network", subject_id=net.pk, actor=user, after={"account": str(account.pk)})
     return item
 

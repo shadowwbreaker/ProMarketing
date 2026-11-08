@@ -40,7 +40,7 @@ class SocialAccount(BaseModel):
 
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="social_accounts")
     platform = models.CharField(max_length=16, choices=Platform.choices)
-    external_id = models.CharField(max_length=128, help_text="ID аккаунта на платформе")
+    external_id = models.CharField(max_length=128, help_text="ID канала на платформе")
     handle = models.CharField(max_length=128)
     profile_url = models.URLField(max_length=500)
     title = models.CharField(max_length=120)
@@ -89,7 +89,7 @@ class StatsRefreshJob(BaseModel):
         FAILED = "failed", "Ошибка"
 
     class Trigger(models.TextChoices):
-        ACCOUNT_ADDED = "account_added", "Добавление аккаунта"
+        ACCOUNT_ADDED = "account_added", "Добавление канала"
         USER_REFRESH = "user_refresh", "Кнопка «Обновить»"
         ADMIN_CHECK = "admin_check", "Проверка администратором"
 

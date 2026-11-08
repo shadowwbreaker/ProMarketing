@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { NetworkCard } from "@/components/catalog/Cards";
+import { OfferTable } from "@/components/catalog/OfferTable";
 import { Avatar } from "@/components/profile/Avatar";
 import { DirectChat } from "@/components/profile/DirectChat";
 import { ErrorState, LoadingState } from "@/components/ui/States";
@@ -52,7 +52,7 @@ function OffersTable({ title, items }: { title: string; items: OfferCard[] }) {
       <table className="mt-2 w-full text-sm">
         <thead>
           <tr className="border-y border-border text-left text-muted">
-            <th className="px-4 py-2 font-medium">Аккаунт</th>
+            <th className="px-4 py-2 font-medium">Канал</th>
             <th className="hidden px-2 py-2 text-right font-medium sm:table-cell">Подписчики</th>
             <th className="hidden px-2 py-2 text-right font-medium sm:table-cell">Просмотры</th>
             <th className="px-4 py-2 text-right font-medium">Цена</th>
@@ -115,7 +115,7 @@ export default function ProfilePage() {
           {s.bio && <p className="mt-2 max-w-2xl text-sm text-muted">{s.bio}</p>}
           {own && (
             <div className="mt-3 flex flex-wrap gap-2 text-sm">
-              <Link href="/account/accounts/new" className="rounded-lg bg-accent px-3 py-1.5 font-semibold text-accent-ink">+ Добавить аккаунт</Link>
+              <Link href="/account/accounts/new" className="rounded-lg bg-accent px-3 py-1.5 font-semibold text-accent-ink">+ Добавить канал</Link>
               <Link href="/account?tab=profile" className="rounded-lg border border-border px-3 py-1.5 font-semibold">Редактировать профиль</Link>
             </div>
           )}
@@ -142,14 +142,14 @@ export default function ProfilePage() {
           ) : (
             <div className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted">
               {own ? (
-                <>У вас пока нет объявлений. <Link href="/account/accounts/new" className="font-semibold text-accent">Добавьте первый аккаунт</Link></>
+                <>У вас пока нет объявлений. <Link href="/account/accounts/new" className="font-semibold text-accent">Добавьте первый канал</Link></>
               ) : "Пока нет активных предложений"}
             </div>
           )}
           {s.networks.length > 0 && (
             <>
-              <Label>Сетки аккаунтов</Label>
-              <div className="grid gap-3 sm:grid-cols-2">{s.networks.map((n) => <NetworkCard key={n.id} n={n} />)}</div>
+              <Label>Сетки каналов</Label>
+              <OfferTable networks={s.networks} />
             </>
           )}
 
