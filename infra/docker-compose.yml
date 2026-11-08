@@ -1,5 +1,6 @@
 # Dev environment (D-017): Docker Desktop + WSL2. Usage from repo root:
 #   copy .env.example .env   (then fill FIELD_ENCRYPTION_KEY)
+#   docker compose -f infra/docker-compose.yml exec backend python manage.py seed_demo
 #   docker compose -f infra/docker-compose.yml up --build
 name: promarketing
 services:
@@ -43,6 +44,14 @@ services:
     build: ../backend
     env_file: ../.env
     command: celery -A config worker -l info
+    volumes: ["../backend:/app"]
+    depends_on:
+      db: {condition: service_healthy}
+      redis: {condition: service_healthy}
+  beat:
+    build: ../backend
+    env_file: ../.env
+    command: celery -A config beat -l info --schedule /tmp/celerybeat-schedule
     volumes: ["../backend:/app"]
     depends_on:
       db: {condition: service_healthy}

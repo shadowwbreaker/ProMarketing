@@ -9,7 +9,10 @@
 ```bash
 cp .env.example .env        # заполните FIELD_ENCRYPTION_KEY
 docker compose -f infra/docker-compose.yml up --build
+docker compose -f infra/docker-compose.yml exec backend python manage.py seed_demo   # демо-данные
 ```
+Сервисы: db, redis, minio, backend, worker (фоновые задачи), beat (таймеры заказов и выплат), frontend.
+Демо-входы: `demo-buyer@example.com`, `demo-seller1@example.com`, `demo-admin@example.com`, `demo-support@example.com`, пароль `Demo-password-1`.
 Backend: http://localhost:8000/api/v1/health/ready · Frontend: http://localhost:3000 · Статус: http://localhost:3000/status
 
 ## Запуск без Docker
