@@ -29,7 +29,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {children}
       <div aria-live="polite" className="fixed bottom-4 right-4 z-50 flex w-[min(92vw,360px)] flex-col gap-2">
         {toasts.map((t) => (
-          <div key={t.id} className={`rounded-lg border-l-4 bg-surface p-3 text-sm shadow-lg ${kindStyle[t.kind]}`}>
+          <div key={t.id} className={`page-enter rounded-xl border-l-4 bg-surface p-3 text-sm shadow-lg ${kindStyle[t.kind]}`}>
             {t.text}
           </div>
         ))}

@@ -15,8 +15,9 @@ const { chromium } = require("playwright");
   await page.waitForURL("**/account");
   await page.getByText("Подтвердите email").waitFor();
   await page.getByRole("button", { name: "Мои каналы" }).waitFor(); // seller tabs visible
-  await page.getByRole("button", { name: "Мои покупки" }).click();
+  await page.goto(`${base}/purchases`);
   await page.getByText("Покупок пока нет").waitFor();
+  await page.goto(`${base}/account`);
   await page.getByRole("button", { name: "Выйти" }).click();
   await page.waitForURL(base + "/");
   await page.goto(`${base}/login`);

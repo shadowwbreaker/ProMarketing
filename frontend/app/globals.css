@@ -36,3 +36,63 @@ body {
   background: var(--surface);
   color: var(--text);
 }
+
+/* ---------- Motion (exact values from .claude/skills/better-ui) ---------- */
+:root {
+  --ease-out-soft: cubic-bezier(0.2, 0, 0, 1);
+}
+
+@keyframes pm-fade-in {
+  from { opacity: 0; }
+}
+@keyframes pm-fade-in-up {
+  from { opacity: 0; transform: translateY(12px); filter: blur(4px); }
+}
+@keyframes pm-shimmer {
+  to { background-position: -200% 0; }
+}
+
+/* page entrance: every route */
+.page-enter { animation: pm-fade-in 300ms ease-out both; }
+/* staged entrance for hero blocks: children 100ms apart */
+.stagger > * { animation: pm-fade-in 300ms ease-out both; }
+.stagger > :nth-child(2) { animation-delay: 100ms; }
+.stagger > :nth-child(3) { animation-delay: 200ms; }
+.stagger > :nth-child(4) { animation-delay: 300ms; }
+.stagger > :nth-child(5) { animation-delay: 400ms; }
+/* list rows: quick cascade on first render, capped so long lists don't wait */
+.rows > * { animation: pm-fade-in 240ms ease-out both; }
+.rows > :nth-child(2) { animation-delay: 30ms; }
+.rows > :nth-child(3) { animation-delay: 60ms; }
+.rows > :nth-child(4) { animation-delay: 90ms; }
+.rows > :nth-child(5) { animation-delay: 120ms; }
+.rows > :nth-child(6) { animation-delay: 150ms; }
+.rows > :nth-child(n+7) { animation-delay: 180ms; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .page-enter, .stagger > *, .rows > * { animation-name: pm-fade-in-up; }
+  /* gentle float for decorative frames */
+  .float-slow { animation: pm-float 7s ease-in-out infinite alternate; }
+}
+@keyframes pm-float {
+  to { transform: translateY(-10px) rotate(var(--r, 0deg)); }
+}
+
+/* loading skeleton */
+.skeleton {
+  border-radius: 0.5rem;
+  background: linear-gradient(90deg, var(--bg) 25%, #eceef2 37%, var(--bg) 63%);
+  background-size: 200% 100%;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .skeleton { animation: pm-shimmer 1.4s linear infinite; }
+}
+
+/* popovers that appear from display:none (menus) */
+.pop {
+  transition: opacity 150ms ease-out, scale 150ms ease-out, display 150ms allow-discrete;
+  transform-origin: top right;
+  @starting-style { opacity: 0; scale: 0.96; }
+}
+
+a, button { -webkit-tap-highlight-color: transparent; }

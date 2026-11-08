@@ -42,7 +42,7 @@ function PlatformTag({ p }: { p: string }) {
   );
 }
 
-const row = "group relative grid grid-cols-[1fr_auto] gap-x-4 gap-y-2 border-b border-border px-2 py-3 hover:bg-bg sm:grid-cols-[minmax(0,1fr)_7rem_7rem_13rem_7rem] sm:items-center";
+const row = "group relative grid grid-cols-[1fr_auto] gap-x-4 gap-y-2 rounded-xl px-3 py-3.5 transition-colors duration-150 hover:bg-bg sm:grid-cols-[minmax(0,1fr)_7rem_7rem_13rem_7.5rem] sm:items-center";
 const stretched = "after:absolute after:inset-0 after:content-[''] focus-visible:outline-none";
 
 export function OfferRow({ o }: { o: OfferCard }) {
@@ -63,8 +63,10 @@ export function OfferRow({ o }: { o: OfferCard }) {
         {o.avg_views != null ? formatCount(o.avg_views) : <span className="text-muted">скрыто</span>}
       </p>
       <div className="col-span-2 row-start-2 sm:col-span-1 sm:row-start-auto"><SellerCell s={o.seller} /></div>
-      <p className="col-start-2 row-start-1 whitespace-nowrap text-right font-bold tabular-nums sm:col-start-auto sm:row-start-auto">
-        {o.min_price_minor != null ? formatMoney(o.min_price_minor) : "—"}
+      <p className="col-start-2 row-start-1 text-right sm:col-start-auto sm:row-start-auto">
+        <span className="inline-block whitespace-nowrap rounded-lg bg-bg px-2.5 py-1 font-bold tabular-nums transition-colors duration-150 group-hover:bg-accent group-hover:text-accent-ink">
+          {o.min_price_minor != null ? formatMoney(o.min_price_minor) : "—"}
+        </span>
       </p>
     </li>
   );
@@ -83,7 +85,9 @@ export function NetworkRow({ n }: { n: NetworkCard }) {
       <p className="hidden text-right text-sm tabular-nums sm:block">{formatCount(n.stats.total_followers)}</p>
       <p className="hidden text-right text-sm tabular-nums sm:block">{formatCount(n.stats.total_avg_views)}</p>
       <div className="col-span-2 row-start-2 sm:col-span-1 sm:row-start-auto"><SellerCell s={n.seller} /></div>
-      <p className="col-start-2 row-start-1 whitespace-nowrap text-right font-bold tabular-nums sm:col-start-auto sm:row-start-auto">{formatMoney(n.stats.price_minor)}</p>
+      <p className="col-start-2 row-start-1 text-right sm:col-start-auto sm:row-start-auto">
+        <span className="inline-block whitespace-nowrap rounded-lg bg-bg px-2.5 py-1 font-bold tabular-nums transition-colors duration-150 group-hover:bg-accent group-hover:text-accent-ink">{formatMoney(n.stats.price_minor)}</span>
+      </p>
     </li>
   );
 }
@@ -97,19 +101,19 @@ export function OfferTable({ offers = [], networks = [], sortHref }: {
   const head = (label: string, key?: "price" | "followers" | "views") =>
     key && sortHref ? (
       <Link href={sortHref[key]} className="inline-flex items-center gap-1 hover:text-accent" aria-label={`Сортировать: ${label}`}>
-        {label} <span aria-hidden className={sortHref.active?.startsWith(key) ? "text-accent" : "text-muted"}>⇅</span>
+        {label} <span aria-hidden className={`transition-colors duration-150 ${sortHref.active?.startsWith(key) ? "text-accent" : "text-muted/60"}`}>⇅</span>
       </Link>
     ) : label;
   return (
     <div>
-      <div className="hidden grid-cols-[minmax(0,1fr)_7rem_7rem_13rem_7rem] gap-x-4 border-b border-border px-2 pb-2 text-sm sm:grid">
+      <div className="hidden grid-cols-[minmax(0,1fr)_7rem_7rem_13rem_7.5rem] gap-x-4 px-3 pb-2 text-[11px] font-bold uppercase tracking-wider text-muted sm:grid">
         <span>Описание</span>
         <span className="text-right">{head("Подписчики", "followers")}</span>
         <span className="text-right">{head("Просмотры", "views")}</span>
         <span>Продавец</span>
         <span className="text-right">{head("Цена", "price")}</span>
       </div>
-      <ul>
+      <ul className="rows divide-y divide-border/70 border-y border-border/70">
         {offers.map((o) => <OfferRow key={o.id} o={o} />)}
         {networks.map((n) => <NetworkRow key={n.id} n={n} />)}
       </ul>

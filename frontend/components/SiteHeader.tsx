@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { Logo } from "@/components/Logo";
 import { Avatar } from "@/components/profile/Avatar";
 import { unreadCount } from "@/lib/api/chat";
 import { directUnread } from "@/lib/api/direct";
@@ -39,7 +40,7 @@ function UserMenu() {
     return () => document.removeEventListener("click", close);
   }, []);
   if (!me) return null;
-  const item = "block px-4 py-2 text-sm hover:bg-bg";
+  const item = "block px-4 py-2 text-sm transition-colors duration-150 hover:bg-bg";
   return (
     <div ref={ref} className="relative">
       <button onClick={() => setOpen((v) => !v)} aria-expanded={open} aria-haspopup="menu"
@@ -49,10 +50,10 @@ function UserMenu() {
         <span className="hidden text-xs sm:inline">▾</span>
       </button>
       {open && (
-        <div role="menu" className="absolute right-0 z-20 mt-2 w-56 overflow-hidden rounded-xl border border-border bg-surface py-1 shadow-lg" onClick={() => setOpen(false)}>
+        <div role="menu" className="pop absolute right-0 z-20 mt-2 w-56 overflow-hidden rounded-2xl border border-border bg-surface py-1.5 shadow-xl" onClick={() => setOpen(false)}>
           <Link href={`/sellers/${me.id}`} className={item} role="menuitem">Мой профиль</Link>
           <Link href="/account/accounts/new" className={item} role="menuitem">+ Добавить канал</Link>
-          <Link href="/account?tab=purchases" className={item} role="menuitem">Мои покупки</Link>
+          <Link href="/purchases" className={`${item} md:hidden`} role="menuitem">Мои покупки</Link>
           <Link href="/account?tab=accounts" className={item} role="menuitem">Мои каналы и продажи</Link>
           <Link href="/favorites" className={`${item} sm:hidden`} role="menuitem">Избранное</Link>
           {me.permissions.includes("staff.access") && <Link href="/staff" className={`${item} lg:hidden`} role="menuitem">Служебный раздел</Link>}
@@ -87,7 +88,7 @@ function NavLink({ href, children, className = "" }: { href: string; children: R
   const on = path === href || path.startsWith(`${href}/`);
   return (
     <Link href={href} aria-current={on ? "page" : undefined}
-      className={`whitespace-nowrap font-semibold ${on ? "text-text" : "text-muted hover:text-text"} ${className}`}>
+      className={`whitespace-nowrap rounded-lg px-2 py-1 font-semibold transition-colors duration-150 ${on ? "bg-bg text-text" : "text-muted hover:text-text"} ${className}`}>
       {children}
     </Link>
   );
@@ -96,16 +97,14 @@ function NavLink({ href, children, className = "" }: { href: string; children: R
 export function SiteHeader() {
   const { me, loading } = useAuth();
   return (
-    <header className="border-b border-border bg-surface">
+    <header className="sticky top-0 z-30 border-b border-border/70 bg-surface/85 backdrop-blur-md supports-[backdrop-filter]:bg-surface/75">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
-        <Link href="/" className="shrink-0 text-lg font-extrabold tracking-tight">
-          Pro<span className="text-accent">Marketing</span>
-        </Link>
-        <nav className="flex min-w-0 items-center gap-2.5 text-sm sm:gap-5" aria-label="Основное меню">
+        <Link href="/" className="shrink-0" aria-label="ProMarketing — на главную"><Logo /></Link>
+        <nav className="flex min-w-0 items-center gap-1 text-sm sm:gap-2" aria-label="Основное меню">
           <NavLink href="/catalog">Каталог</NavLink>
           {loading ? null : me ? (
             <>
-              <NavLink href="/account" className="hidden md:inline">Покупки</NavLink>
+              <NavLink href="/purchases" className="hidden md:inline">Покупки</NavLink>
               <MessagesLink />
               <NavLink href="/favorites" className="hidden sm:inline">Избранное</NavLink>
               {me.permissions.includes("staff.access") && <NavLink href="/staff" className="hidden lg:inline">Служебный раздел</NavLink>}

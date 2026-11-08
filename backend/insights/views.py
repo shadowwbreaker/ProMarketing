@@ -1,5 +1,4 @@
 from django.shortcuts import get_object_or_404
-from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -9,7 +8,7 @@ from common.permissions import IsActiveUser
 from reviews.services import ratings_for
 
 from . import services
-from .models import Favorite, ViewedOffer
+from .models import Favorite
 
 
 def _cards(accounts):
@@ -31,43 +30,6 @@ class Favorites(APIView):
     def post(self, request):
         on = services.toggle_favorite(request.user, account_id=request.data.get("account"), network_id=request.data.get("network"))
         return Response({"favorite": on})
-
-
-class Viewed(APIView):
-    permission_classes = [IsActiveUser]
-
-    def get(self, request):
-        ids = list(ViewedOffer.objects.filter(user=request.user).order_by("-viewed_at").values_list("social_account_id", flat=True)[:50])
-        by_id = {a.pk: a for a in sellable_accounts().filter(pk__in=ids).prefetch_related("offers")}
-        return Response(_cards([by_id[i] for i in ids if i in by_id]))
-
-    def post(self, request):
-        if acc := request.data.get("account"):
-            services.mark_viewed(request.user, acc)
-        return Response({"ok": True})
-
-
-class Recommendations(APIView):
-    permission_classes = [IsActiveUser]
-
-    def get(self, request):
-        return Response(_cards(services.recommendations(request.user)))
-
-
-class Compare(APIView):
-    permission_classes = [AllowAny]
-    authentication_classes = []
-
-    def get(self, request):
-        ids = [i for i in (request.query_params.get("ids") or "").split(",") if i]
-        if not 2 <= len(ids) <= 4:
-            raise DomainError("Для сравнения выберите от 2 до 4 предложений", code="compare_count", status_code=400)
-        try:
-            accs = {str(a.pk): a for a in sellable_accounts().filter(pk__in=ids).prefetch_related("offers")}
-        except Exception as e:  # malformed UUID
-            raise DomainError("Неверные идентификаторы", code="bad_ids", status_code=400) from e
-        ratings = ratings_for({a.owner_id for a in accs.values()})
-        return Response([offer_card(accs[i], ratings, with_offers=True) for i in ids if i in accs])
 
 
 class Analytics(APIView):

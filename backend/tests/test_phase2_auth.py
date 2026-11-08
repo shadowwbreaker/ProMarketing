@@ -158,7 +158,7 @@ def test_cabinet_is_scoped_to_owner(api, user_factory):
     assert api.get("/api/v1/me/sales").json()["count"] == 1
     assert api.get("/api/v1/me/notifications").json()["count"] == 0
     assert api.post(f"/api/v1/me/notifications/{n_b.pk}/read").status_code == 404  # cannot touch others' data
-    for path in ["accounts", "networks", "reviews", "tickets", "activity"]:
+    for path in ["accounts", "networks", "reviews", "tickets"]:
         assert api.get(f"/api/v1/me/{path}").status_code == 200
 
 

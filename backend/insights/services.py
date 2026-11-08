@@ -1,15 +1,19 @@
-"""Phase 13: favorites, history, recommendations, comparison, order analytics, result reports, referrals."""
+"""Phase 13: favorites, order analytics, result reports, referrals.
+
+Viewing history, recommendations and comparison were removed on 2026-11-08 at the owner's request (D-022);
+the ViewedOffer table is kept (no data deletion without permission) but nothing writes to it any more.
+"""
 import secrets
 from datetime import timedelta
 
 
 from django.db import IntegrityError, transaction
-from django.db.models import Avg, Count, F, Q, Sum
+from django.db.models import Avg, Count, Q, Sum
 from django.utils import timezone
 
 from common.exceptions import DomainError
 
-from .models import Favorite, PublicationMetric, Referral, ReferralCode, ViewedOffer
+from .models import Favorite, PublicationMetric, Referral, ReferralCode
 
 OFFSETS = {"24h": timedelta(hours=24), "7d": timedelta(days=7), "30d": timedelta(days=30)}
 
@@ -89,34 +93,6 @@ def toggle_favorite(user, *, account_id=None, network_id=None) -> bool:
     return True
 
 
-def mark_viewed(user, account_id):
-    from catalog.public import sellable_accounts
-
-    if sellable_accounts().filter(pk=account_id).exists():
-        ViewedOffer.objects.update_or_create(user=user, social_account_id=account_id, defaults={"viewed_at": timezone.now()})
-
-
-def recommendations(user, limit: int = 12):
-    """Same categories/platforms as the user's favorites, views and purchases; verified first; excludes own and seen."""
-    from catalog.public import sellable_accounts
-    from orders.models import OrderItem
-
-    seen = set(ViewedOffer.objects.filter(user=user).values_list("social_account_id", flat=True))
-    fav = set(Favorite.objects.filter(user=user, social_account__isnull=False).values_list("social_account_id", flat=True))
-    bought = set(OrderItem.objects.filter(order__buyer=user).values_list("social_account_id", flat=True))
-    from social_data.models import SocialAccount
-
-    base = SocialAccount.objects.filter(pk__in=seen | fav | bought)
-    cats = [c for c in base.values_list("category", flat=True) if c]
-    plats = list(base.values_list("platform", flat=True))
-    qs = sellable_accounts().exclude(owner=user).exclude(pk__in=seen | fav | bought)
-    if cats or plats:
-        qs = qs.filter(Q(category__in=cats) | Q(platform__in=plats))
-    return list(qs.order_by(F("current_statistics__trust_status").asc(nulls_last=True), "-current_statistics__avg_views")
-                .prefetch_related("offers")[:limit])
-
-
-# --- analytics -------------------------------------------------------------------------------
 def buyer_analytics(user) -> dict:
     from orders.models import Order, OrderItem
     from payments.models import RefundRequest

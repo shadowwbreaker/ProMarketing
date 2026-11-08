@@ -63,14 +63,14 @@ export function Conversation({ userId, otherName, empty, onSent }: {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div ref={box} className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-5 py-4" aria-live="polite">
+      <div ref={box} className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto overscroll-contain px-4 py-4" aria-live="polite">
         {msgs.length === 0
           ? <div className="m-auto text-center">{empty}</div>
           : msgs.map((m) => (
-            <div key={m.id}>
-              <p className="flex items-baseline justify-between gap-3 text-sm">
-                <b>{m.mine ? me?.profile.display_name ?? "Вы" : otherName}</b>
-                <span className="shrink-0 text-xs text-muted">{shortDate(m.created_at)}</span>
+            <div key={m.id} className={`page-enter max-w-[88%] rounded-2xl px-3.5 py-2.5 ${m.mine ? "self-end rounded-br-md bg-accent/[0.08]" : "self-start rounded-bl-md bg-bg"}`}>
+              <p className="flex items-baseline justify-between gap-4 text-xs">
+                <b className="text-sm">{m.mine ? me?.profile.display_name ?? "Вы" : otherName}</b>
+                <span className="shrink-0 text-muted">{shortDate(m.created_at)}</span>
               </p>
               <p className="mt-0.5 whitespace-pre-wrap break-words text-sm">{m.body}</p>
             </div>

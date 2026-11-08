@@ -101,9 +101,12 @@ export default function ProfilePage() {
   return (
     <div className="flex flex-col gap-6">
       <section className="overflow-hidden rounded-xl border border-border bg-surface">
-        <div className="h-28 bg-gradient-to-r from-accent via-[#7c4dff] to-[#00a3ff] sm:h-36" style={{ borderBottomLeftRadius: "50% 30%", borderBottomRightRadius: "50% 30%" }} />
+        <div aria-hidden className="relative h-28 overflow-hidden bg-gradient-to-br from-accent via-[#7c4dff] to-[#00a3ff] sm:h-36">
+          {/* repeating vertical-frame pattern: the brand motif, not a generic banner */}
+          <div className="absolute inset-0 opacity-25 [background-image:repeating-linear-gradient(90deg,transparent_0_28px,rgb(255_255_255/0.5)_28px_30px,transparent_30px_58px)] [mask-image:linear-gradient(to_left,black,transparent_75%)]" />
+        </div>
         <div className="-mt-14 px-5 pb-6 sm:px-8">
-          <div className="rounded-full border-4 border-surface bg-surface" style={{ width: 120 }}>
+          <div className="rounded-[32%] border-4 border-surface bg-surface shadow-md" style={{ width: 120 }}>
             <Avatar id={s.id} name={s.display_name} size={112} src={s.avatar_url} />
           </div>
           <div className="mt-3 flex flex-wrap items-baseline gap-3">

@@ -50,7 +50,10 @@ export default function NewAccountPage() {
 function NewAccountWizard() {
   const params = useSearchParams();
   const router = useRouter();
-  const { me, refresh } = useAuth();
+  const { me, loading: authLoading, refresh } = useAuth();
+  useEffect(() => {
+    if (!authLoading && !me) router.replace("/register"); // selling starts with an account on ProMarketing
+  }, [authLoading, me, router]);
   const [step, setStep] = useState<Step>(1);
   const [platform, setPlatform] = useState<Platform>("tiktok");
   const [url, setUrl] = useState("");

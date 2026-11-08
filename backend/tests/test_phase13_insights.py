@@ -66,7 +66,7 @@ def test_report_skips_refunded_and_hides_from_strangers(api, market, user_factor
 
 
 @pytest.mark.django_db
-def test_favorites_viewed_recommendations(api, market, user_factory, account_factory, offer_factory):
+def test_favorites_and_removed_features(api, market, user_factory, account_factory, offer_factory):
     other_seller = user_factory(roles=("seller",))
     same_cat = account_factory(other_seller, listed=True, category="Еда")
     offer_factory(same_cat)
@@ -77,21 +77,10 @@ def test_favorites_viewed_recommendations(api, market, user_factory, account_fac
     assert b.post("/api/v1/me/favorites", {"account": str(first.pk)}, format="json").json()["favorite"] is True
     assert len(b.get("/api/v1/me/favorites").json()["accounts"]) == 1
     assert b.post("/api/v1/me/favorites", {"account": str(first.pk)}, format="json").json()["favorite"] is False
-    b.post("/api/v1/me/viewed", {"account": str(first.pk)}, format="json")
-    b.post("/api/v1/me/viewed", {"account": str(first.pk)}, format="json")
-    assert len(b.get("/api/v1/me/viewed").json()) == 1
-    rec_ids = {c["id"] for c in b.get("/api/v1/me/recommendations").json()}
-    assert str(same_cat.pk) in rec_ids and str(first.pk) not in rec_ids  # similar, not already seen
+    for removed in ("/api/v1/me/viewed", "/api/v1/me/recommendations", "/api/v1/catalog/compare"):  # D-022
+        assert b.get(removed).status_code == 404
     hidden = account_factory(other_seller)  # not listed
     assert b.post("/api/v1/me/favorites", {"account": str(hidden.pk)}, format="json").status_code == 404
-
-
-@pytest.mark.django_db
-def test_compare(api, market):
-    ids = ",".join(str(a.pk) for a in market["accs"][:3])
-    r = api.get("/api/v1/catalog/compare", {"ids": ids}).json()
-    assert [c["id"] for c in r] == ids.split(",") and all("offers" in c for c in r)
-    assert api.get("/api/v1/catalog/compare", {"ids": str(market["accs"][0].pk)}).json()["error"]["code"] == "compare_count"
 
 
 @pytest.mark.django_db

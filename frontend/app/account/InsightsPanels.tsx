@@ -1,25 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { OfferTable } from "@/components/catalog/OfferTable";
 import { Card } from "@/components/ui/Card";
-import { EmptyState, ErrorState, LoadingState } from "@/components/ui/States";
+import { ErrorState, LoadingState } from "@/components/ui/States";
 import { fieldErrors } from "@/lib/forms";
-import { Analytics, getAnalytics, getRecommendations, getReferrals } from "@/lib/api/insights";
-import type { OfferCard as O } from "@/lib/api/public";
+import { Analytics, getAnalytics, getReferrals } from "@/lib/api/insights";
 import { formatMoney } from "@/lib/format";
-
-function Grid({ load, empty }: { load: () => Promise<O[]>; empty: string }) {
-  const [rows, setRows] = useState<O[]>();
-  const [err, setErr] = useState<string>();
-  useEffect(() => void load().then(setRows).catch((e) => setErr(fieldErrors(e).form)), [load]);
-  if (err) return <ErrorState message={err} />;
-  if (!rows) return <LoadingState />;
-  if (!rows.length) return <EmptyState title={empty} />;
-  return <OfferTable offers={rows} />;
-}
-
-export const RecommendationsPanel = () => <Grid load={getRecommendations} empty="Пока нечего рекомендовать — откройте несколько предложений в каталоге" />;
 
 const Stat = ({ label, value }: { label: string; value: string }) => (
   <Card><p className="text-xs text-muted">{label}</p><p className="text-xl font-bold">{value}</p></Card>

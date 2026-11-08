@@ -6,7 +6,6 @@ from rest_framework import generics, serializers
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from audit.models import AuditLog
 from catalog.models import AccountNetwork
 from common.permissions import IsActiveUser
 from notifications.models import Notification
@@ -54,12 +53,6 @@ class NotificationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notification
         fields = ["id", "type", "title", "body", "payload", "read_at", "created_at"]
-
-
-class ActivitySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = AuditLog
-        fields = ["id", "action", "subject_type", "subject_id", "created_at"]
 
 
 class _Mine(generics.ListAPIView):
@@ -130,13 +123,6 @@ class NotificationRead(APIView):
             n.read_at = timezone.now()
             n.save(update_fields=["read_at", "updated_at"])
         return Response(NotificationSerializer(n).data)
-
-
-class MyActivity(_Mine):
-    serializer_class = ActivitySerializer
-
-    def get_queryset(self):
-        return AuditLog.objects.filter(actor=self.request.user).order_by("-seq")
 
 
 class NotificationsUnread(APIView):

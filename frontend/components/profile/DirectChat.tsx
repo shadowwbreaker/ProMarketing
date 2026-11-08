@@ -22,7 +22,7 @@ export function DirectChat({ userId, avatar, name, online, rating, reviews }: Pr
     </>
   );
   return (
-    <aside className="flex h-[34rem] flex-col rounded-xl border border-border bg-surface lg:sticky lg:top-4">
+    <aside className="flex h-[34rem] flex-col rounded-xl border border-border bg-surface lg:sticky lg:top-20">
       <div className="flex items-center gap-3 border-b border-border px-5 py-4">
         <Link href={`/sellers/${userId}`}><Avatar id={userId} name={name} size={48} src={avatar} /></Link>
         <div className="min-w-0">

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useEffect, useState } from "react";
 import { MineList } from "./MineList";
-import { AnalyticsPanel, RecommendationsPanel, ReferralsPanel } from "./InsightsPanels";
+import { AnalyticsPanel, ReferralsPanel } from "./InsightsPanels";
 import { PayoutsPanel } from "./PayoutsPanel";
 import { TwoFactorPanel } from "./TwoFactorPanel";
 import { STATUS_LABEL } from "@/lib/api/orders";
@@ -22,10 +22,6 @@ import { formatDateTime, formatMoney } from "@/lib/format";
 
 type Tab = { key: string; label: string; seller?: boolean };
 const GROUPS: { title: string; tabs: Tab[] }[] = [
-  { title: "Покупки", tabs: [
-    { key: "purchases", label: "Мои покупки" },
-    { key: "recommendations", label: "Рекомендации" },
-  ] },
   { title: "Продажи", tabs: [
     { key: "accounts", label: "Мои каналы" },
     { key: "sales", label: "Мои продажи", seller: true },
@@ -41,7 +37,6 @@ const GROUPS: { title: string; tabs: Tab[] }[] = [
     { key: "profile", label: "Настройки профиля" },
     { key: "reviews", label: "Мои отзывы" },
     { key: "referrals", label: "Пригласить друга" },
-    { key: "activity", label: "История действий" },
   ] },
 ];
 
@@ -58,11 +53,12 @@ function AccountPage() {
   const { me, loading, setMe, signOut, refresh } = useAuth();
   const router = useRouter();
   const toast = useToast();
-  const [tab, setTab] = useState("purchases");
+  const [tab, setTab] = useState("profile");
   useEffect(() => {
     // old links: messages and favorites moved to their own pages in the header
     if (qsTab === "messages") router.replace("/messages");
     else if (qsTab === "favorites") router.replace("/favorites");
+    else if (qsTab === "purchases") router.replace("/purchases");
     else if (qsTab) setTab(qsTab);
   }, [qsTab, router]);
   const [busy, setBusy] = useState(false);
@@ -178,7 +174,6 @@ function AccountPage() {
           </Card>
         )}
         {tab === "profile" && <TwoFactorPanel />}
-        {tab === "purchases" && <MineList<OrderBrief> path="purchases" empty="Покупок пока нет" render={orderRow} />}
         {tab === "sales" && <MineList<OrderBrief> path="sales" empty="Продаж пока нет" render={orderRow} />}
         {tab === "accounts" && (
           <>
@@ -210,7 +205,6 @@ function AccountPage() {
           </>
         )}
         {tab === "payouts" && <PayoutsPanel />}
-        {tab === "recommendations" && <RecommendationsPanel />}
         {tab === "analytics" && <AnalyticsPanel />}
         {tab === "referrals" && <ReferralsPanel />}
         {tab === "reviews" && <MineList<Simple> path="reviews" empty="Отзывов пока нет" render={(r) => `${r.rating}★ ${r.text ?? ""}`} />}
@@ -229,9 +223,6 @@ function AccountPage() {
               }}
             />
           </>
-        )}
-        {tab === "activity" && (
-          <MineList<Simple> path="activity" empty="Действий пока нет" render={(a) => `${formatDateTime(String(a.created_at))} · ${a.action}`} />
         )}
       </section>
     </div>

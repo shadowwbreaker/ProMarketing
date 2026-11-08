@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { ToastProvider } from "@/components/ui/Toast";
 import { AuthProvider } from "@/lib/auth/AuthProvider";
@@ -16,7 +17,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ToastProvider>
           <AuthProvider>
             <SiteHeader />
-            <main className="mx-auto max-w-6xl px-4 py-8">{children}</main>
+            <main className="mx-auto min-h-[70dvh] max-w-6xl px-4 py-8">{children}</main>
+            <SiteFooter />
           </AuthProvider>
         </ToastProvider>
       </body>

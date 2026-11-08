@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useEffect, useRef, useState } from "react";
 import { OfferTable } from "@/components/catalog/OfferTable";
+import { ShortsFan } from "@/components/ShortsFan";
 import { EmptyState, ErrorState, LoadingState } from "@/components/ui/States";
 import type { Page } from "@/lib/api/auth";
 import { getAdFormats } from "@/lib/api/catalog";
@@ -137,27 +138,29 @@ function Toggle({ label, on, onChange }: { label: string; on: boolean; onChange:
 
 type Counts = { accounts: number; tiktok: number; youtube: number; networks: number };
 
-/** Category bubbles as on FunPay: the bigger the section, the bigger the circle. */
-function Bubbles({ counts, active }: { counts?: Counts; active: string }) {
+const TILE_ACCENT: Record<string, string> = {
+  all: "from-accent to-[#7c4dff]", tiktok: "from-text to-[#3a3f4b]", youtube: "from-[#ff0033] to-[#ff6b6b]", networks: "from-[#00a3ff] to-[#7c4dff]",
+};
+
+/** Section tiles: what is in the catalog and how much of it. */
+function SectionTiles({ counts, active }: { counts?: Counts; active: string }) {
   const items: { key: string; label: string; href: string; n?: number }[] = [
     { key: "all", label: "Все каналы", href: "/catalog", n: counts?.accounts },
     { key: "tiktok", label: "TikTok", href: "/catalog?platform=tiktok", n: counts?.tiktok },
     { key: "youtube", label: "YouTube Shorts", href: "/catalog?platform=youtube", n: counts?.youtube },
-    { key: "networks", label: "Сетки", href: "/catalog?kind=networks", n: counts?.networks },
+    { key: "networks", label: "Сетки каналов", href: "/catalog?kind=networks", n: counts?.networks },
   ];
-  const max = Math.max(1, ...items.map((i) => i.n ?? 0));
   return (
-    <nav aria-label="Разделы каталога" className="flex flex-wrap items-center gap-2 sm:gap-5">
+    <nav aria-label="Разделы каталога" className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
       {items.map((i) => {
         const on = i.key === active;
-        const size = 84 + Math.round(40 * Math.sqrt((i.n ?? 0) / max));
         return (
           <Link key={i.key} href={i.href} aria-current={on ? "page" : undefined}
-            style={{ "--s": `${Math.round(size * 0.7)}px`, "--l": `${size}px` } as React.CSSProperties}
-            className={`flex h-[var(--s)] w-[var(--s)] shrink-0 flex-col sm:h-[var(--l)] sm:w-[var(--l)] items-center justify-center rounded-full text-center text-sm font-bold transition-colors duration-150
-              ${on ? "bg-text text-surface" : "bg-bg text-accent hover:bg-border"}`}>
-            <span className="px-2 text-xs leading-tight sm:text-sm">{i.label}</span>
-            <span className={`mt-1 text-xs font-medium ${on ? "text-surface/80" : "text-muted"}`}>{i.n ?? "…"}</span>
+            className={`group relative overflow-hidden rounded-2xl border p-3 transition-[border-color,box-shadow,translate] duration-200 ease-out sm:p-4
+              ${on ? "border-transparent bg-text text-surface shadow-lg" : "border-border bg-surface hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-md motion-reduce:hover:translate-y-0"}`}>
+            <span aria-hidden className={`mb-3 block h-1.5 w-8 rounded-full bg-gradient-to-r ${TILE_ACCENT[i.key]} transition-[width] duration-300 ease-out group-hover:w-12`} />
+            <span className="block text-2xl font-extrabold tabular-nums leading-none">{i.n ?? "·"}</span>
+            <span className={`mt-1 block text-sm font-semibold ${on ? "text-surface/80" : "text-muted"}`}>{i.label}</span>
           </Link>
         );
       })}
@@ -217,19 +220,17 @@ function CatalogInner() {
 
   return (
     <div className="flex flex-col gap-6">
-      <section className="relative -mt-8 overflow-hidden pt-8">
-        {/* decorative disc, FunPay-style; clipped by the section so the page never scrolls sideways */}
-        <div aria-hidden className="pointer-events-none absolute -right-24 -top-28 hidden h-[24rem] w-[24rem] rounded-full bg-[conic-gradient(from_200deg,#ff3d5a,#7c4dff,#00a3ff,#ff3d5a)] lg:block" />
-        <div aria-hidden className="pointer-events-none absolute -right-10 -top-14 hidden h-[20rem] w-[20rem] rounded-full border-[18px] border-surface/25 lg:block" />
-        <div className="relative max-w-2xl">
+      <section className="grid items-center gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="stagger">
           <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">{titles[section]}</h1>
           <p className="mt-3 text-sm leading-relaxed text-muted">
             Покупайте рекламу напрямую у авторов TikTok и YouTube Shorts — подписчики и просмотры получены из самих платформ.{" "}
             <b className="text-text">Продавец получает оплату только после того, как вы подтвердите выполнение заказа</b>{" "}
             (подробнее — в разделе <Link href="/support" className="text-accent hover:underline">«Помощь»</Link>).
           </p>
+          <div className="mt-6"><SectionTiles counts={counts} active={section} /></div>
         </div>
-        <div className="relative mt-6"><Bubbles counts={counts} active={section} /></div>
+        <ShortsFan className="hidden lg:block" />
       </section>
 
       <div className="flex flex-wrap items-center gap-2">
