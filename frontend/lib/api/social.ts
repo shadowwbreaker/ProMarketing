@@ -26,6 +26,7 @@ export type SocialAccount = {
   is_listed: boolean;
   ownership_verified: boolean;
   ownership_code?: string;
+  demo_data?: boolean;
   ownership_check_supported?: boolean;
   statistics: StatsView;
   refresh?: {

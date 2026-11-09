@@ -210,7 +210,7 @@ PLATFORM_YOUTUBE_ENABLED = env.bool("PLATFORM_YOUTUBE_ENABLED", default=True)
 YOUTUBE_DERIVED_METRICS_APPROVED = env.bool("YOUTUBE_DERIVED_METRICS_APPROVED", default=False)
 
 # Social providers: "official" adapters need app credentials; "fake" is for dev/tests only.
-SOCIAL_PROVIDER_MODE = env("SOCIAL_PROVIDER_MODE", default="fake")
+SOCIAL_PROVIDER_MODE = env("SOCIAL_PROVIDER_MODE", default="auto")  # auto | fake | official
 TIKTOK_CLIENT_KEY = env("TIKTOK_CLIENT_KEY", default="")
 TIKTOK_CLIENT_SECRET = env("TIKTOK_CLIENT_SECRET", default="")
 YOUTUBE_API_KEY = env("YOUTUBE_API_KEY", default="")

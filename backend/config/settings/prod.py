@@ -52,7 +52,7 @@ if SECRET_KEY.startswith("dev-") or len(SECRET_KEY) < 40:
     _errors.append("DJANGO_SECRET_KEY must be a strong secret (>= 40 chars)")
 if PAYMENT_PROVIDER == "mock":
     _errors.append("Mock payment provider is forbidden in production (D-008)")
-if SOCIAL_PROVIDER_MODE == "fake":
+if SOCIAL_PROVIDER_MODE != "official":
     _errors.append("Fake social providers are forbidden in production")
 if env.bool("DEV_AUTO_VERIFY_EMAIL", default=False):
     _errors.append("DEV_AUTO_VERIFY_EMAIL must be false in production")

@@ -14,12 +14,28 @@ def platform_enabled(platform: str) -> bool:
     }.get(platform, False)
 
 
+def provider_mode(platform: str) -> str:
+    """'official' or 'fake' for one platform.
+
+    SOCIAL_PROVIDER_MODE=auto (dev default): a platform uses its real API as soon as its keys are configured
+    (YOUTUBE_API_KEY; TIKTOK_CLIENT_KEY + TIKTOK_CLIENT_SECRET), otherwise demo data.
+    """
+    mode = settings.SOCIAL_PROVIDER_MODE
+    if mode != "auto":
+        return mode
+    configured = {
+        "youtube": bool(settings.YOUTUBE_API_KEY),
+        "tiktok": bool(settings.TIKTOK_CLIENT_KEY and settings.TIKTOK_CLIENT_SECRET),
+    }.get(platform, False)
+    return "official" if configured else "fake"
+
+
 def get_provider(platform: str) -> SocialDataProvider:
     if not platform_enabled(platform):
         raise PlatformDisabled(platform)
     if platform in _override:
         return _override[platform]
-    mode = settings.SOCIAL_PROVIDER_MODE
+    mode = provider_mode(platform)
     if mode == "fake":
         from social_data.providers.fake.provider import FakeProvider
 

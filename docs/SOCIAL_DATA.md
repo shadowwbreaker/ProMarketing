@@ -136,3 +136,11 @@ API: `POST /social-accounts`, `GET /social-accounts/{id}`, `POST /social-account
 ## Согласие владельца (D-024, 2026-11-09)
 
 Перед каждым запросом к API платформы (добавление канала, «Обновить статистику», вход через TikTok) владелец ставит галочку согласия; сервер без `consent: true` запрос не выполняет и сохраняет запись `StatsConsent`. Покупатели видят сырые просмотры последних 15 видео; среднее по YouTube — после одобрения сценария Analytics & Reporting (D-016).
+
+## Подключение настоящих API (2026-11-09)
+
+`SOCIAL_PROVIDER_MODE=auto` (по умолчанию в dev): платформа работает через настоящий API, как только заданы её ключи; иначе — демо-цифры с явной пометкой «Демо-режим» в интерфейсе. Production принимает только `official`.
+
+**YouTube** — нужен **API-ключ** (не OAuth-клиент): Google Cloud Console → APIs & Services → Library → включить «YouTube Data API v3» → Credentials → Create credentials → **API key** → ограничить ключ API «YouTube Data API v3». В `.env`: `YOUTUBE_API_KEY=...`. Один пересчёт = 3 единицы квоты (из 10 000 в сутки): channels.list → playlistItems.list (50 последних загрузок) → videos.list; Shorts определяются по длительности ≤ 180 с, берутся 15 последних.
+
+**TikTok** — приложение на developers.tiktok.com: продукты Login Kit + Display API, scopes `user.info.basic`, `user.info.stats`, `video.list`; Redirect URI = `{FRONTEND_URL}/account/accounts/oauth/tiktok` (TikTok принимает только HTTPS-адреса, поэтому нужен домен или HTTPS-туннель, `localhost` не подойдёт); приложение проходит проверку TikTok. В `.env`: `TIKTOK_CLIENT_KEY`, `TIKTOK_CLIENT_SECRET`. После этого мастер после галочки согласия сразу ведёт на вход через TikTok.

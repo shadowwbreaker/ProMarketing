@@ -276,6 +276,12 @@ function NewAccountWizard() {
       {step === 3 && account && (
         <Card className="flex flex-col gap-4">
           <p className="text-sm text-muted">{account.title || account.handle}</p>
+          {account.demo_data && (
+            <p role="note" className="rounded-lg border border-warn/50 bg-warn/10 p-3 text-sm">
+              <b>Демо-режим:</b> ключи API этой платформы не настроены, поэтому цифры тестовые.
+              Чтобы считались настоящие, добавьте в <code>.env</code> {account.platform === "youtube" ? "YOUTUBE_API_KEY" : "TIKTOK_CLIENT_KEY и TIKTOK_CLIENT_SECRET"} и перезапустите сервер.
+            </p>
+          )}
           {pending && <p className="text-sm">Считаем подписчиков и просмотры последних 15 видео…</p>}
           {failed && (
             <p className="text-sm text-danger">

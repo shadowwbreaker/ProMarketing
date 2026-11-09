@@ -99,6 +99,12 @@ export default function AccountDetailPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      {acc.demo_data && (
+            <p role="note" className="rounded-lg border border-warn/50 bg-warn/10 p-3 text-sm">
+              <b>Демо-режим:</b> ключи API этой платформы не настроены, поэтому цифры тестовые.
+              Чтобы считались настоящие, добавьте в <code>.env</code> {acc.platform === "youtube" ? "YOUTUBE_API_KEY" : "TIKTOK_CLIENT_KEY и TIKTOK_CLIENT_SECRET"} и перезапустите сервер.
+            </p>
+          )}
       {created && <Card className="border-ok text-sm font-semibold">Объявление создано и опубликовано в каталоге.</Card>}
       {listingError && (
         <Card className="border-danger text-sm">Объявление сохранено, но пока не опубликовано. {listingError}</Card>

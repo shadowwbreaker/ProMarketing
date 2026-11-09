@@ -68,6 +68,9 @@ def account_payload(account: SocialAccount, *, for_owner: bool) -> dict:
         "statistics": svc.display_status(account.current_statistics, account.platform, for_owner=for_owner),
     }
     if for_owner:
+        from .core.registry import provider_mode
+
+        data["demo_data"] = provider_mode(account.platform) == "fake"  # dev without API keys: numbers are generated
         data["ownership_code"] = account.ownership_code
         data["ownership_check_supported"] = account.platform in ("youtube",)
         data["refresh"] = {
