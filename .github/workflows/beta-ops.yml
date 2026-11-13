@@ -1,0 +1,38 @@
+# Beta on Vercel (D-026): migrations on every push to `beta`, internal timers every 15 minutes.
+# Repository secrets: DATABASE_URL_UNPOOLED (Neon direct URL), BETA_SITE_URL (https://<site>.vercel.app), CRON_SECRET.
+# Scheduled runs use this file from the default branch, so it exists on `main` too and always checks out `beta`.
+name: beta-ops
+
+on:
+  push:
+    branches: [beta]
+    paths: ["backend/**"]
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+jobs:
+  migrate:
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: beta }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -r backend/requirements.txt
+      - name: migrate
+        working-directory: backend
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings.ops
+          DATABASE_URL: ${{ secrets.DATABASE_URL_UNPOOLED }}
+          DJANGO_SECRET_KEY: ci-only-not-used-for-requests-0123456789abcdef
+        run: python manage.py migrate --noinput
+
+  timers:
+    if: github.event_name != 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: tick
+        run: |
+          curl -fsS -m 60 -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" "${{ secrets.BETA_SITE_URL }}/api/v1/ops/tick"
