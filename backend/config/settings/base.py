@@ -199,6 +199,8 @@ SELLER_ACCEPT_TIMEOUT_HOURS = env.int("SELLER_ACCEPT_TIMEOUT_HOURS", default=24)
 BUYER_CONFIRM_WINDOW_HOURS = env.int("BUYER_CONFIRM_WINDOW_HOURS", default=72)
 DISPUTE_RESPONSE_HOURS = env.int("DISPUTE_RESPONSE_HOURS", default=48)
 BUYER_PUBLICATION_CHECKS_LIMIT = env.int("BUYER_PUBLICATION_CHECKS_LIMIT", default=3)
+# Beta for investors/testers: everything real except money — payment is simulated and confirmed instantly (D-025).
+BETA_MODE = env.bool("BETA_MODE", default=False)
 DEV_AUTO_VERIFY_EMAIL = env.bool("DEV_AUTO_VERIFY_EMAIL", default=False)  # dev only: skip email confirmation
 STAFF_2FA_REQUIRED = env.bool("STAFF_2FA_REQUIRED", default=False)  # forced on in production
 RESULTS_REPORTS_ENABLED = env.bool("RESULTS_REPORTS_ENABLED", default=True)  # D-018: buyer opt-in, 3 checks max

@@ -58,3 +58,32 @@ def test_disable_requires_password_and_code(api, user_factory):
     from audit.models import AuditLog
 
     assert AuditLog.objects.filter(action__in=["user.2fa_enabled", "user.2fa_disabled"]).count() == 2
+
+
+def test_beta_mode_allows_mock_payments_in_production_settings(monkeypatch):
+    """D-025: BETA_MODE lets the production config run with simulated payments — and only with them."""
+    import importlib
+    import sys
+
+    env = {"DJANGO_SECRET_KEY": "x" * 50, "FIELD_ENCRYPTION_KEY": "k", "S3_BUCKET": "b", "SOCIAL_PROVIDER_MODE": "official",
+           "EMAIL_BACKEND": "django.core.mail.backends.smtp.EmailBackend", "DJANGO_ALLOWED_HOSTS": "x.ru",
+           "PAYMENT_PROVIDER": "mock", "BETA_MODE": "true"}
+    for k, v in env.items():
+        monkeypatch.setenv(k, v)
+    for m in ("config.settings.prod", "config.settings.base"):
+        sys.modules.pop(m, None)
+    importlib.import_module("config.settings.prod")  # does not raise
+    monkeypatch.setenv("BETA_MODE", "false")
+    for m in ("config.settings.prod", "config.settings.base"):
+        sys.modules.pop(m, None)
+    import pytest as _p
+
+    with _p.raises(Exception, match="Mock payment"):
+        importlib.import_module("config.settings.prod")
+    for m in ("config.settings.prod", "config.settings.base"):
+        sys.modules.pop(m, None)
+
+
+def test_meta_endpoint(api):
+    r = api.get("/api/v1/meta")
+    assert r.status_code == 200 and r.json()["beta"] is False and "payment_provider" in r.json()

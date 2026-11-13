@@ -42,7 +42,7 @@ class MockComplete(APIView):
     permission_classes = [IsActiveUser]
 
     def post(self, request, payment_id):
-        if settings.ENV == "production" or settings.PAYMENT_PROVIDER != "mock":
+        if (settings.ENV == "production" and not settings.BETA_MODE) or settings.PAYMENT_PROVIDER != "mock":
             raise DomainError("Недоступно", code="not_found", status_code=404)
         import uuid as _uuid
 

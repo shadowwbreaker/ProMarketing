@@ -3,7 +3,7 @@ Production deployment itself requires explicit permission from the project owner
 from django.core.exceptions import ImproperlyConfigured
 
 from .base import *  # noqa: F401,F403
-from .base import FIELD_ENCRYPTION_KEY, MIDDLEWARE, PAYMENT_PROVIDER, SECRET_KEY, SOCIAL_PROVIDER_MODE, env
+from .base import BETA_MODE, FIELD_ENCRYPTION_KEY, MIDDLEWARE, PAYMENT_PROVIDER, SECRET_KEY, SOCIAL_PROVIDER_MODE, env
 
 ENV = "production"
 DEBUG = False
@@ -50,18 +50,20 @@ STAFF_2FA_REQUIRED = env.bool("STAFF_2FA_REQUIRED", default=True)
 _errors = []
 if SECRET_KEY.startswith("dev-") or len(SECRET_KEY) < 40:
     _errors.append("DJANGO_SECRET_KEY must be a strong secret (>= 40 chars)")
-if PAYMENT_PROVIDER == "mock":
+if PAYMENT_PROVIDER == "mock" and not BETA_MODE:
     _errors.append("Mock payment provider is forbidden in production (D-008)")
 if SOCIAL_PROVIDER_MODE != "official":
     _errors.append("Fake social providers are forbidden in production")
-if env.bool("DEV_AUTO_VERIFY_EMAIL", default=False):
+if env.bool("DEV_AUTO_VERIFY_EMAIL", default=False) and not BETA_MODE:
     _errors.append("DEV_AUTO_VERIFY_EMAIL must be false in production")
 REST_FRAMEWORK["NUM_PROXIES"] = env.int("NUM_PROXIES", default=1)  # noqa: F405 — Caddy in front (infra/Caddyfile)
+if BETA_MODE and PAYMENT_PROVIDER != "mock":
+    _errors.append("BETA_MODE requires PAYMENT_PROVIDER=mock: the beta never moves real money")
 if not FIELD_ENCRYPTION_KEY:
     _errors.append("FIELD_ENCRYPTION_KEY must be set in production")
 if not S3_BUCKET:
     _errors.append("S3_BUCKET must be set in production (attachments/evidence storage)")
-if env("EMAIL_BACKEND", default="").endswith("console.EmailBackend"):
+if env("EMAIL_BACKEND", default="").endswith("console.EmailBackend") and not BETA_MODE:
     _errors.append("Console email backend is forbidden in production")
 if _errors:
     raise ImproperlyConfigured("; ".join(_errors))

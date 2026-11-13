@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Field } from "@/components/ui/Field";
 import { LoadingState } from "@/components/ui/States";
-import { createOrder } from "@/lib/api/orders";
+import { getMeta } from "@/lib/api/meta";
+import { createOrder, mockComplete, startPayment } from "@/lib/api/orders";
 import { getNetworkCard, NetworkCard } from "@/lib/api/public";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { fieldErrors } from "@/lib/forms";
@@ -55,7 +56,12 @@ function NewOrder() {
         if (picked.size && net && picked.size < (net.items?.length ?? 0)) body.network_items = [...picked];
       }
       const o = await createOrder(body);
-      router.push(`/orders/${o.id}`);
+      if ((await getMeta()).beta) {
+        // Beta (D-025): "Купить" goes straight to a confirmed payment — the mock provider completes it at once.
+        const p = await startPayment(o.id);
+        await mockComplete(p.payment_id, "succeeded");
+        router.push(`/orders/${o.id}/paid`);
+      } else router.push(`/orders/${o.id}`);
     } catch (ex) {
       const fe = fieldErrors(ex);
       const termsErr = (fe.fields.terms as unknown as Record<string, string[]>) ?? {};

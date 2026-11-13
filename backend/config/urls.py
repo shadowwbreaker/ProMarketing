@@ -2,11 +2,12 @@ from django.contrib import admin
 from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView
 
-from common.views import LiveView, ReadyView
+from common.views import LiveView, MetaView, ReadyView
 
 api_v1 = [
     path("health/live", LiveView.as_view(), name="health-live"),
     path("health/ready", ReadyView.as_view(), name="health-ready"),
+    path("meta", MetaView.as_view(), name="meta"),
     path("", include("accounts.urls")),
     path("", include("social_data.urls")),
     path("", include("catalog.urls")),

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { BetaBanner } from "@/components/BetaBanner";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { ToastProvider } from "@/components/ui/Toast";
@@ -16,6 +17,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="font-sans antialiased">
         <ToastProvider>
           <AuthProvider>
+            <BetaBanner />
             <SiteHeader />
             <main className="mx-auto min-h-[70dvh] max-w-6xl px-4 py-8">{children}</main>
             <SiteFooter />

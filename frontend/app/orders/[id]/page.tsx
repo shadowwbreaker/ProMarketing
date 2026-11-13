@@ -257,7 +257,7 @@ function OrderPageInner() {
 
         <DisputePanel order={o} onChanged={() => void load()} />
 
-        <OrderChat orderId={o.id} role={o.role} />
+        <div id="chat" className="scroll-mt-20"><OrderChat orderId={o.id} role={o.role} /></div>
 
         <Card>
           <h2 className="mb-2 font-bold">История заказа</h2>
