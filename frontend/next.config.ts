@@ -16,9 +16,16 @@ const csp = [
   "object-src 'none'",
 ].join("; ");
 
+// Vercel beta (D-026): the browser talks only to the site's own origin; /api/v1/* is proxied to the backend project.
+// Same origin = session cookies and CSRF work without third-party cookies (two *.vercel.app hosts are different sites).
+const backendOrigin = process.env.BACKEND_ORIGIN;
+
 const nextConfig: NextConfig = {
   poweredByHeader: false,
-  output: "standalone",
+  output: process.env.VERCEL ? undefined : "standalone",
+  async rewrites() {
+    return backendOrigin ? [{ source: "/api/v1/:path*", destination: `${backendOrigin}/api/v1/:path*` }] : [];
+  },
   async headers() {
     return [
       {

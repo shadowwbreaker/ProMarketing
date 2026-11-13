@@ -87,3 +87,12 @@ def test_beta_mode_allows_mock_payments_in_production_settings(monkeypatch):
 def test_meta_endpoint(api):
     r = api.get("/api/v1/meta")
     assert r.status_code == 200 and r.json()["beta"] is False and "payment_provider" in r.json()
+
+
+@pytest.mark.django_db
+def test_ops_tick_requires_cron_secret(api, monkeypatch):
+    assert api.get("/api/v1/ops/tick").status_code == 403
+    monkeypatch.setenv("CRON_SECRET", "s3cret-value")
+    assert api.get("/api/v1/ops/tick", HTTP_AUTHORIZATION="Bearer wrong").status_code == 403
+    r = api.get("/api/v1/ops/tick", HTTP_AUTHORIZATION="Bearer s3cret-value")
+    assert r.status_code == 200 and all(v == "ok" for v in r.json()["ran"].values()), r.json()

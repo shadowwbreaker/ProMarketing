@@ -7,7 +7,7 @@ from django.utils import timezone
 
 from tests.test_phase6_orders import as_, create, item_url, paid_single, to_confirmation
 
-PUBLIC_PREFIXES = ("health/", "auth/", "catalog/", "sellers/", "ad-formats", "payments/webhooks/", "schema", "meta")  # meta: public site flags (D-025)
+PUBLIC_PREFIXES = ("health/", "auth/", "catalog/", "sellers/", "ad-formats", "payments/webhooks/", "schema", "meta", "ops/")  # meta: public site flags (D-025)
 
 
 def _walk(patterns, prefix=""):
