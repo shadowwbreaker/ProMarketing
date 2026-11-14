@@ -24,8 +24,11 @@ export default function PaidPage() {
         </span>
         <h1 className="mt-6 text-3xl font-extrabold tracking-tight">Оплата подтверждена</h1>
         <p className="mt-3 text-muted">
-          {o ? <>Заказ на {formatMoney(o.total_minor)} оплачен. </> : null}
-          Продавец получил уведомление и примет заказ в течение 24 часов. Деньги удерживаются до тех пор, пока вы не подтвердите выполнение.
+          {beta ? (
+            <>Заказ{o && <> на {formatMoney(o.total_minor)}</>} создан. Откройте его, чтобы посмотреть статус и чат.</>
+          ) : (
+            <>{o && <>Заказ на {formatMoney(o.total_minor)} оплачен. </>}Текущий статус доступен на странице заказа.</>
+          )}
         </p>
         {beta && <p className="mt-3 rounded-lg bg-bg px-3 py-2 text-xs text-muted">Бета-версия: оплата имитирована, деньги не списаны.</p>}
         <Link href={`/orders/${id}#chat`} className="mt-7 rounded-xl bg-accent px-6 py-3 font-semibold text-accent-ink transition-[translate] duration-200 hover:-translate-y-0.5 motion-reduce:hover:translate-y-0">

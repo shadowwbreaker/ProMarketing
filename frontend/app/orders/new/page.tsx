@@ -23,6 +23,7 @@ function NewOrder() {
   const [net, setNet] = useState<NetworkCard>();
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
+  const [beta, setBeta] = useState(false);
   const [err, setErr] = useState<{ form?: string; fields: Record<string, string> }>({ fields: {} });
 
   useEffect(() => {
@@ -31,6 +32,9 @@ function NewOrder() {
   useEffect(() => {
     if (networkId) void getNetworkCard(networkId).then(setNet);
   }, [networkId]);
+  useEffect(() => {
+    void getMeta().then((meta) => setBeta(meta.beta));
+  }, []);
 
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -76,8 +80,9 @@ function NewOrder() {
     <div className="mx-auto max-w-2xl">
       <h1 className="mb-2 text-2xl font-bold">Оформление заказа</h1>
       <p className="mb-6 text-sm text-muted">
-        Все условия фиксируются до оплаты. После оплаты изменить их можно только с согласия продавца. Деньги удерживаются у
-        платёжного провайдера и переводятся продавцу через 48 часов после вашего подтверждения.
+        {beta
+          ? "Оплата тестовая. Деньги не списываются."
+          : "Все условия фиксируются до оплаты. После оплаты изменить их можно только с согласия продавца. Деньги удерживаются у платёжного провайдера и переводятся продавцу через 48 часов после вашего подтверждения."}
       </p>
       {!me.is_email_verified && <p role="alert" className="mb-4 rounded-lg bg-warn/10 p-3 text-sm">Подтвердите email, чтобы оформить заказ.</p>}
       {net && (

@@ -95,11 +95,13 @@ python manage.py createsuperuser
 ## 6. Проверка
 
 - `https://pm-api.vercel.app/api/v1/health/ready` → `{"database":"ok","cache":"ok"}`
-- `https://pm-web.vercel.app` → жёлтая плашка «Бета-версия», регистрация, добавление канала YouTube по ссылке, покупка → «Оплата подтверждена», заказ виден в чате.
+- `https://promarketing-beta-web.vercel.app` → регистрация, каталог, покупка → «Оплата подтверждена», заказ виден в чате.
 
 ## 7. TikTok
 
-В TikTok for Developers → приложение → Login Kit → **Redirect URI**: `https://pm-web.vercel.app/account/accounts/oauth/tiktok`. Домен `*.vercel.app` нужно подтвердить в разделе URL properties, если TikTok попросит.
+В TikTok for Developers → приложение → Login Kit → **Redirect URI**: `https://promarketing-beta-web.vercel.app/account/accounts/oauth/tiktok`. Нужны Login Kit, Display API и scopes `user.info.basic`, `user.info.profile`, `user.info.stats`, `video.list`. В Sandbox владелец тестового TikTok-аккаунта должен быть добавлен в Target users.
+
+Ключи добавляются как Secret для окружения Production в проекте `promarketing-beta-api`: `YOUTUBE_API_KEY`, `TIKTOK_CLIENT_KEY`, `TIKTOK_CLIENT_SECRET`. После сохранения нужен повторный деплой API. Для YouTube владелец видит среднее по выборке из последних доступных коротких роликов (до 15), а публичный показ производной метрики требует одобрения YouTube (D-016).
 
 ## Ограничения бесплатной беты
 
