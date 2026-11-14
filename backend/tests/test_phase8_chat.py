@@ -33,7 +33,7 @@ def test_chat_participants_only_with_system_messages(api, market, user_factory):
     kinds = [(m["kind"], m["body"]) for m in msgs]
     assert ("system", "Заказ создан. Условия зафиксированы.") in kinds
     assert ("system", "Оплата получена платёжным провайдером.") in kinds
-    assert [m["author"]["role"] for m in msgs if m["kind"] == "user"] == ["buyer", "seller"]
+    assert [m["author"]["role"] for m in msgs if m["kind"] == "user" and not m["order_brief"]] == ["buyer", "seller"]
     assert "contact_signal" not in msgs[0]
     stranger = user_factory()
     assert as_(api, stranger).get(f"/api/v1/orders/{oid}/chat").status_code == 404
