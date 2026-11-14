@@ -67,6 +67,10 @@
 Заказы: `POST /orders`, `GET /orders/{id}`, `…/events`, `…/terms`, `…/terms/propose`, `…/terms/{p}/decide`, `…/cancel`, `…/materials-delivered`, `…/items/{i}/{accept|decline|ready|proof|confirm|rework|cancel|check-publication|review|report}`.
 Платежи: `POST /orders/{id}/pay`, `POST /payments/webhooks/{provider}`, `GET /me/payouts`, `POST /me/payouts/{id}/{withdraw|retry}`.
 Чат и файлы: `GET/POST /orders/{id}/chat`, `PATCH/DELETE /orders/{id}/chat/{m}`, `POST /files`, `GET /files/{id}`.
+
+- `GET /messages/orders` возвращает чаты оплаченных заказов пользователя с отметкой о непрочитанном. `GET /messages/status` возвращает общий признак непрочитанных сообщений и признак первого полученного заказа.
+- `GET /orders/{id}/chat?read=1` отмечает уведомления об оплате и сообщениях только для текущего участника и заказа. У новых оплаченных заказов исходное ТЗ доступно в сообщении `order_brief`. Оно ссылается на первую версию условий.
+- `GET /orders/received` возвращает оплаченные заказы продавца и статистику по выбранным фильтрам `number`, `buyer`, `status`, `platform`. `format_csv=1` выгружает отфильтрованный список.
 Споры: `GET /dispute-reasons`, `POST /orders/{id}/disputes/open`, `GET /orders/{id}/disputes`, `GET /disputes/{id}`, `POST /disputes/{id}/{reply|appeal}`; поддержка `POST /support/tickets`.
 Сотрудники: `/staff/disputes[/{id}[/{action}]]`, `/staff/tickets`, `/staff/dashboard`, `/staff/users`, `/staff/accounts`, `/staff/orders`, `/staff/audit[/verify]`, `/staff/reviews`, `/staff/fraud-signals`.
 Отзывы: `POST /reviews/{id}/{reply|complain}`. Phase 13: `/me/{favorites|viewed|recommendations|analytics|referrals}`, `GET /catalog/compare?ids=`.

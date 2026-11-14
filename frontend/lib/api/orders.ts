@@ -1,4 +1,19 @@
 import { apiFetch } from "./client";
+import type { DirectThread } from "./direct";
+
+export type OrderTerms = Record<string, unknown> & { version: number; brand: string; brief: string; placement_days: number };
+export type OrderParty = DirectThread["user"] & { last_seen_at: string | null };
+
+export type ReceivedRow = {
+  id: string; title: string; brand: string; paid_at: string; buyer: OrderParty;
+  status: string; total_minor: number; currency: string;
+};
+export type ReceivedOrders = {
+  count: number; next: string | null; previous: string | null; results: ReceivedRow[];
+  summary: { total: number; volume: number; buyers: number; completed: number; active: number;
+    earned_minor: number; refunds: { orders: number; amount_minor: number } };
+};
+export const listReceived = (query: string) => apiFetch<ReceivedOrders>(`/orders/received?${query}`);
 
 export type Item = {
   id: string;
@@ -37,9 +52,9 @@ export type Order = {
   materials_delivered_at: string | null;
   seller_terms_accepted_at: string | null;
   items: Item[];
-  terms: Record<string, unknown> & { version: number; brand: string; brief: string; placement_days: number };
-  buyer: { id: string; display_name: string; last_seen_at: string | null };
-  seller: { id: string; display_name: string; last_seen_at: string | null };
+  terms: OrderTerms;
+  buyer: OrderParty;
+  seller: OrderParty;
   role: "buyer" | "seller" | "staff";
   proposals: { id: string; changes: Record<string, string>; comment: string; status: string; proposed_by: string }[];
 };

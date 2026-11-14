@@ -1,11 +1,12 @@
 from django.urls import path
 
-from . import views
+from . import received, views
 
 I = "orders/<uuid:pk>/items/<uuid:item_id>/"  # noqa: E741
 
 urlpatterns = [
     path("orders", views.OrderCreate.as_view()),
+    path("orders/received", received.ReceivedOrders.as_view()),
     path("orders/<uuid:pk>", views.OrderDetail.as_view()),
     path("orders/<uuid:pk>/events", views.OrderEvents.as_view()),
     path("orders/<uuid:pk>/terms", views.OrderTermsHistory.as_view()),

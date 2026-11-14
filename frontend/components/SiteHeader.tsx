@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Logo } from "@/components/Logo";
 import { Avatar } from "@/components/profile/Avatar";
-import { directUnread } from "@/lib/api/direct";
+import { inboxStatus } from "@/lib/api/chat";
 import { useAuth } from "@/lib/auth/AuthProvider";
 
 function UserMenu() {
@@ -35,7 +35,7 @@ function UserMenu() {
           <Link href={`/sellers/${me.id}`} className={item} role="menuitem">Мой профиль</Link>
           <Link href="/account/accounts/new" className={item} role="menuitem">+ Добавить канал</Link>
           <Link href="/purchases" className={`${item} md:hidden`} role="menuitem">Мои покупки</Link>
-          <Link href="/account?tab=accounts" className={item} role="menuitem">Мои каналы и продажи</Link>
+          <Link href="/account?tab=accounts" className={item} role="menuitem">Мои каналы</Link>
           <Link href="/favorites" className={`${item} sm:hidden`} role="menuitem">Избранное</Link>
           {me.permissions.includes("staff.access") && <Link href="/staff" className={`${item} lg:hidden`} role="menuitem">Служебный раздел</Link>}
           <Link href="/support" className={item} role="menuitem">Помощь</Link>
@@ -48,24 +48,40 @@ function UserMenu() {
   );
 }
 
-function MessagesLink() {
-  const [n, setN] = useState(0);
+function OrderNavigation() {
+  const [status, setStatus] = useState({ unread: false, has_received_orders: false });
   const path = usePathname();
   useEffect(() => {
-    const load = () => directUnread().then((r) => setN(r.unread)).catch(() => {});
+    let active = true;
+    let request = 0;
+    const load = () => {
+      if (document.visibilityState === "hidden") return;
+      const current = ++request;
+      void inboxStatus().then((result) => { if (active && current === request) setStatus(result); }).catch(() => {});
+    };
     load();
-    const t = setInterval(load, 30000);
-    return () => clearInterval(t);
+    const t = setInterval(load, 10000);
+    window.addEventListener("inbox-updated", load);
+    document.addEventListener("visibilitychange", load);
+    return () => {
+      active = false;
+      clearInterval(t);
+      window.removeEventListener("inbox-updated", load);
+      document.removeEventListener("visibilitychange", load);
+    };
   }, [path]);
   return (
-    <NavLink href="/messages" className="relative">
-      Сообщения
-      {n > 0 && (
-        <span className="page-enter absolute right-0.5 top-0 h-2 w-2 rounded-full bg-[#e5243b] ring-2 ring-surface">
-          <span className="sr-only">{`, непрочитанных: ${n}`}</span>
-        </span>
-      )}
-    </NavLink>
+    <>
+      {status.has_received_orders && <NavLink href="/orders">Заказы</NavLink>}
+      <NavLink href="/messages" className="relative">
+        Сообщения
+        {status.unread && (
+          <span className="page-enter absolute right-0.5 top-0 h-2 w-2 rounded-full bg-[#e5243b] ring-2 ring-surface">
+            <span className="sr-only">Есть непрочитанные</span>
+          </span>
+        )}
+      </NavLink>
+    </>
   );
 }
 
@@ -91,7 +107,7 @@ export function SiteHeader() {
           {loading ? null : me ? (
             <>
               <NavLink href="/purchases" className="hidden md:inline">Покупки</NavLink>
-              <MessagesLink />
+              <OrderNavigation key={me.id} />
               <NavLink href="/favorites" className="hidden sm:inline">Избранное</NavLink>
               {me.permissions.includes("staff.access") && <NavLink href="/staff" className="hidden lg:inline">Служебный раздел</NavLink>}
               <UserMenu />

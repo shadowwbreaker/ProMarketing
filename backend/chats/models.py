@@ -20,6 +20,8 @@ class ChatMessage(BaseModel):
     author = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT, related_name="+")
     kind = models.CharField(max_length=8, choices=Kind.choices, default=Kind.USER)
     body = models.TextField(max_length=5000)
+    order_brief = models.OneToOneField("orders.OrderTermsVersion", null=True, blank=True,
+                                      on_delete=models.RESTRICT, related_name="+")
     attachments = models.ManyToManyField("files.Attachment", blank=True, related_name="+")
     revision = models.PositiveIntegerField(default=1)
     deleted_at = models.DateTimeField(null=True, blank=True)

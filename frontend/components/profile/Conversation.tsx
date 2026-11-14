@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import { refreshInbox } from "@/lib/api/chat";
 import { DirectMessage, getDirect, sendDirect } from "@/lib/api/direct";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { fieldErrors } from "@/lib/forms";
@@ -29,8 +30,14 @@ export function Conversation({ userId, otherName, empty, onSent }: {
   const box = useRef<HTMLDivElement>(null);
 
   const load = useCallback(() => {
-    getDirect(userId).then((r) => setMsgs(r.results)).catch(() => {});
-  }, [userId]);
+    getDirect(userId).then((r) => {
+      setMsgs(r.results);
+      if (r.marked_read) {
+        refreshInbox();
+        onSent?.();
+      }
+    }).catch(() => {});
+  }, [userId, onSent]);
 
   useEffect(() => {
     setMsgs([]);

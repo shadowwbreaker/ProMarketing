@@ -1,9 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useCallback, useEffect, useState } from "react";
 import { DisputePanel } from "@/components/DisputePanel";
 import { OrderChat } from "@/components/OrderChat";
+import { OrderTermsDetails } from "@/components/OrderTermsDetails";
+import { Avatar } from "@/components/profile/Avatar";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { ErrorState, LoadingState } from "@/components/ui/States";
@@ -195,13 +198,19 @@ function OrderPageInner() {
   if (err) return <ErrorState message={err} />;
   if (!o) return <LoadingState />;
   const t = o.terms;
+  const peer = o.role === "seller" ? o.buyer : o.seller;
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_340px] [&>*]:min-w-0">
+    <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
       <div className="flex flex-col gap-4">
         <div>
-          <p className="text-sm text-muted">Заказ от {formatDateTime(o.created_at)} · {o.role === "buyer" ? `продавец ${o.seller.display_name}` : `покупатель ${o.buyer.display_name}`}</p>
-          <h1 className="text-2xl font-bold">{STATUS_LABEL[o.status] ?? o.status} · {formatMoney(o.total_minor)}</h1>
+          {o.role !== "staff" && <Link href={o.role === "seller" ? "/orders" : "/purchases"} className="mb-2 inline-block text-sm font-medium text-accent hover:underline">
+            {o.role === "seller" ? "← Все заказы" : "← Все покупки"}
+          </Link>}
+          <h1 className="text-3xl font-extrabold tracking-tight">Заказ #{o.id.slice(0, 8)}</h1>
+          <p className="mt-1 text-xl font-bold text-accent">{STATUS_LABEL[o.status] ?? o.status} · {formatMoney(o.total_minor, o.currency)}</p>
+          <p className="mt-2 text-sm text-muted">Создан {formatDateTime(o.created_at)}</p>
+          <a href="#chat" className="mt-2 inline-block text-sm font-semibold text-accent hover:underline lg:hidden">К чату заказа ↓</a>
           {o.role === "buyer" && o.seller.last_seen_at && <p className="text-xs text-muted">Продавец был на сайте {formatDateTime(o.seller.last_seen_at)}</p>}
         </div>
 
@@ -257,28 +266,9 @@ function OrderPageInner() {
 
         <DisputePanel order={o} onChanged={() => void load()} />
 
-        <div id="chat" className="scroll-mt-20"><OrderChat orderId={o.id} role={o.role} /></div>
-
-        <Card>
-          <h2 className="mb-2 font-bold">История заказа</h2>
-          <ol className="grid gap-1 text-xs">
-            {events.map((e) => (
-              <li key={e.seq} className="flex gap-2"><span className="text-muted">{formatDateTime(e.created_at)}</span><span>{e.type}{e.to && ` → ${STATUS_LABEL[e.to] ?? e.to}`}</span></li>
-            ))}
-          </ol>
-        </Card>
-      </div>
-
-      <aside className="flex flex-col gap-3">
         <Card>
           <h2 className="mb-2 font-bold">Условия (версия {t.version})</h2>
-          <dl className="grid gap-2 text-sm">
-            <div><dt className="text-xs text-muted">Бренд</dt><dd>{t.brand}</dd></div>
-            <div><dt className="text-xs text-muted">ТЗ</dt><dd className="whitespace-pre-line">{t.brief}</dd></div>
-            {Boolean(t.ad_text) && <div><dt className="text-xs text-muted">Текст</dt><dd className="whitespace-pre-line">{String(t.ad_text)}</dd></div>}
-            {Boolean(t.cta) && <div><dt className="text-xs text-muted">CTA</dt><dd>{String(t.cta)}</dd></div>}
-            <div><dt className="text-xs text-muted">Срок размещения</dt><dd>{t.placement_days} дней</dd></div>
-          </dl>
+          <OrderTermsDetails terms={t} />
           {o.role !== "staff" && o.paid_at && (
             <button className="mt-3 text-sm text-accent" onClick={() => {
               const brief = prompt("Новое ТЗ (изменение вступит в силу только после согласия другой стороны)", t.brief);
@@ -289,6 +279,28 @@ function OrderPageInner() {
         {o.role === "buyer" && o.paid_at && !o.materials_delivered_at && (
           <Button variant="secondary" onClick={() => run(() => orderAction(o.id, "materials-delivered"), "Продавец уведомлён")}>Я передал рекламные материалы</Button>
         )}
+        <Card>
+          <h2 className="mb-2 font-bold">История заказа</h2>
+          <ol className="grid gap-1 text-xs">
+            {events.map((e) => (
+              <li key={e.seq} className="flex flex-wrap gap-2"><span className="text-muted">{formatDateTime(e.created_at)}</span><span>{e.type}{e.to && ` → ${STATUS_LABEL[e.to] ?? e.to}`}</span></li>
+            ))}
+          </ol>
+        </Card>
+      </div>
+
+      <aside id="chat" aria-label="Переписка по заказу" className="flex h-[min(75dvh,46rem)] min-h-[29rem] min-w-0 scroll-mt-24 flex-col overflow-hidden rounded-xl border border-border bg-surface lg:sticky lg:top-24">
+        <div className="flex flex-wrap items-center gap-3 border-b border-border p-3 sm:px-5">
+          {o.role === "staff" ? <h2 className="font-bold">Чат заказа</h2> : <>
+            <Avatar id={peer.id} name={peer.display_name} size={40} src={peer.avatar_url} />
+            <div className="min-w-0 flex-1">
+              <Link href={`/sellers/${peer.id}`} className="block truncate font-bold hover:text-accent">{peer.display_name}</Link>
+              <p className={`text-xs ${peer.online ? "text-ok" : "text-muted"}`}>{peer.online ? "Онлайн" : "Не в сети"}</p>
+            </div>
+            {o.paid_at && <Link href={`/messages?order=${o.id}`} className="text-sm font-semibold text-accent hover:underline">В сообщениях</Link>}
+          </>}
+        </div>
+        <OrderChat key={o.id} orderId={o.id} role={o.role} />
       </aside>
     </div>
   );

@@ -31,9 +31,10 @@ export default function PaidPage() {
           )}
         </p>
         {beta && <p className="mt-3 rounded-lg bg-bg px-3 py-2 text-xs text-muted">Бета-версия: оплата имитирована, деньги не списаны.</p>}
-        <Link href={`/orders/${id}#chat`} className="mt-7 rounded-xl bg-accent px-6 py-3 font-semibold text-accent-ink transition-[translate] duration-200 hover:-translate-y-0.5 motion-reduce:hover:translate-y-0">
-          Вернуться к заказу и чату
+        <Link href={`/messages?order=${id}`} className="mt-7 rounded-xl bg-accent px-6 py-3 font-semibold text-accent-ink transition-[translate] duration-200 hover:-translate-y-0.5 motion-reduce:hover:translate-y-0">
+          Открыть переписку
         </Link>
+        <Link href={`/orders/${id}`} className="mt-3 text-sm font-semibold text-accent hover:underline">Детали заказа</Link>
         <Link href="/purchases" className="mt-3 text-sm text-muted hover:text-text">Все покупки</Link>
       </div>
     </div>

@@ -8,7 +8,7 @@ export type DirectThread = {
   unread: number;
 };
 
-export const getDirect = (userId: string) => apiFetch<{ results: DirectMessage[] }>(`/direct/${userId}`);
+export const getDirect = (userId: string) => apiFetch<{ results: DirectMessage[]; marked_read?: number }>(`/direct/${userId}`);
 export const sendDirect = (userId: string, body: string) =>
   apiFetch<DirectMessage>(`/direct/${userId}`, { method: "POST", body: { body } });
 export const listDirect = () => apiFetch<{ results: DirectThread[] }>("/direct");

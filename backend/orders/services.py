@@ -143,6 +143,10 @@ def on_payment_succeeded(order_id, payment) -> Order:
             _move(order, item, S.PAID, event="item.paid", payment=payment.pk)
             item.accept_deadline = deadline
             _move(order, item, S.AWAITING_SELLER_ACCEPTANCE, event="item.awaiting_acceptance", deadline=deadline.isoformat())
+        from chats.services import post_order_brief
+
+        append_event(order, "order.paid", actor=order.buyer, payment=payment.pk)
+        post_order_brief(order)
         notify(order.seller, "order.new", "Новый оплаченный заказ", f"Примите заказ до {deadline:%d.%m %H:%M} UTC", order=order.pk)
         notify(order.buyer, "order.paid", "Оплата получена", "Ждём, когда продавец примет заказ", order=order.pk)
     return order

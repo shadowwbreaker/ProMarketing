@@ -1,10 +1,20 @@
 import { API_URL, ApiError, apiFetch } from "./client";
+import type { DirectThread } from "./direct";
+import type { OrderTerms } from "./orders";
+
+export type OrderThread = DirectThread & {
+  order_id: string; role: "buyer" | "seller"; brand: string; status: string;
+};
+export const listOrderThreads = () => apiFetch<{ results: OrderThread[] }>("/messages/orders");
+export const inboxStatus = () => apiFetch<{ unread: boolean; has_received_orders: boolean }>("/messages/status");
+export const refreshInbox = () => window.dispatchEvent(new Event("inbox-updated"));
 
 export type Msg = {
   id: string;
   kind: "user" | "system";
   author: null | { id: string; role: "buyer" | "seller"; display_name: string };
   body: string;
+  order_brief?: OrderTerms | null;
   attachments: { id: string; name: string; mime: string; size: number }[];
   created_at: string;
   edited: boolean;
@@ -12,7 +22,8 @@ export type Msg = {
   warning?: string;
 };
 
-export const getChat = (oid: string) => apiFetch<{ locked: boolean; results: Msg[] }>(`/orders/${oid}/chat`);
+export const getChat = (oid: string, markRead = false) =>
+  apiFetch<{ locked: boolean; results: Msg[]; marked_read?: number }>(`/orders/${oid}/chat${markRead ? "?read=1" : ""}`);
 export const sendMessage = (oid: string, body: string, attachments: string[] = []) =>
   apiFetch<Msg>(`/orders/${oid}/chat`, { method: "POST", body: { body, attachments } });
 export const fileUrl = (id: string) => `${API_URL}/api/v1/files/${id}`;

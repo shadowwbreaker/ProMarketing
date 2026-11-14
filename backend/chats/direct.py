@@ -57,8 +57,9 @@ class DirectMessages(APIView):
         t = get_thread(request.user, other, create=False)
         if not t:
             return Response({"results": []})
-        t.messages.filter(read_at__isnull=True).exclude(author=request.user).update(read_at=timezone.now())
-        return Response({"results": [_msg(m, request.user) for m in t.messages.order_by("created_at")[:300]]})
+        marked = t.messages.filter(read_at__isnull=True).exclude(author=request.user).update(read_at=timezone.now())
+        return Response({"results": [_msg(m, request.user) for m in t.messages.order_by("created_at")[:300]],
+                         "marked_read": marked})
 
     def post(self, request, user_id):
         other = self._other(request, user_id)

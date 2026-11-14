@@ -73,7 +73,17 @@ def system_message(order, text: str) -> ChatMessage | None:
     return ChatMessage.objects.create(chat=chat, author=None, kind=ChatMessage.Kind.SYSTEM, body=text)
 
 
+def post_order_brief(order) -> None:
+    terms = order.terms_versions.get(version=1)
+    ChatMessage.objects.get_or_create(
+        order_brief=terms,
+        defaults={"chat": order.chat, "author": order.buyer, "body": "Техническое задание к заказу"},
+    )
+
+
 def _editable(msg: ChatMessage, user):
+    if msg.order_brief_id:
+        raise DomainError("Исходное ТЗ заказа нельзя изменить в чате", code="order_brief_locked", status_code=403)
     if msg.author_id != user.pk or msg.kind != ChatMessage.Kind.USER:
         raise DomainError("Можно менять только свои сообщения", code="forbidden", status_code=403)
     if msg.chat.locked_at:

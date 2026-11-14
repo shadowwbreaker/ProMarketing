@@ -115,7 +115,9 @@ class OrderSerializer(serializers.ModelSerializer):
                               context=self.context).data
 
     def _party(self, u):
-        return {"id": str(u.pk), "display_name": u.profile.display_name, "last_seen_at": u.last_seen_at}
+        from chats.inbox import peer_summary
+
+        return {**peer_summary(u), "last_seen_at": u.last_seen_at}
 
     def get_buyer(self, o) -> dict:
         return self._party(o.buyer)

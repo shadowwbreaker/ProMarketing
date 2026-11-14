@@ -19,9 +19,12 @@ const { chromium } = require("playwright");
   await page.waitForURL(/\/orders\/[0-9a-f-]{36}\/paid$/);
   await page.getByText("Оплата подтверждена").waitFor();
   await page.getByText("оплата имитирована").waitFor();
-  await page.getByRole("link", { name: "Вернуться к заказу и чату" }).click();
-  await page.getByText("Ждёт принятия продавцом").first().waitFor();
+  await page.getByRole("link", { name: "Открыть переписку" }).click();
   await page.getByText("Оплата получена платёжным провайдером").first().waitFor();
+  await page.getByText("Проверка бета-оплаты", { exact: true }).waitFor();
+  await page.getByRole("link", { name: "Детали заказа" }).click();
+  await page.getByText(/Ждёт принятия продавцом/).first().waitFor();
+  await page.getByRole("log", { name: "Чат заказа" }).getByText("Проверка бета-оплаты").waitFor();
   await browser.close();
   console.log("E2E BETA OK");
 })().catch((e) => {
