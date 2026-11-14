@@ -6,15 +6,35 @@ export type OrderThread = DirectThread & {
   order_id: string; role: "buyer" | "seller"; brand: string; status: string;
 };
 export const listOrderThreads = () => apiFetch<{ results: OrderThread[] }>("/messages/orders");
-export const inboxStatus = () => apiFetch<{ unread: boolean; has_received_orders: boolean }>("/messages/status");
+export type InboxStatus = {
+  unread: boolean; has_received_orders: boolean;
+  signals: { message: string | null; order: string | null };
+};
+export const inboxStatus = () => apiFetch<InboxStatus>("/messages/status");
+export type PeerThread = Omit<DirectThread, "unread"> & { unread: boolean };
+export type ConversationOrder = { id: string; title: string; status: string; locked: boolean };
+export type ConversationPage = {
+  results: Msg[]; next: string | null; orders: ConversationOrder[]; version: string; marked_read: number;
+};
+export const listConversations = () => apiFetch<{ results: PeerThread[] }>("/messages/conversations");
+export const getConversation = (user: string, options: { before?: string; version?: string } = {}) => {
+  const params = new URLSearchParams();
+  if (options.before) params.set("before", options.before);
+  else {
+    params.set("read", "1");
+    if (options.version !== undefined) params.set("version", options.version);
+  }
+  return apiFetch<ConversationPage | { unchanged: true }>(`/messages/conversations/${user}?${params}`);
+};
 export const refreshInbox = () => window.dispatchEvent(new Event("inbox-updated"));
 
 export type Msg = {
   id: string;
   kind: "user" | "system";
-  author: null | { id: string; role: "buyer" | "seller"; display_name: string };
+  author: null | { id: string; role?: "buyer" | "seller"; display_name: string };
   body: string;
   order_brief?: OrderTerms | null;
+  order_id?: string;
   attachments: { id: string; name: string; mime: string; size: number }[];
   created_at: string;
   edited: boolean;

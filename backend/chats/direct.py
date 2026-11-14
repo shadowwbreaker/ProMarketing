@@ -61,6 +61,7 @@ class DirectMessages(APIView):
         return Response({"results": [_msg(m, request.user) for m in t.messages.order_by("created_at")[:300]],
                          "marked_read": marked})
 
+    @transaction.atomic
     def post(self, request, user_id):
         other = self._other(request, user_id)
         if other.status == User.Status.BLOCKED:

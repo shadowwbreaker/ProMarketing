@@ -68,7 +68,8 @@
 Платежи: `POST /orders/{id}/pay`, `POST /payments/webhooks/{provider}`, `GET /me/payouts`, `POST /me/payouts/{id}/{withdraw|retry}`.
 Чат и файлы: `GET/POST /orders/{id}/chat`, `PATCH/DELETE /orders/{id}/chat/{m}`, `POST /files`, `GET /files/{id}`.
 
-- `GET /messages/orders` возвращает чаты оплаченных заказов пользователя с отметкой о непрочитанном. `GET /messages/status` возвращает общий признак непрочитанных сообщений и признак первого полученного заказа.
+- `GET /messages/conversations` возвращает по одной строке на собеседника. `GET /messages/conversations/{user}` объединяет личную переписку и сообщения оплаченных заказов этой пары, сохраняя ссылки на заказы. `before` загружает предыдущую страницу, `version` позволяет проверить наличие изменений, а `read=1` отмечает ленту собеседника прочитанной при её открытии.
+- `GET /messages/status` возвращает признак непрочитанного, признак полученных заказов и время последнего входящего сообщения и заказа для звуковых уведомлений.
 - `GET /orders/{id}/chat?read=1` отмечает уведомления об оплате и сообщениях только для текущего участника и заказа. У новых оплаченных заказов исходное ТЗ доступно в сообщении `order_brief`. Оно ссылается на первую версию условий.
 - `GET /orders/received` возвращает оплаченные заказы продавца и статистику по выбранным фильтрам `number`, `buyer`, `status`, `platform`. `format_csv=1` выгружает отфильтрованный список.
 Споры: `GET /dispute-reasons`, `POST /orders/{id}/disputes/open`, `GET /orders/{id}/disputes`, `GET /disputes/{id}`, `POST /disputes/{id}/{reply|appeal}`; поддержка `POST /support/tickets`.

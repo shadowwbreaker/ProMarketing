@@ -62,7 +62,7 @@ def post_message(order_id, *, user, body: str, attachments=()) -> ChatMessage:
         msg = ChatMessage.objects.create(chat=chat, author=user, body=body, contact_signal=has_contact_signal(body))
         msg.attachments.set(atts)
         other = chat.order.seller if role == "buyer" else chat.order.buyer
-    notify(other, "chat.message", "Новое сообщение по заказу", body[:120], order=chat.order_id)
+        notify(other, "chat.message", "Новое сообщение по заказу", body[:120], order=chat.order_id)
     return msg
 
 

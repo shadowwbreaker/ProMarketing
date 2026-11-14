@@ -49,6 +49,7 @@ export async function apiFetch<T>(
       headers,
       body: isForm ? (options.body as FormData) : options.body !== undefined ? JSON.stringify(options.body) : undefined,
       credentials: "include",
+      cache: "no-store",
       signal: options.signal,
     });
   } catch {

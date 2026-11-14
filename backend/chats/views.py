@@ -8,7 +8,7 @@ from rest_framework.views import APIView
 from common.permissions import IsActiveUser
 
 from . import services
-from .inbox import order_notifications
+from .inbox import order_notifications, visible_order_messages
 from .models import ChatMessage
 
 
@@ -58,7 +58,9 @@ class Messages(APIView):
     def get(self, request, pk):
         chat = services.get_chat(pk, request.user)
         opened_at = timezone.now()
-        qs = chat.messages.select_related("author__profile", "chat__order", "order_brief").prefetch_related("attachments")
+        qs = visible_order_messages().filter(chat=chat).select_related(
+            "author__profile", "chat__order", "order_brief",
+        ).prefetch_related("attachments")
         if after := request.query_params.get("after"):
             messages = list(qs.filter(created_at__gt=after).order_by("created_at", "pk")[:500])
         else:

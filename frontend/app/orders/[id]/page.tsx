@@ -300,7 +300,7 @@ function OrderPageInner() {
             {o.paid_at && <Link href={`/messages?order=${o.id}`} className="text-sm font-semibold text-accent hover:underline">В сообщениях</Link>}
           </>}
         </div>
-        <OrderChat key={o.id} orderId={o.id} role={o.role} />
+        <OrderChat key={o.id} orderId={o.id} role={o.role} peerId={o.paid_at && o.role !== "staff" ? peer.id : undefined} />
       </aside>
     </div>
   );
