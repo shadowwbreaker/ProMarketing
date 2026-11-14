@@ -4,8 +4,15 @@ from django.db import models
 from common.models import BaseModel
 
 
+class StoredFile(models.Model):
+    """File content for the Vercel beta."""
+
+    name = models.CharField(max_length=512, primary_key=True)
+    content = models.BinaryField()
+
+
 class Attachment(BaseModel):
-    """Uploaded file metadata. Content lives in S3/MinIO under storage_key; sha256 proves integrity."""
+    """Uploaded file metadata. Content is read through Django storage."""
 
     class ScanStatus(models.TextChoices):
         PENDING = "pending", "Ожидает проверки"

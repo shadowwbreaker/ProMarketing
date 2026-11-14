@@ -8,6 +8,7 @@
 import os
 
 os.environ.setdefault("BETA_MODE", "true")
+os.environ.setdefault("BETA_DATABASE_STORAGE", "true")
 os.environ.setdefault("PAYMENT_PROVIDER", "mock")
 os.environ.setdefault("CELERY_TASK_ALWAYS_EAGER", "true")
 os.environ.setdefault("SOCIAL_PROVIDER_MODE", "official")

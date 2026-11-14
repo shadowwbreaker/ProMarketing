@@ -1,4 +1,4 @@
-# Бета на Vercel + Neon + Upstash + Cloudflare R2
+# Бета на Vercel + Neon + Upstash
 
 Ветка `beta`. Оплата имитируется (`PAYMENT_PROVIDER=mock`), остальное работает по-настоящему.
 
@@ -7,9 +7,8 @@
 ```
 браузер → pm-web.vercel.app (Next.js)
             └─ /api/v1/*  →  pm-api.vercel.app (Django, serverless-функция)
-                               ├─ Neon (PostgreSQL)
-                               ├─ Upstash (Redis: кэш, лимиты запросов)
-                               └─ Cloudflare R2 (файлы чата, аватары)
+                               ├─ Neon (PostgreSQL: данные, файлы чата, аватары)
+                               └─ Upstash (Redis: кэш, лимиты запросов)
 GitHub Actions: миграции при push в beta; таймеры каждые 15 минут → /api/v1/ops/tick
 ```
 
@@ -17,11 +16,7 @@ GitHub Actions: миграции при push в beta; таймеры кажды�
 
 На Vercel бета принимает аватары и вложения до 4 МБ с учётом ограничения на размер HTTP-запроса. Каждая операция тестовой оплаты хранится в PostgreSQL, чтобы подтверждение, возврат и выплата работали между разными экземплярами функции.
 
-## 1. Cloudflare R2 (файлы)
-
-1. Cloudflare → R2 Object Storage → **Create bucket** → имя `promarketing-beta`, регион Automatic.
-2. R2 → **Manage API tokens** → **Create API token** → права *Object Read & Write*, только этот bucket.
-3. Сохраните: **Access Key ID**, **Secret Access Key**, и **Account ID** (виден справа на странице R2).
+Файлы беты входят в лимит хранилища проекта Neon. Настройки Vercel включают хранение в PostgreSQL по умолчанию.
 
 ## 2. Vercel: проект API (backend)
 
@@ -43,10 +38,6 @@ GitHub Actions: миграции при push в beta; таймеры кажды�
 | `CSRF_TRUSTED_ORIGINS` | `https://pm-web.vercel.app` |
 | `CORS_ALLOWED_ORIGINS` | `https://pm-web.vercel.app` |
 | `DJANGO_ALLOWED_HOSTS` | `pm-api.vercel.app` (адрес этого проекта) |
-| `S3_BUCKET` | `promarketing-beta` |
-| `S3_ENDPOINT_URL` | `https://<Account ID>.r2.cloudflarestorage.com` |
-| `S3_REGION` | `auto` |
-| `S3_ACCESS_KEY` / `S3_SECRET_KEY` | ключи из шага 1 |
 | `YOUTUBE_API_KEY` | ваш ключ YouTube Data API |
 | `TIKTOK_CLIENT_KEY` / `TIKTOK_CLIENT_SECRET` | ключи TikTok (если нет — TikTok только вручную) |
 | `DEV_AUTO_VERIFY_EMAIL` | `true` (почта подтверждается сразу; позже — SMTP) |

@@ -23,6 +23,7 @@ SECURE_REDIRECT_EXEMPT = [r"^api/v1/health/"]  # load balancer probes over plain
 # --- static & media -----------------------------------------------------------------
 MIDDLEWARE = [MIDDLEWARE[0], MIDDLEWARE[1], "whitenoise.middleware.WhiteNoiseMiddleware", *MIDDLEWARE[2:]]
 S3_BUCKET = env("S3_BUCKET", default="")
+BETA_DATABASE_STORAGE = BETA_MODE and env.bool("BETA_DATABASE_STORAGE", default=False)
 STORAGES = {
     "default": {
         "BACKEND": "storages.backends.s3.S3Storage",
@@ -40,6 +41,8 @@ STORAGES = {
     },
     "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
 }
+if BETA_DATABASE_STORAGE:
+    STORAGES["default"] = {"BACKEND": "files.storage.DatabaseStorage"}
 
 # drf-spectacular falls back to generic schemas for plain APIViews; documentation-only warning.
 SILENCED_SYSTEM_CHECKS = ["drf_spectacular.W001", "drf_spectacular.W002"]
@@ -61,7 +64,7 @@ if BETA_MODE and PAYMENT_PROVIDER != "mock":
     _errors.append("BETA_MODE requires PAYMENT_PROVIDER=mock: the beta never moves real money")
 if not FIELD_ENCRYPTION_KEY:
     _errors.append("FIELD_ENCRYPTION_KEY must be set in production")
-if not S3_BUCKET:
+if not S3_BUCKET and not BETA_DATABASE_STORAGE:
     _errors.append("S3_BUCKET must be set in production (attachments/evidence storage)")
 if env("EMAIL_BACKEND", default="").endswith("console.EmailBackend") and not BETA_MODE:
     _errors.append("Console email backend is forbidden in production")
