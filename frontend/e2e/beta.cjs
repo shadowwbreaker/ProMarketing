@@ -18,7 +18,10 @@ const { chromium } = require("playwright");
       };
     });
     async function login(page, email) {
-      await page.goto(`${base}/login`);
+      await Promise.all([
+        page.waitForResponse((response) => new URL(response.url()).pathname === "/api/v1/auth/session"),
+        page.goto(`${base}/login`),
+      ]);
       await page.getByLabel("Email").fill(email);
       await page.getByLabel("Пароль").fill("Demo-password-1");
       await page.getByRole("button", { name: "Войти", exact: true }).click();
