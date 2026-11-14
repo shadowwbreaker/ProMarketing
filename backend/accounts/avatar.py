@@ -2,6 +2,7 @@
 import io
 import uuid
 
+from django.conf import settings
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 from django.http import FileResponse, Http404
@@ -55,8 +56,9 @@ class MyAvatar(APIView):
 
     def post(self, request):
         f = request.FILES.get("file")
-        if not f or f.size <= 0 or f.size > MAX_BYTES:
-            raise DomainError("Выберите изображение до 5 МБ", code="file_too_large", status_code=400)
+        limit = getattr(settings, "AVATAR_MAX_BYTES", MAX_BYTES)
+        if not f or f.size <= 0 or f.size > limit:
+            raise DomainError(f"Выберите изображение до {limit // (1024 * 1024)} МБ", code="file_too_large", status_code=400)
         jpeg = process(f.read())
         profile = request.user.profile
         old = profile.avatar_key

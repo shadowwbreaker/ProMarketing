@@ -90,6 +90,30 @@ def test_meta_endpoint(api):
 
 
 @pytest.mark.django_db
+def test_beta_payment_survives_provider_restart(settings):
+    from payments.providers.beta import BetaPaymentProvider
+
+    settings.BETA_MODE = True
+    payment = BetaPaymentProvider().create_payment(
+        order_id="order", amount_minor=10000, currency="RUB", idempotency_key="pay-key",
+        return_url="https://beta.example.com/orders/order",
+    )
+    fresh = BetaPaymentProvider()
+    headers, payload = fresh.simulate_payment(payment.provider_payment_id)
+    assert fresh.verify_webhook(headers, payload).type == "payment.succeeded"
+    assert BetaPaymentProvider().get_payment_status(payment.provider_payment_id) == "succeeded"
+    args = {"provider_payment_id": payment.provider_payment_id, "amount_minor": 3000,
+            "idempotency_key": "refund-key", "reason": "test"}
+    refund = BetaPaymentProvider().request_refund(**args)
+    assert BetaPaymentProvider().request_refund(**args) == refund
+    assert BetaPaymentProvider().get_refund_status(refund.provider_id) == "succeeded"
+    payout = BetaPaymentProvider().request_payout(
+        seller_ref="seller", amount_minor=7000, idempotency_key="payout-key",
+    )
+    assert BetaPaymentProvider().get_payout_status(payout.provider_id) == "succeeded"
+
+
+@pytest.mark.django_db
 def test_ops_tick_requires_cron_secret(api, monkeypatch):
     assert api.get("/api/v1/ops/tick").status_code == 403
     monkeypatch.setenv("CRON_SECRET", "s3cret-value")

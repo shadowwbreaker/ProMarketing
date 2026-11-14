@@ -37,8 +37,9 @@ def sniff(head: bytes) -> tuple[str, str] | None:
 
 def store_upload(*, owner, uploaded) -> Attachment:
     size = uploaded.size
-    if size <= 0 or size > getattr(settings, "ATTACHMENT_MAX_SIZE", MAX_SIZE):
-        raise DomainError("Файл пустой или больше 20 МБ", code="file_too_large", status_code=400)
+    limit = getattr(settings, "ATTACHMENT_MAX_SIZE", MAX_SIZE)
+    if size <= 0 or size > limit:
+        raise DomainError(f"Файл пустой или больше {limit // (1024 * 1024)} МБ", code="file_too_large", status_code=400)
     data = uploaded.read()
     kind = sniff(data[:16])
     if not kind:

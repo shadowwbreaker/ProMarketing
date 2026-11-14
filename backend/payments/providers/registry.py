@@ -11,9 +11,14 @@ def get_payment_provider() -> PaymentProvider:
     if _instance is not None:
         return _instance
     if settings.PAYMENT_PROVIDER == "mock":
-        from .mock import MockPaymentProvider
+        if settings.BETA_MODE:
+            from .beta import BetaPaymentProvider
 
-        _instance = MockPaymentProvider()
+            _instance = BetaPaymentProvider()
+        else:
+            from .mock import MockPaymentProvider
+
+            _instance = MockPaymentProvider()
         return _instance
     raise ImproperlyConfigured(f"Payment provider '{settings.PAYMENT_PROVIDER}' is not implemented (Q-03)")
 

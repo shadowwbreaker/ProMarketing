@@ -38,6 +38,7 @@ class TickView(APIView):
         given = request.headers.get("Authorization", "").removeprefix("Bearer ").strip()
         if not secret or not hmac.compare_digest(given, secret):
             return Response({"error": {"code": "forbidden", "message": "Forbidden"}}, status=403)
-        return Response({"ran": run_all_timers()})
+        ran = run_all_timers()
+        return Response({"ran": ran}, status=200 if all(result == "ok" for result in ran.values()) else 503)
 
     post = get

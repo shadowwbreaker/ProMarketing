@@ -1,3 +1,5 @@
+import uuid
+
 from django.conf import settings
 from django.db import models
 
@@ -28,6 +30,21 @@ class Payment(BaseModel):
             models.CheckConstraint(condition=models.Q(amount_minor__gt=0), name="payment_amount_positive"),
             models.UniqueConstraint(fields=["order"], condition=models.Q(status="succeeded"), name="one_succeeded_payment_per_order"),
         ]
+
+
+class BetaProviderOperation(models.Model):
+    """Persistent provider state for the beta simulator."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    idempotency_key = models.CharField(max_length=64, unique=True)
+    kind = models.CharField(max_length=3)
+    status = models.CharField(max_length=16)
+    amount_minor = MoneyField()
+    refunded_minor = MoneyField(default=0)
+
+    @property
+    def provider_id(self):
+        return f"mock_{self.kind}_{self.pk.hex}"
 
 
 class PaymentAllocation(BaseModel):

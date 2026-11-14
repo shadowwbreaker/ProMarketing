@@ -27,4 +27,7 @@ from .prod import *  # noqa: E402,F403
 SECURE_SSL_REDIRECT = False  # Vercel terminates TLS and redirects itself
 SESSION_COOKIE_DOMAIN = None  # cookies belong to the site origin that proxies us
 CSRF_COOKIE_DOMAIN = None
+# Leave room for multipart overhead under the Vercel Functions payload limit.
+ATTACHMENT_MAX_SIZE = 4 * 1024 * 1024
+AVATAR_MAX_BYTES = ATTACHMENT_MAX_SIZE
 STORAGES["staticfiles"] = {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"}  # noqa: F405
