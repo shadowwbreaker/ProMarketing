@@ -27,7 +27,7 @@
 
 Обязательные (приложение не стартует без них): `DJANGO_SECRET_KEY` (≥ 40 символов), `FIELD_ENCRYPTION_KEY` (Fernet), `DATABASE_URL`, `REDIS_URL`, `DJANGO_ALLOWED_HOSTS`, `CSRF_TRUSTED_ORIGINS`, `CORS_ALLOWED_ORIGINS`, `FRONTEND_URL`, `S3_BUCKET` (+ `S3_ENDPOINT_URL`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`), `EMAIL_BACKEND` (SMTP) и `EMAIL_HOST*`, `PAYMENT_PROVIDER` ≠ `mock`, `SOCIAL_PROVIDER_MODE=official`.
 
-Рекомендуемые: `SESSION_COOKIE_DOMAIN` / `CSRF_COOKIE_DOMAIN` (например `.promarketing.ru`, если API на поддомене), `SECURE_HSTS_PRELOAD=true` после подготовки домена, `STAFF_2FA_REQUIRED=true` (по умолчанию в prod), `GUNICORN_WORKERS`.
+Рекомендуемые: `SESSION_COOKIE_DOMAIN` / `CSRF_COOKIE_DOMAIN` (например `.promarketing.ru`, если API на поддомене), `SECURE_HSTS_PRELOAD=true` после подготовки домена, `GUNICORN_WORKERS`.
 
 Секреты хранятся вне репозитория (секрет-менеджер облака или `.env.prod` с правами 600 на сервере). `.env*` в `.gitignore`.
 
@@ -64,6 +64,8 @@
 См. статусы в `MASTER_ROADMAP.md`, раздел PHASE 15.
 
 ## 8. Защита от DDoS и флуда
+
+Для Vercel см. [операции с бетой](BETA_VERCEL.md), для самостоятельного хостинга действуют настройки ниже.
 
 - **До сервера (обязательно для production):** DDoS-Guard / Qrator / StormWall или защита облака (Yandex Cloud DDoS Protection). Приложение не способно отсечь распределённую атаку само.
 - **Caddy:** таймауты чтения заголовков и тела (slowloris), лимит размера заголовков и тела запроса (`infra/Caddyfile`). Для лимитов на уровне прокси можно собрать Caddy с модулем `caddy-ratelimit`.

@@ -42,7 +42,7 @@
 
 | Таблица | Ключевые поля | Ограничения |
 |---|---|---|
-| `orders` | buyer_id, seller_id, network_id?, status (агрегированный), total_minor, currency, current_terms_version_id | индекс (buyer_id), (seller_id), (status) |
+| `orders` | buyer_id, seller_id, network_id?, status, total_minor, currency, current_terms_version_id, creation_key?, creation_fingerprint | `UNIQUE (buyer_id, creation_key)` для защиты повторов. Существующие заказы хранят NULL в `creation_key` |
 | `order_terms_versions` | order_id, version, brand, site_url, brief, ad_text, cta, links, publish_deadline, placement_days, materials, platform_removal_policy, agreed_by_buyer_at, agreed_by_seller_at, hash | `UNIQUE (order_id, version)`; только добавление |
 | `order_items` | order_id, social_account_id, offer_id, price_minor, status (DRAFT…EXPIRED из roadmap 6.2), publish_deadline, placement_until, accepted_at | `CHECK price_minor > 0`; `SUM(order_items.price_minor) = orders.total_minor` — проверка в сервисе |
 | `publication_proofs` | order_item_id, video_url, profile_url, screenshot_file_id, published_at, submitted_by | |

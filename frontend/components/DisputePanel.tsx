@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { useToast } from "@/components/ui/Toast";
 import { uploadFile } from "@/lib/api/chat";
+import { getMeta } from "@/lib/api/meta";
 import { appealDispute, DECISION_LABEL, Dispute, DISPUTE_STATUS, Evidence, getReasons, openDispute, orderDisputes, Reason, replyDispute } from "@/lib/api/disputes";
 import type { Order } from "@/lib/api/orders";
 import { fieldErrors } from "@/lib/forms";
@@ -12,11 +13,13 @@ import { formatDateTime, formatMoney } from "@/lib/format";
 
 function EvidencePicker({ value, onChange }: { value: Evidence[]; onChange: (e: Evidence[]) => void }) {
   const toast = useToast();
+  const [documentAttachments, setDocumentAttachments] = useState(false);
+  useEffect(() => { void getMeta().then((meta) => setDocumentAttachments(Boolean(meta.document_attachments))); }, []);
   return (
     <div className="flex flex-col gap-1 text-xs">
       <label className="cursor-pointer text-accent">
-        + Скриншот, видео или PDF
-        <input type="file" className="hidden" accept="image/*,application/pdf,video/mp4" onChange={async (e) => {
+        {documentAttachments ? "+ Скриншот, видео или PDF" : "+ Скриншот"}
+        <input type="file" className="hidden" accept={documentAttachments ? "image/png,image/jpeg,image/gif,image/webp,application/pdf,video/mp4" : "image/png,image/jpeg,image/gif,image/webp"} onChange={async (e) => {
           const f = e.target.files?.[0];
           if (!f) return;
           try {

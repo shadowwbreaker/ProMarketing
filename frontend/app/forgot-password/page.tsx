@@ -30,7 +30,7 @@ export default function ForgotPasswordPage() {
       {sent ? (
         <p className="text-sm">Если аккаунт с таким email существует, мы отправили на него ссылку для сброса пароля.</p>
       ) : (
-        <form onSubmit={onSubmit} className="flex flex-col gap-4">
+        <form method="post" onSubmit={onSubmit} className="flex flex-col gap-4">
           <FormError message={err} />
           <Field label="Email" name="email" type="email" required />
           <Button type="submit" loading={busy}>Отправить ссылку</Button>

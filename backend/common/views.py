@@ -26,7 +26,11 @@ class MetaView(APIView):
     def get(self, request):
         from django.conf import settings
 
-        return Response({"beta": settings.BETA_MODE, "payment_provider": settings.PAYMENT_PROVIDER})
+        return Response({
+            "beta": settings.BETA_MODE,
+            "payment_provider": settings.PAYMENT_PROVIDER,
+            "document_attachments": bool(settings.ATTACHMENT_CLAMAV_HOST),
+        })
 
 
 class ReadyView(APIView):

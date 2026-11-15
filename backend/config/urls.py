@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib import admin
 from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView
@@ -24,7 +25,8 @@ api_v1 = [
 ]
 
 urlpatterns = [
-    path("django-admin/", admin.site.urls),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("api/v1/", include(api_v1)),
 ]
+if settings.DEBUG:
+    urlpatterns.append(path("django-admin/", admin.site.urls))

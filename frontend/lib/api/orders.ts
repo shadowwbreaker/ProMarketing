@@ -61,7 +61,8 @@ export type Order = {
 
 export type OrderEvent = { seq: number; type: string; item: string | null; from: string; to: string; created_at: string };
 
-export const createOrder = (body: Record<string, unknown>) => apiFetch<Order>("/orders", { method: "POST", body });
+export const createOrder = (body: Record<string, unknown>, idempotencyKey: string) =>
+  apiFetch<Order>("/orders", { method: "POST", body, idempotencyKey });
 export const getOrder = (id: string) => apiFetch<Order>(`/orders/${id}`);
 export const getOrderEvents = (id: string) => apiFetch<OrderEvent[]>(`/orders/${id}/events`);
 export const itemAction = (oid: string, iid: string, action: string, body?: unknown) =>

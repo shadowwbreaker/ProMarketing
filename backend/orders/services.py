@@ -6,6 +6,7 @@ import json
 from datetime import timedelta
 
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.utils import timezone
 
@@ -64,10 +65,27 @@ def distribute(total: int, weights: list[int]) -> list[int]:
 
 # --- creation ---------------------------------------------------------------------
 @transaction.atomic
-def create_order(*, buyer, terms: dict, offer_id=None, network_id=None, network_item_ids=None, results_report: bool = False) -> Order:
+def create_order(*, buyer, terms: dict, offer_id=None, network_id=None, network_item_ids=None,
+                 results_report: bool = False, idempotency_key: str | None = None) -> Order:
     """Create an order with frozen prices and terms (roadmap 6.1). Ready for payment (AWAITING_PAYMENT)."""
     if not buyer.is_email_verified:
         raise DomainError("Подтвердите email, чтобы оформить заказ", code="email_not_verified", status_code=403)
+    fingerprint = ""
+    if idempotency_key is not None:
+        fingerprint = _hash_terms({
+            "terms": terms,
+            "offer": offer_id,
+            "network": network_id,
+            "network_items": sorted({str(item) for item in network_item_ids or []}),
+            "results_report": results_report,
+        })
+        # Serialize the first write for this buyer even when there is no order row to lock yet.
+        get_user_model().objects.select_for_update().only("pk").get(pk=buyer.pk)
+        previous = Order.objects.filter(buyer=buyer, creation_key=idempotency_key).first()
+        if previous:
+            if previous.creation_fingerprint != fingerprint:
+                raise DomainError("Этот ключ уже использован для другого заказа", code="idempotency_conflict")
+            return previous
     lines: list[tuple] = []  # (offer, price)
     network = None
     if offer_id:
@@ -101,6 +119,7 @@ def create_order(*, buyer, terms: dict, offer_id=None, network_id=None, network_
         raise DomainError("Нельзя заказать рекламу у самого себя", code="self_order", status_code=400)
     fee_bps = settings.PLATFORM_FEE_BPS
     order = Order.objects.create(buyer=buyer, seller=seller, network=network,
+                                 creation_key=idempotency_key, creation_fingerprint=fingerprint,
                                  fee_bps=fee_bps, total_minor=sum(p for _, p in lines), status=S.DRAFT,
                                  results_report=bool(results_report and settings.RESULTS_REPORTS_ENABLED))
     for offer, price in lines:

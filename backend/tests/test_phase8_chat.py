@@ -1,13 +1,21 @@
 from datetime import timedelta
+from io import BytesIO
 
 import pytest
 from django.core import mail
 from django.core.files.uploadedfile import SimpleUploadedFile
 from freezegun import freeze_time
+from PIL import Image
 
 from tests.test_phase6_orders import as_, item_url, paid_single
 
-PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 64
+def _png():
+    buffer = BytesIO()
+    Image.new("RGB", (3, 3), "red").save(buffer, format="PNG")
+    return buffer.getvalue()
+
+
+PNG = _png()
 
 
 @pytest.fixture(autouse=True)

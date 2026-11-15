@@ -10,17 +10,18 @@
 |---|---|---|
 | `BETA_MODE` | `true` | `false` |
 | `PAYMENT_PROVIDER` | `mock` (обязательно при `BETA_MODE`) | адаптер провайдера (ЮKassa / Т-Бизнес) |
-| `DEV_AUTO_VERIFY_EMAIL` | можно `true`, если нет SMTP | запрещено |
+| `DEV_AUTO_VERIFY_EMAIL` | `false`, требуется подтверждение письмом | `false`, требуется подтверждение письмом |
+| 2FA сотрудников | обязательна на публичном сервере | обязательна |
 
 **Переход на рабочую версию:** подключить адаптер провайдера (Q-03), поставить `BETA_MODE=false`, `PAYMENT_PROVIDER=<провайдер>`, настроить SMTP — и перезапустить. Приложение само откажется стартовать, если что-то осталось в бета-режиме. Тестовые заказы беты стоит удалить или перенести в отдельную БД до запуска.
 
 ## Запуск на сервере
 
-1. VPS в РФ (2 vCPU, 4 ГБ RAM достаточно), Docker и Docker Compose, домен с двумя A-записями: `beta.<домен>` и `api.beta.<домен>` → IP сервера.
+1. VPS в РФ (память для приложения и отдельного контейнера ClamAV), Docker и Docker Compose, домен с двумя A-записями: `beta.<домен>` и `api.beta.<домен>` → IP сервера.
 2. `git clone -b beta https://github.com/shadowwbreaker/ProMarketing.git && cd ProMarketing`
 3. `cp .env.beta.example .env.prod` и заполнить пустые значения (ключи, домены, пароль БД, S3, SMTP).
 4. `docker compose -f infra/docker-compose.prod.yml --env-file .env.prod up -d --build` — Caddy сам получит HTTPS-сертификаты.
-5. `docker compose -f infra/docker-compose.prod.yml --env-file .env.prod exec backend python manage.py createsuperuser` — администратор.
+5. `docker compose -f infra/docker-compose.prod.yml --env-file .env.prod exec backend python manage.py createsuperuser` — создайте администратора, войдите на сайт и включите TOTP в профиле.
 6. Проверка: `https://api.beta.<домен>/api/v1/meta` → `{"beta": true, ...}`, откройте сайт, добавьте свой канал.
 
 **TikTok:** в приложении TikTok Developers укажите Redirect URI `https://beta.<домен>/account/accounts/oauth/tiktok`; пока приложение на проверке — включите Sandbox и добавьте тестовые аккаунты в Target users.

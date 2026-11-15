@@ -40,8 +40,12 @@ GitHub Actions: миграции при push в beta; таймеры кажды�
 | `DJANGO_ALLOWED_HOSTS` | `pm-api.vercel.app` (адрес этого проекта) |
 | `YOUTUBE_API_KEY` | ваш ключ YouTube Data API |
 | `TIKTOK_CLIENT_KEY` / `TIKTOK_CLIENT_SECRET` | ключи TikTok (если нет — TikTok только вручную) |
-| `DEV_AUTO_VERIFY_EMAIL` | `true` (почта подтверждается сразу; позже — SMTP) |
-| `EMAIL_BACKEND` | `django.core.mail.backends.console.EmailBackend` |
+| `DEV_AUTO_VERIFY_EMAIL` | `false` |
+| `EMAIL_BACKEND` | `django.core.mail.backends.smtp.EmailBackend` |
+| `EMAIL_HOST`, `EMAIL_PORT` | SMTP-сервер и порт, для Gmail — `smtp.gmail.com`, `587` |
+| `EMAIL_HOST_USER`, `DEFAULT_FROM_EMAIL` | аккаунт отправителя и адрес From |
+| `EMAIL_HOST_PASSWORD` | секрет SMTP. Для Gmail — [пароль приложения Google](https://support.google.com/accounts/answer/185833?hl=ru) |
+| `EMAIL_USE_TLS`, `EMAIL_USE_SSL` | для порта 587 — `true` и `false` соответственно |
 
 Генерация секретов (на своём ПК, в папке backend с установленным Python):
 
@@ -52,6 +56,8 @@ python -c "import secrets;print(secrets.token_urlsafe(32))"     # CRON_SECRET
 ```
 
 `FIELD_ENCRYPTION_KEY` после первого запуска не меняйте — им зашифрованы токены каналов.
+
+В публичной бете статус подтверждённого адреса выдаётся только после проверки ссылки. При недоступном SMTP пользователь может войти и открыть каталог, а оформление заказа и публикация предложения требуют подтверждения. Кнопка повторной отправки возвращает понятную ошибку, пока провайдер недоступен. После добавления SMTP-переменных разверните API заново и проверьте регистрацию и получение письма на подконтрольный адрес. [SMTP на Vercel](https://vercel.com/kb/guide/serverless-functions-and-smtp)
 
 ## 3. Vercel: проект сайта (frontend)
 
@@ -95,13 +101,21 @@ python manage.py createsuperuser
 ## 6. Проверка
 
 - `https://pm-api.vercel.app/api/v1/health/ready` → `{"database":"ok","cache":"ok"}`
-- `https://promarketing-beta-web.vercel.app` → регистрация, каталог, покупка → «Оплата подтверждена», заказ виден в чате.
+- `https://promarketing-beta-web.vercel.app` → регистрация → письмо с подтверждением → каталог → покупка → «Оплата подтверждена», заказ виден в чате.
+- Администратор входит через сайт, настраивает TOTP в профиле и открывает `/staff`. `/django-admin/` на публичном API возвращает 404.
+- При обновлении сначала дождитесь успешной миграции в Actions, затем разверните фронтенд и API из этого же коммита `beta`. Проверьте HTTP 200 у readiness, загрузку карточки каталога и отказ при POST входа без CSRF.
+- `old-main` сохраняет исходный SHA `00da2d5477a4d891feda71e04d6c90e3f833df3d` для просмотра предыдущей версии. Для отката публичной беты используйте подходящий деплой Vercel с учётом миграций. Историческая ветка сохраняет код, текущее содержимое Neon в неё не входит.
 
 ## 7. TikTok
 
 В TikTok for Developers → приложение → Login Kit → **Redirect URI**: `https://promarketing-beta-web.vercel.app/account/accounts/oauth/tiktok`. Нужны Login Kit, Display API и scopes `user.info.basic`, `user.info.profile`, `user.info.stats`, `video.list`. В Sandbox владелец тестового TikTok-аккаунта должен быть добавлен в Target users.
 
 Ключи добавляются как Secret для окружения Production в проекте `promarketing-beta-api`: `YOUTUBE_API_KEY`, `TIKTOK_CLIENT_KEY`, `TIKTOK_CLIENT_SECRET`. После сохранения нужен повторный деплой API. Для YouTube владелец видит среднее по выборке из последних доступных коротких роликов (до 15), а публичный показ производной метрики требует одобрения YouTube (D-016).
+
+## 8. Вложения и защита от флуда
+
+- Без ClamAV Vercel принимает статичные PNG, JPEG, GIF и WebP. Бэкенд декодирует и пересобирает их и удаляет вложенные метаданные. Для PDF и видео можно приложить ссылку в споре. Вложения, созданные до исправления, остаются в хранилище и выдаются только после проверки командой `rescan_attachments` с доверенным сканером.
+- Базовая защита Vercel DDoS Mitigation включена. Настройки правила уровня Vercel WAF для каждого проекта находятся в [отчёте о выпуске](TEST_REPORT_2026-11-15.md). Проверяйте статусы и окно частоты для публичного фронтенда и прямого API отдельно. Не направляйте нагрузочный тест на публичные адреса.
 
 ## Ограничения бесплатной беты
 

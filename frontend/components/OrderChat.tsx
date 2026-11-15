@@ -8,6 +8,7 @@ import { useToast } from "@/components/ui/Toast";
 import { ConversationOrder, fileUrl, getChat, getConversation, Msg, refreshInbox, sendMessage, uploadFile } from "@/lib/api/chat";
 import { sendDirect } from "@/lib/api/direct";
 import { fieldErrors } from "@/lib/forms";
+import { getMeta } from "@/lib/api/meta";
 import { formatDateTime } from "@/lib/format";
 import { useLivePolling } from "@/lib/useLivePolling";
 
@@ -23,6 +24,8 @@ export function OrderChat({ orderId, role, peerId, empty, onOrders }: {
   const [error, setError] = useState<string>();
   const [loaded, setLoaded] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [documentAttachments, setDocumentAttachments] = useState(false);
+  useEffect(() => { void getMeta().then((meta) => setDocumentAttachments(Boolean(meta.document_attachments))); }, []);
   const [orders, setOrders] = useState<ConversationOrder[]>([]);
   const [earlier, setEarlier] = useState<Msg[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
@@ -164,7 +167,7 @@ export function OrderChat({ orderId, role, peerId, empty, onOrders }: {
           <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
             {destination && <label className="relative inline-flex min-h-10 cursor-pointer items-center rounded-lg px-2 text-sm font-medium text-accent focus-within:ring-2 focus-within:ring-accent">
               {uploading ? "Загружаем файл…" : "Прикрепить файл"}
-              <input type="file" disabled={uploading || busy} accept="image/*,application/pdf,video/mp4" className="absolute inset-0 h-full w-full cursor-pointer opacity-0" aria-label="Прикрепить файл" onChange={async (e) => {
+              <input type="file" disabled={uploading || busy} accept={documentAttachments ? "image/png,image/jpeg,image/gif,image/webp,application/pdf,video/mp4" : "image/png,image/jpeg,image/gif,image/webp"} className="absolute inset-0 h-full w-full cursor-pointer opacity-0" aria-label="Прикрепить файл" onChange={async (e) => {
                 const f = e.target.files?.[0];
                 if (!f) return;
                 e.target.value = "";

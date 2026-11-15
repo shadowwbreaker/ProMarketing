@@ -34,6 +34,8 @@ class Order(BaseModel):
     currency = models.CharField(max_length=3, default="RUB")
     fee_bps = models.PositiveIntegerField(help_text="Комиссия платформы, зафиксированная при создании (D-015)")
     current_terms_version = models.ForeignKey("OrderTermsVersion", null=True, blank=True, on_delete=models.PROTECT, related_name="+")
+    creation_key = models.CharField(max_length=128, null=True, blank=True, editable=False)
+    creation_fingerprint = models.CharField(max_length=64, blank=True, editable=False)
     paid_at = models.DateTimeField(null=True, blank=True)
     materials_delivered_at = models.DateTimeField(null=True, blank=True, help_text="Покупатель передал материалы (сценарий 14)")
     seller_terms_accepted_at = models.DateTimeField(null=True, blank=True, help_text="Продавец принял условия (первое принятие позиции)")
@@ -42,6 +44,7 @@ class Order(BaseModel):
     class Meta:
         indexes = [models.Index(fields=["buyer", "-created_at"]), models.Index(fields=["seller", "-created_at"])]
         constraints = [
+            models.UniqueConstraint(fields=["buyer", "creation_key"], name="order_creation_key_per_buyer"),
             models.CheckConstraint(condition=~models.Q(buyer=models.F("seller")), name="order_buyer_not_seller"),
             models.CheckConstraint(condition=models.Q(fee_bps__lte=10_000), name="order_fee_bps_range"),
         ]

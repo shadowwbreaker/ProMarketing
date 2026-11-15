@@ -5,6 +5,7 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import ensure_csrf_cookie
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
+from rest_framework.authentication import SessionAuthentication
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
@@ -31,6 +32,14 @@ from .serializers import (
 class AuthThrottleMixin:
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "auth"
+
+
+class CsrfAuthMixin(AuthThrottleMixin):
+    """Protect credential entry points even before a session exists."""
+
+    def initial(self, request, *args, **kwargs):
+        super().initial(request, *args, **kwargs)
+        SessionAuthentication().enforce_csrf(request)
 
 
 def _ip(request):
@@ -64,7 +73,7 @@ class SessionView(APIView):
         return Response({"user": MeSerializer(u).data if active else None})
 
 
-class RegisterView(AuthThrottleMixin, APIView):
+class RegisterView(CsrfAuthMixin, APIView):
     permission_classes = [AllowAny]
 
     @extend_schema(request=RegisterSerializer, responses={201: MeSerializer})
@@ -82,7 +91,7 @@ class RegisterView(AuthThrottleMixin, APIView):
         return Response(MeSerializer(user).data, status=status.HTTP_201_CREATED)
 
 
-class LoginView(AuthThrottleMixin, APIView):
+class LoginView(CsrfAuthMixin, APIView):
     permission_classes = [AllowAny]
 
     @extend_schema(request=LoginSerializer, responses={200: MeSerializer})
@@ -95,9 +104,10 @@ class LoginView(AuthThrottleMixin, APIView):
         if user.status == User.Status.BLOCKED:
             record(action="user.login_blocked", subject_type="user", subject_id=user.pk, actor=user, ip=_ip(request))
             raise DomainError("Аккаунт заблокирован. Обратитесь в поддержку.", code="account_blocked", status_code=403)
-        from .twofactor import is_enabled, verify
+        from .twofactor import is_enabled, remember_verified_session, verify
 
-        if is_enabled(user):
+        factor_enabled = is_enabled(user)
+        if factor_enabled:
             otp = request.data.get("otp")
             if not otp:
                 raise DomainError("Введите код из приложения-аутентификатора", code="otp_required", status_code=401)
@@ -105,11 +115,14 @@ class LoginView(AuthThrottleMixin, APIView):
                 record(action="user.login_bad_otp", subject_type="user", subject_id=user.pk, actor=user, ip=_ip(request))
                 raise DomainError("Неверный код подтверждения", code="invalid_otp", status_code=400)
         login(request, user)  # rotates session key (session fixation protection)
+        request.session.pop("staff_totp", None)
+        if factor_enabled:
+            remember_verified_session(request, user)
         record(action="user.login", subject_type="user", subject_id=user.pk, actor=user, ip=_ip(request))
         return Response(MeSerializer(user).data)
 
 
-class LogoutView(APIView):
+class LogoutView(CsrfAuthMixin, APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
@@ -121,6 +134,7 @@ class LogoutView(APIView):
 
 class MeView(APIView):
     permission_classes = [IsActiveUser]
+    allow_before_staff_2fa = True
 
     @extend_schema(responses={200: MeSerializer})
     def get(self, request):
@@ -134,7 +148,7 @@ class MeView(APIView):
         return Response(MeSerializer(request.user).data)
 
 
-class VerifyEmailView(AuthThrottleMixin, APIView):
+class VerifyEmailView(CsrfAuthMixin, APIView):
     permission_classes = [AllowAny]
 
     @extend_schema(request=TokenSerializer, responses={200: dict})
@@ -154,7 +168,7 @@ class ResendVerificationView(AuthThrottleMixin, APIView):
         return Response({"ok": True})
 
 
-class PasswordResetRequestView(AuthThrottleMixin, APIView):
+class PasswordResetRequestView(CsrfAuthMixin, APIView):
     permission_classes = [AllowAny]
 
     @extend_schema(request=PasswordResetRequestSerializer, responses={200: dict})
@@ -165,7 +179,7 @@ class PasswordResetRequestView(AuthThrottleMixin, APIView):
         return Response({"ok": True})  # same answer whether or not the email exists
 
 
-class PasswordResetConfirmView(AuthThrottleMixin, APIView):
+class PasswordResetConfirmView(CsrfAuthMixin, APIView):
     permission_classes = [AllowAny]
 
     @extend_schema(request=PasswordResetConfirmSerializer, responses={200: dict})
@@ -218,6 +232,7 @@ class StaffUserRolesView(APIView):
 
 class TwoFactorView(APIView):
     permission_classes = [IsActiveUser]
+    allow_before_staff_2fa = True
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "auth"
 
@@ -233,6 +248,8 @@ class TwoFactorView(APIView):
             return Response(twofactor.setup(request.user))
         if action == "confirm":
             twofactor.confirm(request.user, request.data.get("code", ""))
+            request.session.cycle_key()
+            twofactor.remember_verified_session(request, request.user)
         elif action == "disable":
             twofactor.disable(request.user, request.data.get("code", ""), request.data.get("password", ""))
         else:

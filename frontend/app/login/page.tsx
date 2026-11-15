@@ -43,7 +43,7 @@ export default function LoginPage() {
         </>
       }
     >
-      <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
+      <form method="post" onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
         <FormError message={err.form} />
         <Field label="Email" name="email" type="email" autoComplete="email" required error={err.fields.email} />
         <Field label="Пароль" name="password" type="password" autoComplete="current-password" required error={err.fields.password} />

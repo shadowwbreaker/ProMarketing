@@ -7,6 +7,7 @@ from datetime import timedelta  # noqa: F401  (used by environment overrides)
 from pathlib import Path
 
 import environ
+from corsheaders.defaults import default_headers
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
@@ -112,6 +113,9 @@ USE_TZ = True
 STATIC_URL = "static/"
 MEDIA_ROOT = env("MEDIA_ROOT", default=str(BASE_DIR / "media"))
 ATTACHMENT_MAX_SIZE = env.int("ATTACHMENT_MAX_SIZE", default=20 * 1024 * 1024)
+ATTACHMENT_CLAMAV_HOST = env("ATTACHMENT_CLAMAV_HOST", default="")
+ATTACHMENT_CLAMAV_PORT = env.int("ATTACHMENT_CLAMAV_PORT", default=3310)
+ATTACHMENT_SCAN_TIMEOUT = env.int("ATTACHMENT_SCAN_TIMEOUT", default=10)
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # --- Sessions / CSRF -------------------------------------------------------
@@ -122,6 +126,7 @@ CSRF_COOKIE_SAMESITE = "Lax"
 CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=["http://localhost:3000"])
 CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS", default=["http://localhost:3000"])
 CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_HEADERS = (*default_headers, "idempotency-key")
 
 # --- DRF -------------------------------------------------------------------
 REST_FRAMEWORK = {
@@ -184,6 +189,13 @@ CELERY_BEAT_SCHEDULE = {
 
 # --- Email -----------------------------------------------------------------
 EMAIL_BACKEND = env("EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend")
+EMAIL_HOST = env("EMAIL_HOST", default="localhost")
+EMAIL_PORT = env.int("EMAIL_PORT", default=587)
+EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="")
+EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
+EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
+EMAIL_USE_SSL = env.bool("EMAIL_USE_SSL", default=False)
+EMAIL_TIMEOUT = env.int("EMAIL_TIMEOUT", default=8)
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="no-reply@promarketing.local")
 FRONTEND_URL = env("FRONTEND_URL", default="http://localhost:3000")
 
