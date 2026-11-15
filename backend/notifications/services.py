@@ -24,7 +24,7 @@ def notify(user, type_: str, title: str, body: str = "", **payload) -> Notificat
 
         def _send():
             try:
-                send_mail(f"ProMarketing: {title}", f"{body}\n\n{link}", None, [user.email])
+                send_mail(f"YourVideoTeam: {title}", f"{body}\n\n{link}", None, [user.email])
             except Exception:  # noqa: BLE001 — email failure must never break the business operation
                 logger.exception("notification email failed type=%s", type_)
 

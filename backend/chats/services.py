@@ -62,7 +62,7 @@ def post_message(order_id, *, user, body: str, attachments=()) -> ChatMessage:
         msg = ChatMessage.objects.create(chat=chat, author=user, body=body, contact_signal=has_contact_signal(body))
         msg.attachments.set(atts)
         other = chat.order.seller if role == "buyer" else chat.order.buyer
-    notify(other, "chat.message", "Новое сообщение по заказу", body[:120], order=chat.order_id)
+        notify(other, "chat.message", "Новое сообщение по заказу", body[:120], order=chat.order_id)
     return msg
 
 
@@ -73,7 +73,17 @@ def system_message(order, text: str) -> ChatMessage | None:
     return ChatMessage.objects.create(chat=chat, author=None, kind=ChatMessage.Kind.SYSTEM, body=text)
 
 
+def post_order_brief(order) -> None:
+    terms = order.terms_versions.get(version=1)
+    ChatMessage.objects.get_or_create(
+        order_brief=terms,
+        defaults={"chat": order.chat, "author": order.buyer, "body": "Техническое задание к заказу"},
+    )
+
+
 def _editable(msg: ChatMessage, user):
+    if msg.order_brief_id:
+        raise DomainError("Исходное ТЗ заказа нельзя изменить в чате", code="order_brief_locked", status_code=403)
     if msg.author_id != user.pk or msg.kind != ChatMessage.Kind.USER:
         raise DomainError("Можно менять только свои сообщения", code="forbidden", status_code=403)
     if msg.chat.locked_at:

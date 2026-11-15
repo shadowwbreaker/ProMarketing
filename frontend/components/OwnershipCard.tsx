@@ -42,7 +42,7 @@ export function OwnershipCard({ acc, onVerified }: { acc: SocialAccount; onVerif
               Скопируйте код: <code className="rounded bg-bg px-2 py-0.5 font-mono font-bold">{code}</code>{" "}
               <button className="text-xs text-accent underline" onClick={() => void navigator.clipboard?.writeText(code)}>копировать</button>
             </li>
-            <li>Откройте YouTube Studio → «Настройка» → «Основные сведения» и вставьте код в описание канала.</li>
+            <li>Вставьте указанный выше код в описание вашего канала.</li>
             <li>Нажмите «Опубликовать» в YouTube Studio, затем «Проверить» здесь.</li>
             <li>После подтверждения код из описания можно удалить.</li>
           </ol>

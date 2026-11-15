@@ -16,6 +16,23 @@ class LiveView(APIView):
         return Response({"status": "ok"})
 
 
+class MetaView(APIView):
+    """Public flags the SPA needs before login (beta banner, instant test payment)."""
+
+    permission_classes = [AllowAny]
+    authentication_classes = []
+    throttle_classes = []
+
+    def get(self, request):
+        from django.conf import settings
+
+        return Response({
+            "beta": settings.BETA_MODE,
+            "payment_provider": settings.PAYMENT_PROVIDER,
+            "document_attachments": bool(settings.ATTACHMENT_CLAMAV_HOST),
+        })
+
+
 class ReadyView(APIView):
     permission_classes = [AllowAny]
     authentication_classes = []

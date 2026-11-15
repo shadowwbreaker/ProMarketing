@@ -2,8 +2,8 @@
 
 export const API_URL =
   (typeof window === "undefined" ? process.env.API_INTERNAL_URL : undefined) ??
-  process.env.NEXT_PUBLIC_API_URL ??
-  "http://localhost:8000";
+  (process.env.NEXT_PUBLIC_API_URL ??
+  "http://localhost:8000").replace(/\/+$/, ""); // "/" = same origin (Vercel proxy)
 
 export class ApiError extends Error {
   constructor(
@@ -49,6 +49,7 @@ export async function apiFetch<T>(
       headers,
       body: isForm ? (options.body as FormData) : options.body !== undefined ? JSON.stringify(options.body) : undefined,
       credentials: "include",
+      cache: "no-store",
       signal: options.signal,
     });
   } catch {

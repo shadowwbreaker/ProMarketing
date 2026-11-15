@@ -4,7 +4,7 @@ import { useEffect, useId, useRef, useState } from "react";
 
 /** Must match backend social_data/consent.py CONSENT_TEXT (version 2026-11-09). */
 export const CONSENT_TEXT =
-  "Я владелец этого канала и разрешаю ProMarketing один раз получить из официального API платформы " +
+  "Я владелец этого канала и разрешаю YourVideoTeam один раз получить из официального API платформы " +
   "число подписчиков и просмотры последних 15 видео, чтобы показать их покупателям в объявлении. " +
   "Повторно данные запрашиваются только когда я нажимаю «Обновить статистику».";
 

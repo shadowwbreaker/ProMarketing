@@ -3,7 +3,9 @@ Production deployment itself requires explicit permission from the project owner
 from django.core.exceptions import ImproperlyConfigured
 
 from .base import *  # noqa: F401,F403
-from .base import FIELD_ENCRYPTION_KEY, MIDDLEWARE, PAYMENT_PROVIDER, SECRET_KEY, SOCIAL_PROVIDER_MODE, env
+from .base import (
+    BETA_MODE, EMAIL_BACKEND, FIELD_ENCRYPTION_KEY, MIDDLEWARE, PAYMENT_PROVIDER, SECRET_KEY, SOCIAL_PROVIDER_MODE, env,
+)
 
 ENV = "production"
 DEBUG = False
@@ -23,6 +25,7 @@ SECURE_REDIRECT_EXEMPT = [r"^api/v1/health/"]  # load balancer probes over plain
 # --- static & media -----------------------------------------------------------------
 MIDDLEWARE = [MIDDLEWARE[0], MIDDLEWARE[1], "whitenoise.middleware.WhiteNoiseMiddleware", *MIDDLEWARE[2:]]
 S3_BUCKET = env("S3_BUCKET", default="")
+BETA_DATABASE_STORAGE = BETA_MODE and env.bool("BETA_DATABASE_STORAGE", default=False)
 STORAGES = {
     "default": {
         "BACKEND": "storages.backends.s3.S3Storage",
@@ -40,28 +43,42 @@ STORAGES = {
     },
     "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
 }
+if BETA_DATABASE_STORAGE:
+    STORAGES["default"] = {"BACKEND": "files.storage.DatabaseStorage"}
 
 # drf-spectacular falls back to generic schemas for plain APIViews; documentation-only warning.
 SILENCED_SYSTEM_CHECKS = ["drf_spectacular.W001", "drf_spectacular.W002"]
 
-STAFF_2FA_REQUIRED = env.bool("STAFF_2FA_REQUIRED", default=True)
+STAFF_2FA_REQUIRED = True
+DEV_AUTO_VERIFY_EMAIL = False
+_NON_DELIVERY_BACKENDS = {
+    "django.core.mail.backends.console.EmailBackend",
+    "django.core.mail.backends.dummy.EmailBackend",
+    "django.core.mail.backends.filebased.EmailBackend",
+    "django.core.mail.backends.locmem.EmailBackend",
+}
+if BETA_MODE and EMAIL_BACKEND in _NON_DELIVERY_BACKENDS:
+    # Never expose live verification or recovery tokens in deployment logs.
+    EMAIL_BACKEND = "django.core.mail.backends.dummy.EmailBackend"
 
 # --- refuse unsafe configuration -------------------------------------------------------
 _errors = []
 if SECRET_KEY.startswith("dev-") or len(SECRET_KEY) < 40:
     _errors.append("DJANGO_SECRET_KEY must be a strong secret (>= 40 chars)")
-if PAYMENT_PROVIDER == "mock":
+if PAYMENT_PROVIDER == "mock" and not BETA_MODE:
     _errors.append("Mock payment provider is forbidden in production (D-008)")
 if SOCIAL_PROVIDER_MODE != "official":
     _errors.append("Fake social providers are forbidden in production")
-if env.bool("DEV_AUTO_VERIFY_EMAIL", default=False):
+if env.bool("DEV_AUTO_VERIFY_EMAIL", default=False) and not BETA_MODE:
     _errors.append("DEV_AUTO_VERIFY_EMAIL must be false in production")
 REST_FRAMEWORK["NUM_PROXIES"] = env.int("NUM_PROXIES", default=1)  # noqa: F405 — Caddy in front (infra/Caddyfile)
+if BETA_MODE and PAYMENT_PROVIDER != "mock":
+    _errors.append("BETA_MODE requires PAYMENT_PROVIDER=mock: the beta never moves real money")
 if not FIELD_ENCRYPTION_KEY:
     _errors.append("FIELD_ENCRYPTION_KEY must be set in production")
-if not S3_BUCKET:
+if not S3_BUCKET and not BETA_DATABASE_STORAGE:
     _errors.append("S3_BUCKET must be set in production (attachments/evidence storage)")
-if env("EMAIL_BACKEND", default="").endswith("console.EmailBackend"):
-    _errors.append("Console email backend is forbidden in production")
+if EMAIL_BACKEND in _NON_DELIVERY_BACKENDS and not BETA_MODE:
+    _errors.append("A real email delivery backend is required in production")
 if _errors:
     raise ImproperlyConfigured("; ".join(_errors))

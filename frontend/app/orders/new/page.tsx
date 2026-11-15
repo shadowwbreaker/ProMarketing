@@ -1,17 +1,25 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { FormEvent, Suspense, useEffect, useState } from "react";
+import { FormEvent, Suspense, useEffect, useRef, useState } from "react";
 import { FormError } from "@/components/AuthCard";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Field } from "@/components/ui/Field";
 import { LoadingState } from "@/components/ui/States";
-import { createOrder } from "@/lib/api/orders";
+import { getMeta } from "@/lib/api/meta";
+import { createOrder, mockComplete, startPayment } from "@/lib/api/orders";
 import { getNetworkCard, NetworkCard } from "@/lib/api/public";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { fieldErrors } from "@/lib/forms";
 import { formatMoney } from "@/lib/format";
+
+type PendingCheckout = { signature: string; key: string };
+
+async function checkoutSignature(body: Record<string, unknown>) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify(body)));
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
 
 function NewOrder() {
   const q = useSearchParams();
@@ -22,6 +30,9 @@ function NewOrder() {
   const [net, setNet] = useState<NetworkCard>();
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
+  const submitting = useRef(false);
+  const pending = useRef<PendingCheckout | null>(null);
+  const [beta, setBeta] = useState(false);
   const [err, setErr] = useState<{ form?: string; fields: Record<string, string> }>({ fields: {} });
 
   useEffect(() => {
@@ -30,9 +41,13 @@ function NewOrder() {
   useEffect(() => {
     if (networkId) void getNetworkCard(networkId).then(setNet);
   }, [networkId]);
+  useEffect(() => {
+    void getMeta().then((meta) => setBeta(meta.beta));
+  }, []);
 
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (submitting.current || !me) return;
     const f = new FormData(e.currentTarget);
     const terms: Record<string, unknown> = {};
     for (const k of ["brand", "site_url", "brief", "ad_text", "cta", "extra_requirements"]) {
@@ -45,23 +60,47 @@ function NewOrder() {
     if (pd) terms.publish_deadline = new Date(pd).toISOString();
     const md = String(f.get("materials_deadline") ?? "");
     if (md) terms.materials_deadline = new Date(md).toISOString();
+    submitting.current = true;
     setBusy(true);
     setErr({ fields: {} });
+    let navigating = false;
     try {
       const body: Record<string, unknown> = { terms, results_report: f.get("results_report") === "on" };
       if (offer) body.offer = offer;
       if (networkId) {
         body.network = networkId;
-        if (picked.size && net && picked.size < (net.items?.length ?? 0)) body.network_items = [...picked];
+        if (picked.size && net && picked.size < (net.items?.length ?? 0)) body.network_items = [...picked].sort();
       }
-      const o = await createOrder(body);
-      router.push(`/orders/${o.id}`);
+      const signature = await checkoutSignature(body);
+      const storageKey = `checkout:${me.id}:${offer ?? networkId}`;
+      let saved: PendingCheckout | null = pending.current;
+      try {
+        if (!saved) saved = JSON.parse(sessionStorage.getItem(storageKey) ?? "null") as PendingCheckout | null;
+      } catch { /* Blocked storage still allows retries on the current page. */ }
+      pending.current = saved?.signature === signature ? saved : { signature, key: crypto.randomUUID() };
+      try {
+        sessionStorage.setItem(storageKey, JSON.stringify(pending.current));
+      } catch { /* Keep the key in memory. */ }
+      const o = await createOrder(body, pending.current.key);
+      if ((await getMeta()).beta) {
+        // Beta (D-025): "Купить" goes straight to a confirmed payment — the mock provider completes it at once.
+        const p = await startPayment(o.id);
+        await mockComplete(p.payment_id, "succeeded");
+        router.push(`/orders/${o.id}/paid`);
+      } else router.push(`/orders/${o.id}`);
+      navigating = true;
+      try {
+        sessionStorage.removeItem(storageKey);
+      } catch { /* Checkout already succeeded. */ }
     } catch (ex) {
       const fe = fieldErrors(ex);
       const termsErr = (fe.fields.terms as unknown as Record<string, string[]>) ?? {};
       setErr({ form: fe.form ?? (Object.keys(termsErr).length ? "Проверьте поля ТЗ" : undefined), fields: Object.fromEntries(Object.entries(termsErr).map(([k, v]) => [k, String(v)])) });
     } finally {
-      setBusy(false);
+      if (!navigating) {
+        submitting.current = false;
+        setBusy(false);
+      }
     }
   }
 
@@ -70,8 +109,9 @@ function NewOrder() {
     <div className="mx-auto max-w-2xl">
       <h1 className="mb-2 text-2xl font-bold">Оформление заказа</h1>
       <p className="mb-6 text-sm text-muted">
-        Все условия фиксируются до оплаты. После оплаты изменить их можно только с согласия продавца. Деньги удерживаются у
-        платёжного провайдера и переводятся продавцу через 48 часов после вашего подтверждения.
+        {beta
+          ? "Оплата тестовая. Деньги не списываются."
+          : "Все условия фиксируются до оплаты. После оплаты изменить их можно только с согласия продавца. Деньги удерживаются у платёжного провайдера и переводятся продавцу через 48 часов после вашего подтверждения."}
       </p>
       {!me.is_email_verified && <p role="alert" className="mb-4 rounded-lg bg-warn/10 p-3 text-sm">Подтвердите email, чтобы оформить заказ.</p>}
       {net && (
@@ -99,7 +139,7 @@ function NewOrder() {
         </Card>
       )}
       <Card>
-        <form onSubmit={submit} className="flex flex-col gap-4" noValidate>
+        <form method="post" onSubmit={submit} className="flex flex-col gap-4" noValidate>
           <FormError message={err.form} />
           <Field label="Бренд или продукт" name="brand" required error={err.fields.brand} />
           <Field label="Сайт" name="site_url" type="url" placeholder="https://" error={err.fields.site_url} />

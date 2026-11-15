@@ -1,7 +1,9 @@
+import re
+
 from django.conf import settings
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import serializers
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -115,7 +117,9 @@ class OrderSerializer(serializers.ModelSerializer):
                               context=self.context).data
 
     def _party(self, u):
-        return {"id": str(u.pk), "display_name": u.profile.display_name, "last_seen_at": u.last_seen_at}
+        from chats.inbox import peer_summary
+
+        return {**peer_summary(u), "last_seen_at": u.last_seen_at}
 
     def get_buyer(self, o) -> dict:
         return self._party(o.buyer)
@@ -150,14 +154,18 @@ def _out(request, order):
 class OrderCreate(APIView):
     permission_classes = [HasPerm("order.create"), IsEmailVerified]
 
-    @extend_schema(request=CreateOrderSerializer, responses={201: OrderSerializer})
+    @extend_schema(request=CreateOrderSerializer, responses={201: OrderSerializer},
+                   parameters=[OpenApiParameter("Idempotency-Key", str, OpenApiParameter.HEADER)])
     def post(self, request):
+        key = request.headers.get("Idempotency-Key")
+        if key is not None and not re.fullmatch(r"[\x21-\x7e]{1,128}", key):
+            raise DomainError("Некорректный ключ повторной отправки", code="invalid_idempotency_key", status_code=400)
         s = CreateOrderSerializer(data=request.data)
         s.is_valid(raise_exception=True)
         d = s.validated_data
         order = services.create_order(buyer=request.user, terms=d["terms"], offer_id=d.get("offer"),
                                       network_id=d.get("network"), network_item_ids=d.get("network_items"),
-                                      results_report=d["results_report"])
+                                      results_report=d["results_report"], idempotency_key=key)
         r = _out(request, order)
         r.status_code = 201
         return r

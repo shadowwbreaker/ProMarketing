@@ -57,9 +57,11 @@ class DirectMessages(APIView):
         t = get_thread(request.user, other, create=False)
         if not t:
             return Response({"results": []})
-        t.messages.filter(read_at__isnull=True).exclude(author=request.user).update(read_at=timezone.now())
-        return Response({"results": [_msg(m, request.user) for m in t.messages.order_by("created_at")[:300]]})
+        marked = t.messages.filter(read_at__isnull=True).exclude(author=request.user).update(read_at=timezone.now())
+        return Response({"results": [_msg(m, request.user) for m in t.messages.order_by("created_at")[:300]],
+                         "marked_read": marked})
 
+    @transaction.atomic
     def post(self, request, user_id):
         other = self._other(request, user_id)
         if other.status == User.Status.BLOCKED:
@@ -73,7 +75,7 @@ class DirectMessages(APIView):
         DirectThread.objects.filter(pk=t.pk).update(last_message_at=m.created_at)
         from notifications.services import notify
 
-        notify(other, "direct.message", f"Новое сообщение от {request.user.profile.display_name}", body[:200],
+        notify(other, "direct.message", f"Новое сообщение от {request.user.profile.public_display_name}", body[:200],
                sender=request.user.pk)
         out = _msg(m, request.user)
         out["warning"] = WARNING if signal else ""
@@ -96,7 +98,7 @@ class DirectThreads(APIView):
             from accounts.avatar import avatar_url
 
             online = bool(other.last_seen_at and timezone.now() - other.last_seen_at < timedelta(minutes=10))
-            out.append({"user": {"id": str(other.pk), "display_name": other.profile.display_name,
+            out.append({"user": {"id": str(other.pk), "display_name": other.profile.public_display_name,
                                  "avatar_url": avatar_url(other.profile), "online": online,
                                  "date_joined": other.date_joined, "blocked": other.status == User.Status.BLOCKED},
                         "last_message": last.body[:120] if last else "", "last_message_at": t.last_message_at,

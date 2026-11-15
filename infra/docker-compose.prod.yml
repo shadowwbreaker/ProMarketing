@@ -17,10 +17,16 @@ services:
     command: ["redis-server", "--appendonly", "yes"]
     volumes: [redisdata:/data]
     restart: unless-stopped
+  clamav:
+    image: clamav/clamav:1.4
+    volumes: [clamavdata:/var/lib/clamav]
+    restart: unless-stopped
   backend:
     build: {context: ../backend, dockerfile: Dockerfile.prod}
     env_file: ../.env.prod
-    depends_on: {db: {condition: service_healthy}, redis: {condition: service_started}}
+    environment:
+      ATTACHMENT_CLAMAV_HOST: clamav
+    depends_on: {db: {condition: service_healthy}, redis: {condition: service_started}, clamav: {condition: service_started}}
     healthcheck: {test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8000/api/v1/health/ready')"], interval: 30s, retries: 3}
     restart: unless-stopped
   migrate:
@@ -51,4 +57,4 @@ services:
     volumes: ["./Caddyfile:/etc/caddy/Caddyfile:ro", "caddydata:/data"]
     depends_on: [backend, frontend]
     restart: unless-stopped
-volumes: {pgdata: {}, redisdata: {}, caddydata: {}}
+volumes: {pgdata: {}, redisdata: {}, caddydata: {}, clamavdata: {}}

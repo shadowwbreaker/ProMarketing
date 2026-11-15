@@ -53,7 +53,7 @@ function NewAccountWizard() {
   const router = useRouter();
   const { me, loading: authLoading, refresh } = useAuth();
   useEffect(() => {
-    if (!authLoading && !me) router.replace("/register"); // selling starts with an account on ProMarketing
+    if (!authLoading && !me) router.replace("/register"); // selling starts with an account on YourVideoTeam
   }, [authLoading, me, router]);
   const [step, setStep] = useState<Step>(1);
   const [platform, setPlatform] = useState<Platform>("tiktok");
@@ -249,8 +249,8 @@ function NewAccountWizard() {
                 ) : (
                   <>
                     <p>
-                      Вставьте код <code className="rounded bg-bg px-1.5 font-mono font-bold">{claim.code}</code> в описание канала
-                      (YouTube Studio → «Настройка» → «Основные сведения»), опубликуйте и нажмите «Проверить».
+                      Вставьте код <code className="rounded bg-bg px-1.5 font-mono font-bold">{claim.code}</code> в описание вашего канала.
+                      Сохраните описание и нажмите «Проверить».
                     </p>
                     {claim.failed && <p className="text-danger">Код в описании не найден. Изменения на YouTube иногда появляются через пару минут.</p>}
                     <Button type="button" onClick={() => checkClaim(claim.id).then((r) => {

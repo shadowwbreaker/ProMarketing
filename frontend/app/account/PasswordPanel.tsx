@@ -37,7 +37,7 @@ export function PasswordPanel() {
     <Card>
       <h2 className="mb-1 text-lg font-bold">Пароль</h2>
       <p className="mb-4 text-sm text-muted">После смены пароля все остальные сеансы будут завершены.</p>
-      <form onSubmit={submit} className="flex max-w-md flex-col gap-4" noValidate>
+      <form method="post" onSubmit={submit} className="flex max-w-md flex-col gap-4" noValidate>
         {err.form && <p role="alert" className="text-sm text-danger">{err.form}</p>}
         <Field label="Текущий пароль" name="old_password" type="password" autoComplete="current-password" required error={err.fields.old_password} />
         <Field label="Новый пароль" name="new_password" type="password" autoComplete="new-password" required minLength={10}

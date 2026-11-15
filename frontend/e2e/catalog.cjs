@@ -31,11 +31,11 @@ const { chromium } = require("playwright");
   await sheet.waitFor({ state: "hidden" });
   await page.getByText("Гаджеты без воды").waitFor();
   if (await page.getByText("Мемы про офис").count()) throw new Error("platform filter not applied");
-  // YouTube average hidden until approval (D-016)
+  // Demo fixture has no verified public YouTube average (D-016).
   await page.goto(`${base}/catalog?platform=youtube`);
   await page.getByText("Гаджеты без воды").click();
   await page.waitForURL("**/catalog/*");
-  await page.getByText("скрыты до одобрения YouTube").first().waitFor();
+  await page.getByText("Среднее число просмотров пока недоступно").first().waitFor();
   await page.getByRole("link", { name: /Купить за/ }).waitFor();
   await page.getByRole("link", { name: /Демо-продавец/ }).click();
   await page.waitForURL("**/sellers/*");

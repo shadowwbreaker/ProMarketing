@@ -8,7 +8,6 @@ import { AnalyticsPanel, ReferralsPanel } from "./InsightsPanels";
 import { PayoutsPanel } from "./PayoutsPanel";
 import { PasswordPanel } from "./PasswordPanel";
 import { TwoFactorPanel } from "./TwoFactorPanel";
-import { STATUS_LABEL } from "@/lib/api/orders";
 import { Avatar } from "@/components/profile/Avatar";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -17,13 +16,11 @@ import { useToast } from "@/components/ui/Toast";
 import { becomeSeller, deleteAvatar, resendVerification, updateProfile, uploadAvatar } from "@/lib/api/auth";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { fieldErrors } from "@/lib/forms";
-import { formatDateTime, formatMoney } from "@/lib/format";
 
 type Tab = { key: string; label: string; seller?: boolean };
 const GROUPS: { title: string; tabs: Tab[] }[] = [
   { title: "Продажи", tabs: [
     { key: "accounts", label: "Мои каналы" },
-    { key: "sales", label: "Мои продажи", seller: true },
     { key: "networks", label: "Сетки каналов", seller: true },
     { key: "payouts", label: "Выплаты", seller: true },
     { key: "analytics", label: "Аналитика" },
@@ -39,7 +36,6 @@ const GROUPS: { title: string; tabs: Tab[] }[] = [
   ] },
 ];
 
-type OrderBrief = { id: string; status: string; total_minor: number; currency: string; created_at: string; items_count: number };
 type AccountBrief = { id: string; platform: string; handle: string; title: string; status: string; is_listed: boolean };
 type Simple = { id: string; [k: string]: unknown };
 
@@ -58,6 +54,7 @@ function AccountPage() {
     if (qsTab === "messages") router.replace("/messages");
     else if (qsTab === "favorites") router.replace("/favorites");
     else if (qsTab === "purchases") router.replace("/purchases");
+    else if (qsTab === "sales") router.replace("/orders");
     else if (qsTab) setTab(qsTab);
   }, [qsTab, router]);
   const [busy, setBusy] = useState(false);
@@ -83,13 +80,6 @@ function AccountPage() {
       setBusy(false);
     }
   }
-
-  const orderRow = (o: OrderBrief) => (
-    <Link href={`/orders/${o.id}`} className="flex flex-wrap justify-between gap-2 hover:text-accent">
-      <span>Заказ от {formatDateTime(o.created_at)} · позиций: {o.items_count}</span>
-      <span className="font-semibold">{formatMoney(o.total_minor, o.currency)} · {STATUS_LABEL[o.status] ?? o.status}</span>
-    </Link>
-  );
 
   return (
     <div className="grid gap-6 md:grid-cols-[220px_1fr]">
@@ -178,7 +168,6 @@ function AccountPage() {
         )}
         {tab === "security" && <PasswordPanel />}
         {tab === "security" && <TwoFactorPanel />}
-        {tab === "sales" && <MineList<OrderBrief> path="sales" empty="Продаж пока нет" render={orderRow} />}
         {tab === "accounts" && (
           <>
             <Link href="/account/accounts/new" className="self-start rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-ink">

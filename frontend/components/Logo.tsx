@@ -1,5 +1,5 @@
 /**
- * ProMarketing mark: a 9:16 short-video frame with a play notch and a rising bar —
+ * YourVideoTeam mark: a 9:16 short-video frame with a play notch and a rising bar —
  * "ads inside vertical video". Own identity, no third-party shapes.
  */
 export function LogoMark({ size = 28 }: { size?: number }) {
@@ -22,8 +22,8 @@ export function Logo() {
   return (
     <span className="inline-flex items-center gap-2">
       <LogoMark />
-      <span className="hidden text-lg font-extrabold tracking-tight min-[420px]:inline">
-        Pro<span className="bg-gradient-to-r from-accent to-[#7c4dff] bg-clip-text text-transparent">Marketing</span>
+      <span className="hidden text-lg font-extrabold tracking-tight min-[560px]:inline">
+        Your<span className="bg-gradient-to-r from-accent to-[#7c4dff] bg-clip-text text-transparent">VideoTeam</span>
       </span>
     </span>
   );

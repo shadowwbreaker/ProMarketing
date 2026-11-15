@@ -6,7 +6,7 @@ import { ToastProvider } from "@/components/ui/Toast";
 import { AuthProvider } from "@/lib/auth/AuthProvider";
 
 export const metadata: Metadata = {
-  title: "ProMarketing — реклама у авторов коротких видео",
+  title: "YourVideoTeam — реклама у авторов коротких видео",
   description: "Маркетплейс рекламы в TikTok и YouTube Shorts с защитой сделок",
 };
 

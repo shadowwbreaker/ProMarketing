@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Avatar } from "@/components/profile/Avatar";
-import { Conversation } from "@/components/profile/Conversation";
+import { OrderChat } from "@/components/OrderChat";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { reviewsWord } from "@/lib/format";
 
@@ -31,7 +31,7 @@ export function DirectChat({ userId, avatar, name, online, rating, reviews }: Pr
         </div>
       </div>
       {loading ? null : me && !own ? (
-        <Conversation userId={userId} otherName={name} empty={empty} />
+        <OrderChat key={userId} peerId={userId} empty={empty} />
       ) : (
         <div className="flex flex-1 flex-col">
           <div className="m-auto px-5 text-center">{empty}</div>

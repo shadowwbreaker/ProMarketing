@@ -98,6 +98,12 @@ class UserProfile(BaseModel):
     avatar_key = models.CharField(max_length=255, blank=True, default="", help_text="Ключ файла аватара в хранилище")
     avatar_updated_at = models.DateTimeField(null=True, blank=True)
 
+    @property
+    def public_display_name(self):
+        if self.user.email == "beta-catalog-seller@example.invalid" and self.display_name == "Демо-продавец ProMarketing":
+            return "Демо-продавец YourVideoTeam"
+        return self.display_name
+
     def __str__(self):
         return self.display_name
 

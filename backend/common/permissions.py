@@ -8,10 +8,18 @@ class IsActiveUser(BasePermission):
 
     def has_permission(self, request, view):
         u = request.user
-        return bool(u and u.is_authenticated and u.is_active and u.status != u.Status.BLOCKED)
+        if not (u and u.is_authenticated and u.is_active and u.status != u.Status.BLOCKED):
+            return False
+        if not getattr(view, "allow_before_staff_2fa", False):
+            from accounts.twofactor import has_verified_session, is_enabled, required_for
 
+            if required_for(u) and not has_verified_session(request, u):
+                from common.exceptions import DomainError
 
-STAFF_PREFIXES = ("staff.", "dispute.handle", "dispute.decide", "dispute.escalated", "finance.", "moderation.", "user.", "settings.", "audit.")
+                message = ("Войдите снова с кодом из приложения-аутентификатора" if is_enabled(u)
+                           else "Включите двухфакторную защиту в профиле")
+                raise DomainError(message, code="2fa_required", status_code=403)
+        return True
 
 
 def HasPerm(*codes: str):  # noqa: N802 — factory reads like a class in permission_classes
@@ -24,14 +32,6 @@ def HasPerm(*codes: str):  # noqa: N802 — factory reads like a class in permis
             if not super().has_permission(request, view):
                 return False
             u = request.user
-            if any(c.startswith(STAFF_PREFIXES) for c in codes):
-                from accounts.twofactor import is_enabled, required_for
-
-                if required_for(u) and not is_enabled(u):
-                    from common.exceptions import DomainError
-
-                    raise DomainError("Для служебного раздела включите двухфакторную защиту в профиле",
-                                      code="2fa_required", status_code=403)
             if request.method in SAFE_METHODS and u.status == u.Status.LIMITED:
                 from accounts.roles import permissions_for_roles
 

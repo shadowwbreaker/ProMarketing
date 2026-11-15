@@ -48,7 +48,7 @@ export default function RegisterPage() {
         </>
       }
     >
-      <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
+      <form method="post" onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
         <FormError message={err.form} />
         <Field label="Имя или название" name="display_name" required error={err.fields.display_name} />
         <Field label="Email" name="email" type="email" autoComplete="email" required error={err.fields.email} />

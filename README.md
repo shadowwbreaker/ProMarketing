@@ -2,7 +2,7 @@
 
 Маркетплейс рекламы у авторов TikTok и YouTube Shorts (Instagram Reels отключён для рынка РФ — см. `docs/DECISIONS.md` D-013).
 
-Главный документ — [`MASTER_ROADMAP.md`](MASTER_ROADMAP.md). Решения — [`docs/DECISIONS.md`](docs/DECISIONS.md).
+Главный документ — [`MASTER_ROADMAP.md`](MASTER_ROADMAP.md). Решения — [`docs/DECISIONS.md`](docs/DECISIONS.md). Публичная бета YourVideoTeam и окружение Vercel описаны в [`docs/BETA_VERCEL.md`](docs/BETA_VERCEL.md). Результаты аудита и исправления — в [отчёте от 15 ноября](docs/TEST_REPORT_2026-11-15.md).
 
 ## Запуск в Docker (Windows: Docker Desktop + WSL2)
 

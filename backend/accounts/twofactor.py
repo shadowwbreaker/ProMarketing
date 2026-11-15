@@ -12,7 +12,7 @@ from common.exceptions import DomainError
 
 from .models import TwoFactor
 
-ISSUER = "ProMarketing"
+ISSUER = "YourVideoTeam"
 
 
 def is_enabled(user) -> bool:
@@ -54,7 +54,9 @@ def confirm(user, code: str):
         raise DomainError("Сначала начните настройку", code="2fa_not_started")
     if not verify(user, code):
         raise DomainError("Неверный код", code="invalid_otp", status_code=400)
-    TwoFactor.objects.filter(pk=tf.pk).update(confirmed_at=timezone.now())
+    tf.confirmed_at = timezone.now()
+    TwoFactor.objects.filter(pk=tf.pk).update(confirmed_at=tf.confirmed_at)
+    user.two_factor = tf
     record(action="user.2fa_enabled", subject_type="user", subject_id=user.pk, actor=user)
 
 
@@ -66,4 +68,20 @@ def disable(user, code: str, password: str):
 
 
 def required_for(user) -> bool:
-    return bool(getattr(settings, "STAFF_2FA_REQUIRED", False)) and user.has_perm_code("staff.access")
+    return settings.STAFF_2FA_REQUIRED and (user.is_staff or user.is_superuser or user.has_perm_code("staff.access"))
+
+
+def _verified_session_value(user):
+    tf = getattr(user, "two_factor", None)
+    if tf and tf.confirmed_at:
+        return f"{tf.pk}:{tf.confirmed_at.isoformat()}"
+    return None
+
+
+def remember_verified_session(request, user):
+    request.session["staff_totp"] = _verified_session_value(user)
+
+
+def has_verified_session(request, user):
+    value = _verified_session_value(user)
+    return value is not None and request.session.get("staff_totp") == value

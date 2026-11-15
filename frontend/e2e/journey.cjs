@@ -53,7 +53,7 @@ async function login(page, email) {
   await step("Входит в аккаунт", async () => login(buyer, "demo-buyer@example.com"));
   await step("Пишет продавцу до оплаты", async () => {
     await buyer.goto(offerUrl);
-    await buyer.getByLabel(/Сообщение для/).fill(text);
+    await buyer.getByLabel("Сообщение", { exact: true }).fill(text);
     await buyer.getByRole("button", { name: "Отправить" }).click();
     await buyer.getByText(text).waitFor();
   });
@@ -62,12 +62,12 @@ async function login(page, email) {
   watch(seller, "seller");
   await step("Продавец входит и видит красную точку у «Сообщений»", async () => {
     await login(seller, "demo-seller1@example.com");
-    await seller.getByText(/непрочитанных: [1-9]/).waitFor({ state: "attached", timeout: 35000 });
+    await seller.getByRole("link", { name: /Сообщения.*Есть непрочитанные/ }).waitFor({ timeout: 10000 });
   });
   await step("Продавец отвечает в «Сообщениях»", async () => {
     await seller.getByRole("link", { name: /Сообщения/ }).click();
     await seller.getByText(text).first().click();
-    await seller.getByLabel(/Сообщение для/).fill("Да, могу снять в четверг.");
+    await seller.getByLabel("Сообщение", { exact: true }).fill("Да, могу снять в четверг.");
     await seller.getByRole("button", { name: "Отправить" }).click();
     await seller.getByText("Да, могу снять в четверг.").first().waitFor();
   });
@@ -99,7 +99,7 @@ async function login(page, email) {
     await buyer.getByText("Быстро и аккуратно").waitFor();
   });
   await step("Покупатель видит заказ в «Моих покупках»", async () => {
-    await buyer.getByRole("link", { name: "Покупки" }).click();
+    await buyer.getByRole("link", { name: "Покупки", exact: true }).click();
     await buyer.getByText("Мои покупки").waitFor();
     await buyer.getByText("Выполнен").first().waitFor();
   });

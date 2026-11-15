@@ -31,7 +31,7 @@ def test_error_format_and_request_id(api):
 def test_schema_generates(api):
     r = api.get("/api/schema/")
     assert r.status_code == 200
-    assert b"ProMarketing API" in r.content
+    assert b"YourVideoTeam API" in r.content
 
 
 # --- money (D-005, D-015) ----------------------------------------------------

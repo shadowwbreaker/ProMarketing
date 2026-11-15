@@ -35,7 +35,7 @@ function ResetForm() {
       </p>
     );
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-4">
+    <form method="post" onSubmit={onSubmit} className="flex flex-col gap-4">
       <FormError message={err.form} />
       <Field label="Новый пароль" name="new_password" type="password" autoComplete="new-password" required error={err.fields.new_password} />
       <Button type="submit" loading={busy} disabled={!token}>Сохранить пароль</Button>

@@ -1,6 +1,6 @@
 import { StatusPanel } from "./StatusPanel";
 
-export const metadata = { title: "Статус сервиса — ProMarketing" };
+export const metadata = { title: "Статус сервиса — YourVideoTeam" };
 
 export default function StatusPage() {
   return (

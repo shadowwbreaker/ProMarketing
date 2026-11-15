@@ -2,13 +2,15 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Logo } from "@/components/Logo";
 import { Avatar } from "@/components/profile/Avatar";
-import { directUnread } from "@/lib/api/direct";
+import { inboxStatus } from "@/lib/api/chat";
 import { useAuth } from "@/lib/auth/AuthProvider";
+import { useInboxSound } from "@/lib/useInboxSound";
+import { useLivePolling } from "@/lib/useLivePolling";
 
-function UserMenu() {
+function UserMenu({ sound, toggleSound }: { sound: boolean; toggleSound: () => void }) {
   const { me, signOut } = useAuth();
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -35,11 +37,14 @@ function UserMenu() {
           <Link href={`/sellers/${me.id}`} className={item} role="menuitem">Мой профиль</Link>
           <Link href="/account/accounts/new" className={item} role="menuitem">+ Добавить канал</Link>
           <Link href="/purchases" className={`${item} md:hidden`} role="menuitem">Мои покупки</Link>
-          <Link href="/account?tab=accounts" className={item} role="menuitem">Мои каналы и продажи</Link>
+          <Link href="/account?tab=accounts" className={item} role="menuitem">Мои каналы</Link>
           <Link href="/favorites" className={`${item} sm:hidden`} role="menuitem">Избранное</Link>
           {me.permissions.includes("staff.access") && <Link href="/staff" className={`${item} lg:hidden`} role="menuitem">Служебный раздел</Link>}
           <Link href="/support" className={item} role="menuitem">Помощь</Link>
           <Link href="/account?tab=profile" className={item} role="menuitem">Настройки</Link>
+          <button type="button" role="menuitemcheckbox" aria-checked={sound} className={`${item} w-full text-left`} onClick={toggleSound}>
+            Звук сообщений: {sound ? "вкл." : "выкл."}
+          </button>
           <button className={`${item} w-full text-left text-danger`} role="menuitem"
             onClick={() => void signOut().then(() => router.replace("/"))}>Выйти</button>
         </div>
@@ -48,24 +53,29 @@ function UserMenu() {
   );
 }
 
-function MessagesLink() {
-  const [n, setN] = useState(0);
+function OrderNavigation({ sound, announce }: { sound: boolean; announce: ReturnType<typeof useInboxSound>["announce"] }) {
+  const [status, setStatus] = useState({ unread: false, has_received_orders: false });
   const path = usePathname();
-  useEffect(() => {
-    const load = () => directUnread().then((r) => setN(r.unread)).catch(() => {});
-    load();
-    const t = setInterval(load, 30000);
-    return () => clearInterval(t);
-  }, [path]);
+  const load = useCallback(async () => {
+    try {
+      const result = await inboxStatus();
+      setStatus(result);
+      announce(result.signals);
+    } catch { /* The next refresh retries the inbox. */ }
+  }, [announce]);
+  useLivePolling(load, path === "/messages" || path.startsWith("/orders") ? 2500 : 5000, "inbox-updated", sound);
   return (
-    <NavLink href="/messages" className="relative">
-      Сообщения
-      {n > 0 && (
-        <span className="page-enter absolute right-0.5 top-0 h-2 w-2 rounded-full bg-[#e5243b] ring-2 ring-surface">
-          <span className="sr-only">{`, непрочитанных: ${n}`}</span>
-        </span>
-      )}
-    </NavLink>
+    <>
+      {status.has_received_orders && <NavLink href="/orders">Заказы</NavLink>}
+      <NavLink href="/messages" className="relative">
+        Сообщения
+        {status.unread && (
+          <span className="page-enter absolute right-0.5 top-0 h-2 w-2 rounded-full bg-[#e5243b] ring-2 ring-surface">
+            <span className="sr-only">Есть непрочитанные</span>
+          </span>
+        )}
+      </NavLink>
+    </>
   );
 }
 
@@ -82,19 +92,20 @@ function NavLink({ href, children, className = "" }: { href: string; children: R
 
 export function SiteHeader() {
   const { me, loading } = useAuth();
+  const sound = useInboxSound(me?.id ?? "");
   return (
     <header className="sticky top-0 z-30 border-b border-border/70 bg-surface/85 backdrop-blur-md supports-[backdrop-filter]:bg-surface/75">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
-        <Link href="/" className="shrink-0" aria-label="ProMarketing — на главную"><Logo /></Link>
+        <Link href="/" className="shrink-0" aria-label="YourVideoTeam — на главную"><Logo /></Link>
         <nav className="flex min-w-0 items-center gap-1 text-sm sm:gap-2" aria-label="Основное меню">
           <NavLink href="/catalog">Каталог</NavLink>
           {loading ? null : me ? (
             <>
               <NavLink href="/purchases" className="hidden md:inline">Покупки</NavLink>
-              <MessagesLink />
+              <OrderNavigation key={me.id} sound={sound.enabled} announce={sound.announce} />
               <NavLink href="/favorites" className="hidden sm:inline">Избранное</NavLink>
               {me.permissions.includes("staff.access") && <NavLink href="/staff" className="hidden lg:inline">Служебный раздел</NavLink>}
-              <UserMenu />
+              <UserMenu sound={sound.enabled} toggleSound={sound.toggle} />
             </>
           ) : (
             <>

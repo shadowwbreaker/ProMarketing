@@ -16,22 +16,33 @@ export type Page<T> = { count: number; next: string | null; previous: string | n
 export const ensureCsrf = () => apiFetch<{ ok: boolean }>("/auth/csrf");
 export const getMe = () => apiFetch<Me>("/me");
 export const getSession = () => apiFetch<{ user: Me | null }>("/auth/session");
-export const login = (email: string, password: string, otp?: string) =>
-  apiFetch<Me>("/auth/login", { method: "POST", body: { email, password, otp } });
+export const login = async (email: string, password: string, otp?: string) => {
+  await ensureCsrf();
+  return apiFetch<Me>("/auth/login", { method: "POST", body: { email, password, otp } });
+};
 export const get2fa = () => apiFetch<{ enabled: boolean; required: boolean }>("/me/2fa");
 export const setup2fa = () => apiFetch<{ secret: string; otpauth_url: string }>("/me/2fa/setup", { method: "POST" });
 export const confirm2fa = (code: string) => apiFetch<{ enabled: boolean }>("/me/2fa/confirm", { method: "POST", body: { code } });
 export const disable2fa = (code: string, password: string) =>
   apiFetch<{ enabled: boolean }>("/me/2fa/disable", { method: "POST", body: { code, password } });
-export const register = (data: { email: string; password: string; display_name: string; as_seller: boolean; accept_terms: boolean; ref?: string }) =>
-  apiFetch<Me>("/auth/register", { method: "POST", body: data });
+export const register = async (data: { email: string; password: string; display_name: string; as_seller: boolean; accept_terms: boolean; ref?: string }) => {
+  await ensureCsrf();
+  return apiFetch<Me>("/auth/register", { method: "POST", body: data });
+};
 export const logout = () => apiFetch<void>("/auth/logout", { method: "POST" });
-export const verifyEmail = (token: string) => apiFetch<{ ok: boolean }>("/auth/verify-email", { method: "POST", body: { token } });
+export const verifyEmail = async (token: string) => {
+  await ensureCsrf();
+  return apiFetch<{ ok: boolean }>("/auth/verify-email", { method: "POST", body: { token } });
+};
 export const resendVerification = () => apiFetch<{ ok: boolean }>("/auth/resend-verification", { method: "POST" });
-export const requestPasswordReset = (email: string) =>
-  apiFetch<{ ok: boolean }>("/auth/password-reset", { method: "POST", body: { email } });
-export const confirmPasswordReset = (token: string, new_password: string) =>
-  apiFetch<{ ok: boolean }>("/auth/password-reset/confirm", { method: "POST", body: { token, new_password } });
+export const requestPasswordReset = async (email: string) => {
+  await ensureCsrf();
+  return apiFetch<{ ok: boolean }>("/auth/password-reset", { method: "POST", body: { email } });
+};
+export const confirmPasswordReset = async (token: string, new_password: string) => {
+  await ensureCsrf();
+  return apiFetch<{ ok: boolean }>("/auth/password-reset/confirm", { method: "POST", body: { token, new_password } });
+};
 export const updateProfile = (profile: Partial<Me["profile"]>) => apiFetch<Me>("/me", { method: "PATCH", body: { profile } });
 export const uploadAvatar = (file: File) => {
   const fd = new FormData();

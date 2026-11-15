@@ -1,13 +1,21 @@
 from datetime import timedelta
+from io import BytesIO
 
 import pytest
 from django.core import mail
 from django.core.files.uploadedfile import SimpleUploadedFile
 from freezegun import freeze_time
+from PIL import Image
 
 from tests.test_phase6_orders import as_, item_url, paid_single
 
-PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 64
+def _png():
+    buffer = BytesIO()
+    Image.new("RGB", (3, 3), "red").save(buffer, format="PNG")
+    return buffer.getvalue()
+
+
+PNG = _png()
 
 
 @pytest.fixture(autouse=True)
@@ -29,11 +37,13 @@ def test_chat_participants_only_with_system_messages(api, market, user_factory):
     assert r.status_code == 201 and r.json()["warning"] == ""
     s = as_(api, market["seller"])
     s.post(f"/api/v1/orders/{oid}/chat", {"body": "Завтра"}, format="json")
+    assert s.post(item_url(oid, iid, "accept")).status_code == 200
     msgs = chat(s, oid)["results"]
     kinds = [(m["kind"], m["body"]) for m in msgs]
-    assert ("system", "Заказ создан. Условия зафиксированы.") in kinds
-    assert ("system", "Оплата получена платёжным провайдером.") in kinds
-    assert [m["author"]["role"] for m in msgs if m["kind"] == "user"] == ["buyer", "seller"]
+    assert ("system", "Продавец принял заказ.") in kinds
+    assert ("system", "Заказ создан. Условия зафиксированы.") not in kinds
+    assert ("system", "Оплата получена платёжным провайдером.") not in kinds
+    assert [m["author"]["role"] for m in msgs if m["kind"] == "user" and not m["order_brief"]] == ["buyer", "seller"]
     assert "contact_signal" not in msgs[0]
     stranger = user_factory()
     assert as_(api, stranger).get(f"/api/v1/orders/{oid}/chat").status_code == 404

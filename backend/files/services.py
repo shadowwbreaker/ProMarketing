@@ -1,20 +1,22 @@
-"""Attachment storage with type/size checks and integrity hash (roadmap 8.1, Phase 12 file checks).
-
-Content is stored through Django's default storage (local MEDIA_ROOT in dev; S3/MinIO in production via
-STORAGES setting). The real type is detected from file signature, not from the client's name or header.
-"""
+"""Validate attachments before storage and serve them only to authorized participants."""
 import hashlib
+import logging
 import uuid
+from io import BytesIO
 
 from django.conf import settings
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
+from PIL import Image, ImageOps, UnidentifiedImageError
 
 from common.exceptions import DomainError
 
 from .models import Attachment
+from .scanner import scan
 
 MAX_SIZE = 20 * 1024 * 1024
+MAX_IMAGE_PIXELS = 12_000_000
+IMAGE_FORMATS = {"image/png": "PNG", "image/jpeg": "JPEG", "image/gif": "GIF", "image/webp": "WEBP"}
 SIGNATURES = [
     (b"\x89PNG\r\n\x1a\n", "image/png", "png"),
     (b"\xff\xd8\xff", "image/jpeg", "jpg"),
@@ -22,12 +24,13 @@ SIGNATURES = [
     (b"GIF89a", "image/gif", "gif"),
     (b"%PDF-", "application/pdf", "pdf"),
 ]
+logger = logging.getLogger(__name__)
 
 
 def sniff(head: bytes) -> tuple[str, str] | None:
-    for sig, mime, ext in SIGNATURES:
-        if head.startswith(sig):
-            return mime, ext
+    for signature, mime, extension in SIGNATURES:
+        if head.startswith(signature):
+            return mime, extension
     if head[:4] == b"RIFF" and head[8:12] == b"WEBP":
         return "image/webp", "webp"
     if head[4:8] == b"ftyp":
@@ -35,23 +38,65 @@ def sniff(head: bytes) -> tuple[str, str] | None:
     return None
 
 
+def normalize_image(data: bytes, mime: str) -> bytes:
+    """Validate the decoder's format and rebuild a static raster without untrusted metadata."""
+    image_format = IMAGE_FORMATS[mime]
+    try:
+        with Image.open(BytesIO(data), formats=[image_format]) as image:
+            if image.width * image.height > MAX_IMAGE_PIXELS:
+                raise DomainError("Слишком большое разрешение изображения", code="image_too_large", status_code=400)
+            if getattr(image, "is_animated", False):
+                if not settings.ATTACHMENT_CLAMAV_HOST:
+                    raise DomainError("Сейчас доступны только статичные изображения",
+                                      code="animated_file_unavailable", status_code=400)
+                # Check every frame before allowing the original animated file through the scanner.
+                if image.n_frames * image.width * image.height > MAX_IMAGE_PIXELS:
+                    raise DomainError("Слишком большое изображение", code="image_too_large", status_code=400)
+                for index in range(image.n_frames):
+                    image.seek(index)
+                    image.load()
+                return data
+            image = ImageOps.exif_transpose(image)
+            mode = "RGBA" if image_format != "JPEG" and ("A" in image.getbands() or "transparency" in image.info) else "RGB"
+            pixels = image.convert(mode)
+            pixels.info.clear()
+            output = BytesIO()
+            pixels.save(output, format=image_format)
+            return output.getvalue()
+    except (UnidentifiedImageError, Image.DecompressionBombError, OSError, ValueError, SyntaxError, EOFError) as exc:
+        raise DomainError("Изображение повреждено или не соответствует формату", code="invalid_image", status_code=400) from exc
+
+
 def store_upload(*, owner, uploaded) -> Attachment:
-    size = uploaded.size
-    if size <= 0 or size > getattr(settings, "ATTACHMENT_MAX_SIZE", MAX_SIZE):
-        raise DomainError("Файл пустой или больше 20 МБ", code="file_too_large", status_code=400)
-    data = uploaded.read()
+    limit = settings.ATTACHMENT_MAX_SIZE
+    data = uploaded.read(limit + 1)
+    if not data or len(data) > limit:
+        raise DomainError(f"Файл пустой или больше {limit // (1024 * 1024)} МБ", code="file_too_large", status_code=400)
     kind = sniff(data[:16])
     if not kind:
-        raise DomainError("Допустимы изображения (PNG, JPG, GIF, WEBP), PDF и MP4", code="file_type_not_allowed", status_code=400)
+        raise DomainError("Допустимы PNG, JPG, GIF и WEBP", code="file_type_not_allowed", status_code=400)
     mime, ext = kind
+    if settings.ATTACHMENT_CLAMAV_HOST:
+        scan(data)
+    elif mime not in IMAGE_FORMATS:
+        raise DomainError("PDF и MP4 временно недоступны. Используйте изображение или ссылку.",
+                          code="file_scan_required", status_code=400)
+    if mime in IMAGE_FORMATS:
+        data = normalize_image(data, mime)
+    if len(data) > limit:
+        raise DomainError("После обработки изображение превышает допустимый размер", code="file_too_large", status_code=400)
     digest = hashlib.sha256(data).hexdigest()
-    key = f"attachments/{owner.pk}/{uuid.uuid4().hex}.{ext}"
-    default_storage.save(key, ContentFile(data))
+    key = default_storage.save(f"attachments/{owner.pk}/{uuid.uuid4().hex}.{ext}", ContentFile(data))
     name = (getattr(uploaded, "name", "") or f"file.{ext}").replace("/", "_").replace("\\", "_")[:200]
-    # Scanning hook: images/PDF/MP4 that passed the signature check are marked clean here; an antivirus
-    # scanner (Phase 12) can set REJECTED and the file is then never served.
-    return Attachment.objects.create(owner=owner, storage_key=key, original_name=name, mime=mime, size=size, sha256=digest,
-                                     scan_status=Attachment.ScanStatus.CLEAN)
+    try:
+        return Attachment.objects.create(owner=owner, storage_key=key, original_name=name, mime=mime,
+                                         size=len(data), sha256=digest, scan_status=Attachment.ScanStatus.CLEAN)
+    except Exception:
+        try:
+            default_storage.delete(key)
+        except OSError:
+            logger.warning("Could not discard an orphaned attachment")
+        raise
 
 
 def can_read(user, att: Attachment) -> bool:

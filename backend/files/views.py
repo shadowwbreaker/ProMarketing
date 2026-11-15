@@ -37,7 +37,10 @@ class Download(APIView):
         a = get_object_or_404(Attachment, pk=pk, scan_status=Attachment.ScanStatus.CLEAN)
         if not can_read(request.user, a):
             raise DomainError("Нет доступа", code="forbidden", status_code=404)
-        resp = FileResponse(default_storage.open(a.storage_key, "rb"), content_type=a.mime)
-        resp["Content-Disposition"] = f'attachment; filename="{a.original_name}"'
+        try:
+            file = default_storage.open(a.storage_key, "rb")
+        except FileNotFoundError:
+            raise DomainError("Файл не найден", code="not_found", status_code=404) from None
+        resp = FileResponse(file, content_type=a.mime, as_attachment=True, filename=a.original_name)
         resp["X-Content-Type-Options"] = "nosniff"
         return resp

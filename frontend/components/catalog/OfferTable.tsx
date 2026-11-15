@@ -68,11 +68,12 @@ export function OfferRow({ o }: { o: OfferCard }) {
           {o.trust_status === "MANUAL" && <span className="text-warn">цифры указаны вручную</span>}
           {o.trust_status === "STALE" && <span>данные устарели</span>}
           <span className="sm:hidden">· {o.followers != null ? formatCount(o.followers) : "—"} подп.</span>
+          {o.avg_views != null && <span className="sm:hidden">· {o.avg_views.toLocaleString("ru-RU")} ср. просмотров</span>}
         </p>
       </div>
       <p className="hidden text-right text-sm tabular-nums sm:block">{o.followers != null ? formatCount(o.followers) : "—"}</p>
       <p className="hidden text-right text-sm tabular-nums sm:block" title={o.avg_views == null && o.derived_metrics_note ? o.derived_metrics_note : undefined}>
-        {o.avg_views != null ? formatCount(o.avg_views) : <span className="text-muted">скрыто</span>}
+        {o.avg_views != null ? o.avg_views.toLocaleString("ru-RU") : <span className="text-muted">—</span>}
       </p>
       <div className="col-span-2 row-start-2 sm:col-span-1 sm:row-start-auto"><SellerCell s={o.seller} /></div>
       <p className="col-start-2 row-start-1 text-right sm:col-start-auto sm:row-start-auto">
@@ -121,7 +122,7 @@ export function OfferTable({ offers = [], networks = [], sortHref }: {
       <div className="hidden grid-cols-[minmax(0,1fr)_7rem_7rem_13rem_7.5rem] gap-x-4 px-3 pb-2 text-[11px] font-bold uppercase tracking-wider text-muted sm:grid">
         <span>Описание</span>
         <span className="text-right">{head("Подписчики", "followers")}</span>
-        <span className="text-right">{head("Просмотры", "views")}</span>
+        <span className="text-right">{head("Ср. просмотры", "views")}</span>
         <span>Продавец</span>
         <span className="text-right">{head("Цена", "price")}</span>
       </div>

@@ -6,7 +6,7 @@ YouTube averages are hidden until derived metrics are approved (D-016) — also 
 from datetime import timedelta
 
 from django.conf import settings
-from django.db.models import Count, Exists, Min, OuterRef, Q, Subquery
+from django.db.models import Case, Count, Exists, F, Min, OuterRef, Q, Subquery, When
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework.permissions import AllowAny
@@ -20,7 +20,7 @@ from common.pagination import StandardPagination
 from reviews.models import Review
 from reviews.services import completed_orders_count, ratings_for, seller_rating
 from social_data.core.registry import platform_enabled
-from social_data.models import SocialAccount
+from social_data.models import DataSource, Platform, SocialAccount, TrustStatus
 from social_data.services.refresh_service import display_status
 
 from .models import AccountNetwork, AdvertisingOffer, NetworkItem
@@ -31,7 +31,7 @@ SORTS = {
     "price_asc": "min_price",
     "price_desc": "-min_price",
     "followers": "-current_statistics__followers",
-    "views": "-current_statistics__avg_views",
+    "views": F("catalog_avg_views").desc(nulls_last=True),
     "popular": "-completed_count",
 }
 
@@ -42,7 +42,7 @@ ONLINE_WINDOW = timedelta(minutes=10)
 def seller_brief(user, ratings: dict) -> dict:
     """Seller as shown next to an offer: name, photo, rating, online, time on the platform."""
     r = ratings.get(user.pk, {"rating": None, "reviews_count": 0})
-    return {"id": str(user.pk), "display_name": user.profile.display_name, "avatar_url": avatar_url(user.profile),
+    return {"id": str(user.pk), "display_name": user.profile.public_display_name, "avatar_url": avatar_url(user.profile),
             "online": bool(user.last_seen_at and timezone.now() - user.last_seen_at < ONLINE_WINDOW),
             "member_since": user.date_joined, **r}
 
@@ -51,14 +51,32 @@ def enabled_platforms() -> list[str]:
     return [p for p in ("tiktok", "instagram", "youtube") if platform_enabled(p)]
 
 
+def youtube_snapshot_cutoff():
+    return timezone.now() - timedelta(days=30)
+
+
+def has_public_youtube_snapshot(account, stats):
+    return (stats is not None and account.ownership_verified and stats.source == DataSource.OFFICIAL_API
+            and stats.trust_status in (TrustStatus.VERIFIED, TrustStatus.STALE)
+            and stats.fetched_at >= youtube_snapshot_cutoff())
+
+
 def sellable_accounts():
     active_offers = AdvertisingOffer.objects.filter(social_account=OuterRef("pk"), is_active=True)
+    public_average = ~Q(platform=Platform.YOUTUBE) | Q(current_statistics__source=DataSource.MANUAL)
+    if settings.YOUTUBE_DERIVED_METRICS_APPROVED:
+        public_average |= Q(
+            platform=Platform.YOUTUBE, ownership_verified=True, current_statistics__source=DataSource.OFFICIAL_API,
+            current_statistics__trust_status__in=(TrustStatus.VERIFIED, TrustStatus.STALE),
+            current_statistics__fetched_at__gte=youtube_snapshot_cutoff(),
+        )
     return (
         SocialAccount.objects.filter(is_listed=True, status=SocialAccount.Status.ACTIVE, platform__in=enabled_platforms(),
                                      owner__is_active=True, owner__status=User.Status.ACTIVE)
         .filter(Exists(active_offers))
         .annotate(min_price=Subquery(active_offers.order_by("price_minor").values("price_minor")[:1]),
-                  completed_count=Count("order_items", filter=Q(order_items__status="COMPLETED"), distinct=True))
+                  completed_count=Count("order_items", filter=Q(order_items__status="COMPLETED"), distinct=True),
+                  catalog_avg_views=Case(When(public_average, then=F("current_statistics__avg_views"))))
         .select_related("current_statistics", "owner__profile")
     )
 
@@ -81,15 +99,11 @@ def apply_filters(qs, params):
         qs = qs.filter(current_statistics__followers__gte=v)
     if (v := _int(params, "followers_max")) is not None:
         qs = qs.filter(current_statistics__followers__lte=v)
-    yt_hidden = not settings.YOUTUBE_DERIVED_METRICS_APPROVED
     avg_min, avg_max = _int(params, "avg_min"), _int(params, "avg_max")
-    if avg_min is not None or avg_max is not None:
-        if yt_hidden:  # YouTube averages are not public → cannot be filtered on
-            qs = qs.exclude(Q(platform="youtube") & ~Q(current_statistics__source="manual"))
-        if avg_min is not None:
-            qs = qs.filter(current_statistics__avg_views__gte=avg_min)
-        if avg_max is not None:
-            qs = qs.filter(current_statistics__avg_views__lte=avg_max)
+    if avg_min is not None:
+        qs = qs.filter(catalog_avg_views__gte=avg_min)
+    if avg_max is not None:
+        qs = qs.filter(catalog_avg_views__lte=avg_max)
     if (v := _int(params, "price_min")) is not None:
         qs = qs.filter(min_price__gte=v)
     if (v := _int(params, "price_max")) is not None:
@@ -125,7 +139,11 @@ def apply_filters(qs, params):
 
 def offer_card(acc: SocialAccount, ratings: dict, *, with_offers=False) -> dict:
     offers = [o for o in acc.offers.all() if o.is_active]
-    st = display_status(acc.current_statistics, acc.platform, for_owner=False)
+    cur = acc.current_statistics
+    st = display_status(cur, acc.platform, for_owner=False)
+    if acc.platform == Platform.YOUTUBE and cur and cur.source != DataSource.MANUAL:
+        if not has_public_youtube_snapshot(acc, cur):
+            st["avg_views"] = None
     card = {
         "id": str(acc.pk), "title": acc.title, "platform": acc.platform, "handle": acc.handle, "profile_url": acc.profile_url,
         "category": acc.category, "language": acc.language, "geo": acc.geo,
@@ -137,11 +155,11 @@ def offer_card(acc: SocialAccount, ratings: dict, *, with_offers=False) -> dict:
     }
     if with_offers:
         card["description"] = acc.description
-        # Raw per-video views exactly as the platform API returned them (not a derived metric, D-024):
-        # buyers can judge the channel even while the YouTube average is hidden (D-016).
-        cur = acc.current_statistics
-        card["recent_views"] = ([v.views for v in cur.videos.order_by("-published_at", "-views")[:15]]
-                                if cur and cur.trust_status in ("VERIFIED", "STALE") else [])
+        show_videos = cur is not None and cur.trust_status in (TrustStatus.VERIFIED, TrustStatus.STALE)
+        if acc.platform == Platform.YOUTUBE:
+            show_videos = has_public_youtube_snapshot(acc, cur)
+        card["recent_views"] = list(cur.videos.order_by(F("published_at").desc(nulls_last=True), "pk")
+                                    .values_list("views", flat=True)[:15]) if show_videos else []
         card["offers"] = [{"id": str(o.pk), "ad_format": o.ad_format, "ad_format_label": o.get_ad_format_display(),
                            "price_minor": o.price_minor, "conditions": o.conditions, "placement_days": o.placement_days,
                            "publish_within_days": o.publish_within_days} for o in offers]
@@ -259,7 +277,7 @@ class CatalogHome(APIView):
         popular = list(base.order_by("-completed_count", "-created_at")[:8])
         new = list(base.order_by("-created_at")[:8])
         recommended = list(base.filter(current_statistics__trust_status="VERIFIED")
-                           .order_by("-current_statistics__avg_views")[:8])
+                           .order_by(SORTS["views"], "-created_at")[:8])
         nets = list(sellable_networks().annotate(done=Count("orders", filter=Q(orders__status="COMPLETED")))
                     .order_by("-done", "-created_at")[:4])
         owners = {a.owner_id for a in popular + new + recommended} | {n.owner_id for n in nets}
@@ -298,7 +316,7 @@ class SellerPage(APIView):
         return Response({
             "rating_distribution": {str(k): dist.get(k, 0) for k in (5, 4, 3, 2, 1)}, "online": online,
             "is_seller": seller.has_role("seller"),
-            "id": str(seller.pk), "display_name": seller.profile.display_name, "bio": seller.profile.bio,
+            "id": str(seller.pk), "display_name": seller.profile.public_display_name, "bio": seller.profile.bio,
             "avatar_url": avatar_url(seller.profile),
             "member_since": seller.date_joined, "last_seen_at": seller.last_seen_at, "selling_since": first_listed,
             "completed_orders": completed_orders_count(seller.pk), **rating,

@@ -1,6 +1,8 @@
 import hashlib
+import logging
 import secrets
 from datetime import timedelta
+from smtplib import SMTPException
 
 from django.conf import settings
 from django.contrib.auth.password_validation import validate_password
@@ -14,6 +16,9 @@ from common.exceptions import DomainError
 from .models import EmailToken, User, UserProfile
 from .roles import ROLES, assign_role
 
+logger = logging.getLogger(__name__)
+DUMMY_MAIL_BACKEND = "django.core.mail.backends.dummy.EmailBackend"
+
 TOKEN_TTL = {
     EmailToken.Purpose.VERIFY_EMAIL: timedelta(days=3),
     EmailToken.Purpose.RESET_PASSWORD: timedelta(hours=1),
@@ -24,8 +29,10 @@ def _hash(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
 
 
+@transaction.atomic
 def issue_token(user: User, purpose: str) -> str:
     """Create a one-time token; only its hash is stored. Previous unused tokens of same purpose are invalidated."""
+    User.objects.select_for_update().only("pk").get(pk=user.pk)
     now = timezone.now()
     EmailToken.objects.filter(user=user, purpose=purpose, used_at__isnull=True).update(used_at=now)
     token = secrets.token_urlsafe(32)
@@ -35,23 +42,47 @@ def issue_token(user: User, purpose: str) -> str:
 
 def consume_token(token: str, purpose: str) -> User:
     with transaction.atomic():
-        et = (
-            EmailToken.objects.select_for_update()
-            .select_related("user")
-            .filter(token_hash=_hash(token or ""), purpose=purpose)
-            .first()
-        )
+        candidates = EmailToken.objects.filter(token_hash=_hash(token or ""), purpose=purpose)
+        user_id = candidates.values_list("user_id", flat=True).first()
+        if user_id is None:
+            raise DomainError("Ссылка недействительна или устарела", code="invalid_token", status_code=400)
+        user = User.objects.select_for_update().get(pk=user_id)
+        et = candidates.select_for_update().first()
         if not et or et.used_at or et.expires_at < timezone.now():
             raise DomainError("Ссылка недействительна или устарела", code="invalid_token", status_code=400)
         et.used_at = timezone.now()
         et.save(update_fields=["used_at", "updated_at"])
-        return et.user
+        return user
+
+
+@transaction.atomic
+def _send_token(user: User, *, purpose: str, path: str, subject: str, intro: str) -> None:
+    unavailable = DomainError("Отправка писем временно недоступна. Попробуйте позже.",
+                              code="email_delivery_unavailable", status_code=503)
+    if settings.EMAIL_BACKEND == DUMMY_MAIL_BACKEND or (
+        settings.EMAIL_BACKEND == "django.core.mail.backends.smtp.EmailBackend"
+        and settings.EMAIL_HOST_USER and not settings.EMAIL_HOST_PASSWORD
+    ):
+        raise unavailable
+    token = issue_token(user, purpose)
+    try:
+        sent = send_mail(subject, f"{intro} {settings.FRONTEND_URL}/{path}?token={token}", None, [user.email])
+    except (OSError, SMTPException) as exc:
+        raise unavailable from exc
+    if sent != 1:
+        raise unavailable
 
 
 def send_verification_email(user: User) -> None:
-    token = issue_token(user, EmailToken.Purpose.VERIFY_EMAIL)
-    link = f"{settings.FRONTEND_URL}/verify-email?token={token}"
-    send_mail("Подтвердите email на ProMarketing", f"Подтвердите адрес: {link}", None, [user.email])
+    _send_token(user, purpose=EmailToken.Purpose.VERIFY_EMAIL, path="verify-email",
+                subject="Подтвердите email на YourVideoTeam", intro="Подтвердите адрес:")
+
+
+def _send_initial_verification(user: User) -> None:
+    try:
+        send_verification_email(user)
+    except DomainError:
+        logger.warning("Email verification delivery unavailable after signup")
 
 
 @transaction.atomic
@@ -67,14 +98,15 @@ def register_user(*, email: str, password: str, display_name: str, as_seller: bo
     if as_seller:
         assign_role(user, "seller")
     record(action="user.registered", subject_type="user", subject_id=user.pk, actor=user, after={"as_seller": as_seller})
-    if settings.DEV_AUTO_VERIFY_EMAIL:  # local development only; production refuses to start with it
+    if settings.DEV_AUTO_VERIFY_EMAIL and not settings.BETA_MODE:
         user.is_email_verified = True
         user.save(update_fields=["is_email_verified", "updated_at"])
     else:
-        transaction.on_commit(lambda: send_verification_email(user))
+        transaction.on_commit(lambda: _send_initial_verification(user))
     return user
 
 
+@transaction.atomic
 def verify_email(token: str) -> User:
     user = consume_token(token, EmailToken.Purpose.VERIFY_EMAIL)
     if not user.is_email_verified:
@@ -89,9 +121,11 @@ def request_password_reset(email: str) -> None:
     user = User.objects.filter(email__iexact=(email or "").strip(), is_active=True).first()
     if not user or user.status == User.Status.BLOCKED:
         return
-    token = issue_token(user, EmailToken.Purpose.RESET_PASSWORD)
-    link = f"{settings.FRONTEND_URL}/reset-password?token={token}"
-    send_mail("Сброс пароля ProMarketing", f"Чтобы задать новый пароль, перейдите по ссылке: {link}", None, [user.email])
+    try:
+        _send_token(user, purpose=EmailToken.Purpose.RESET_PASSWORD, path="reset-password",
+                    subject="Сброс пароля YourVideoTeam", intro="Чтобы задать новый пароль, перейдите по ссылке:")
+    except DomainError:
+        logger.warning("Password reset delivery unavailable")
 
 
 def reset_password(token: str, new_password: str) -> User:
@@ -99,7 +133,8 @@ def reset_password(token: str, new_password: str) -> User:
         user = consume_token(token, EmailToken.Purpose.RESET_PASSWORD)
         validate_password(new_password, user=user)
         user.set_password(new_password)  # changes session auth hash → all existing sessions invalidated
-        user.save(update_fields=["password", "updated_at"])
+        user.is_email_verified = True  # the recovery link also proves control of this address
+        user.save(update_fields=["password", "is_email_verified", "updated_at"])
         record(action="user.password_reset", subject_type="user", subject_id=user.pk, actor=user)
     return user
 

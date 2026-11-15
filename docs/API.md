@@ -1,13 +1,13 @@
 # API
 
-Статус: соглашения (Phase 0, 2026-11-07). Эндпоинтов пока нет. Источник правды после Phase 1 — генерируемая схема OpenAPI (`/api/schema/`).
+Актуальные маршруты и форматы описывает генерируемая схема OpenAPI (`/api/schema/`). Ниже приведены правила интеграции и сводка маршрутов.
 
 ## Соглашения
 - Префикс `/api/v1/`, JSON, `snake_case`.
-- Аутентификация — сессия (cookie) + CSRF для браузера.
+- Аутентификация — сессия (cookie) + CSRF. Перед `POST /auth/login`, `/auth/register` и отправкой токенов восстановления или подтверждения получите cookie через `GET /auth/csrf`. Передавайте её значение в `X-CSRFToken`. Запросы с постороннего Origin или без CSRF получают 403.
 - Ошибки: `{ "error": { "code": "...", "message": "...", "details": {...}, "request_id": "..." } }`.
 - Пагинация — курсорная для лент (чат, события), постраничная для каталога.
-- Идемпотентность для мутаций с деньгами: заголовок `Idempotency-Key`.
+- Для `POST /orders` передайте уникальный `Idempotency-Key` (1–128 видимых ASCII-символов). Повтор того же заказа с тем же ключом возвращает 201 и ID исходного заказа. Если содержимое запроса изменилось, вернётся 409 `idempotency_conflict`. Ключ действует для одного покупателя. Старые клиенты могут отправлять запрос без ключа, на них защита от повтора не действует.
 - Деньги: `{ "amount_minor": 150000, "currency": "RUB" }`.
 
 ## Планируемые группы (по фазам)
@@ -67,6 +67,11 @@
 Заказы: `POST /orders`, `GET /orders/{id}`, `…/events`, `…/terms`, `…/terms/propose`, `…/terms/{p}/decide`, `…/cancel`, `…/materials-delivered`, `…/items/{i}/{accept|decline|ready|proof|confirm|rework|cancel|check-publication|review|report}`.
 Платежи: `POST /orders/{id}/pay`, `POST /payments/webhooks/{provider}`, `GET /me/payouts`, `POST /me/payouts/{id}/{withdraw|retry}`.
 Чат и файлы: `GET/POST /orders/{id}/chat`, `PATCH/DELETE /orders/{id}/chat/{m}`, `POST /files`, `GET /files/{id}`.
+
+- `GET /messages/conversations` возвращает по одной строке на собеседника. `GET /messages/conversations/{user}` объединяет личную переписку и сообщения оплаченных заказов этой пары, сохраняя ссылки на заказы. `before` загружает предыдущую страницу, `version` позволяет проверить наличие изменений, а `read=1` отмечает ленту собеседника прочитанной при её открытии.
+- `GET /messages/status` возвращает признак непрочитанного, признак полученных заказов и время последнего входящего сообщения и заказа для звуковых уведомлений.
+- `GET /orders/{id}/chat?read=1` отмечает уведомления об оплате и сообщениях только для текущего участника и заказа. У новых оплаченных заказов исходное ТЗ доступно в сообщении `order_brief`. Оно ссылается на первую версию условий.
+- `GET /orders/received` возвращает оплаченные заказы продавца и статистику по выбранным фильтрам `number`, `buyer`, `status`, `platform`. `format_csv=1` выгружает отфильтрованный список.
 Споры: `GET /dispute-reasons`, `POST /orders/{id}/disputes/open`, `GET /orders/{id}/disputes`, `GET /disputes/{id}`, `POST /disputes/{id}/{reply|appeal}`; поддержка `POST /support/tickets`.
 Сотрудники: `/staff/disputes[/{id}[/{action}]]`, `/staff/tickets`, `/staff/dashboard`, `/staff/users`, `/staff/accounts`, `/staff/orders`, `/staff/audit[/verify]`, `/staff/reviews`, `/staff/fraud-signals`.
 Отзывы: `POST /reviews/{id}/{reply|complain}`. Phase 13: `/me/{favorites|viewed|recommendations|analytics|referrals}`, `GET /catalog/compare?ids=`.

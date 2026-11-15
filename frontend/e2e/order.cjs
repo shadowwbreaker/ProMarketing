@@ -31,7 +31,7 @@ async function login(ctx, base, email) {
 
   const seller = await login(await browser.newContext(), base, "demo-seller1@example.com");
   await seller.goto(orderUrl);
-  await seller.getByText("Оплата получена платёжным провайдером.").waitFor(); // system message in chat
+  await seller.getByRole("log", { name: "Чат заказа" }).getByText("Техническое задание к заказу").waitFor();
   await seller.getByLabel("Сообщение").fill("Здравствуйте! Сниму завтра.");
   await seller.getByRole("button", { name: "Отправить", exact: true }).click();
   await buyer.getByText("Здравствуйте! Сниму завтра.").waitFor({ timeout: 10000 }); // buyer sees it via polling

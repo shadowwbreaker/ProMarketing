@@ -14,14 +14,9 @@ def run_refresh_job(job_id: str):
 
 @shared_task(name="social_data.tasks.purge_expired_youtube_data")
 def purge_expired_youtube_data():
-    """YouTube API policy: without derived-metrics approval, stored statistics older than 30 days must be
-    deleted (D-016). DELETION ONLY — this task never calls YouTube."""
-    from django.conf import settings
-
+    """Keep the 30-day retention window independently of public display. This task never calls YouTube."""
     from social_data.models import SocialAccountStatistics
 
-    if settings.YOUTUBE_DERIVED_METRICS_APPROVED:
-        return 0
     cutoff = timezone.now() - timedelta(days=30)
     qs = SocialAccountStatistics.objects.filter(social_account__platform="youtube", fetched_at__lt=cutoff).exclude(source="manual")
     n = qs.count()

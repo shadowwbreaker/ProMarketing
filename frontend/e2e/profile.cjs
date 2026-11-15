@@ -19,7 +19,7 @@ const { chromium } = require("playwright");
   const sellerUrl = buyer.url();
   for (const t of ["Дата регистрации", "Рейтинг продавца", "Предложения"]) await buyer.getByText(t).first().waitFor();
   const text = `Здравствуйте! ${Date.now()}`;
-  await buyer.getByLabel(/Сообщение для/).fill(text);
+  await buyer.getByLabel("Сообщение", { exact: true }).fill(text);
   await buyer.getByRole("button", { name: "Отправить" }).click();
   await buyer.getByText(text).waitFor();
   // the seller sees the thread in "Сообщения"
