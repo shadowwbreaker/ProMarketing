@@ -12,6 +12,10 @@ export function SiteFooter() {
           <Link href="/rules" className="hover:text-text">Правила</Link>
           <Link href="/guide" className="hover:text-text">Документация</Link>
         </nav>
+        <nav aria-label="Документы сервиса" className="flex w-full flex-wrap gap-2">
+          <Link href="/terms" className="inline-flex min-h-10 items-center rounded-lg border border-border px-3 py-2 font-semibold text-text hover:bg-bg">Пользовательское соглашение</Link>
+          <Link href="/privacy" className="inline-flex min-h-10 items-center rounded-lg border border-border px-3 py-2 font-semibold text-text hover:bg-bg">Политика конфиденциальности</Link>
+        </nav>
       </div>
     </footer>
   );
