@@ -9,7 +9,8 @@ export function SiteFooter() {
         <nav aria-label="Нижнее меню" className="flex flex-wrap gap-x-5 gap-y-2">
           <Link href="/catalog" className="hover:text-text">Каталог</Link>
           <Link href="/support" className="hover:text-text">Помощь</Link>
-          <Link href="/status" className="hover:text-text">Статус сервиса</Link>
+          <Link href="/rules" className="hover:text-text">Правила</Link>
+          <Link href="/guide" className="hover:text-text">Документация</Link>
         </nav>
       </div>
     </footer>

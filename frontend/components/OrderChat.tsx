@@ -7,7 +7,6 @@ import { OrderTermsDetails } from "@/components/OrderTermsDetails";
 import { useToast } from "@/components/ui/Toast";
 import { ConversationOrder, fileUrl, getChat, getConversation, Msg, refreshInbox, sendMessage, uploadFile } from "@/lib/api/chat";
 import { sendDirect } from "@/lib/api/direct";
-import { STATUS_LABEL } from "@/lib/api/orders";
 import { fieldErrors } from "@/lib/forms";
 import { formatDateTime } from "@/lib/format";
 import { useLivePolling } from "@/lib/useLivePolling";
@@ -25,7 +24,6 @@ export function OrderChat({ orderId, role, peerId, empty, onOrders }: {
   const [loaded, setLoaded] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [orders, setOrders] = useState<ConversationOrder[]>([]);
-  const [selection, setSelection] = useState<string>();
   const [earlier, setEarlier] = useState<Msg[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
   const [olderBusy, setOlderBusy] = useState(false);
@@ -33,7 +31,7 @@ export function OrderChat({ orderId, role, peerId, empty, onOrders }: {
   const version = useRef<string>(undefined);
   const logRef = useRef<HTMLDivElement>(null);
   const followRef = useRef(true);
-  const destination = selection ?? orderId ?? orders.find((o) =>
+  const destination = orderId ?? orders.find((o) =>
     !["COMPLETED", "REFUNDED", "PARTIALLY_REFUNDED", "EXPIRED", "CANCELLED"].includes(o.status),
   )?.id ?? "";
 
@@ -162,14 +160,6 @@ export function OrderChat({ orderId, role, peerId, empty, onOrders }: {
       </div>
       {role !== "staff" && (
         <form onSubmit={send} className="shrink-0 border-t border-border p-3 sm:px-4">
-          {peerId && orders.length > 0 && <label className="mb-2 flex items-center gap-2 text-xs text-muted">
-            К заказу
-            <select value={destination} disabled={uploading || busy} onChange={(event) => { setSelection(event.target.value); setFiles([]); }}
-              className="min-w-0 flex-1 rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-text">
-              <option value="">Личное сообщение</option>
-              {orders.map((order) => <option key={order.id} value={order.id}>#{order.id.slice(0, 8)} · {order.title} · {STATUS_LABEL[order.status] ?? order.status}</option>)}
-            </select>
-          </label>}
           <textarea name="body" rows={2} maxLength={destination ? 5000 : 2000} aria-label="Сообщение" placeholder="Написать…" className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-base" />
           <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
             {destination && <label className="relative inline-flex min-h-10 cursor-pointer items-center rounded-lg px-2 text-sm font-medium text-accent focus-within:ring-2 focus-within:ring-accent">

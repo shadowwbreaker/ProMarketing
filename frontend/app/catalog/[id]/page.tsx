@@ -24,11 +24,16 @@ function RecentViews({ views }: { views: number[] }) {
       <figcaption className="mb-2 text-xs text-muted">Просмотры последних {series.length} видео — данные платформы, от старых к новым</figcaption>
       <div className="flex h-20 items-end gap-1" aria-hidden>
         {series.map((v, i) => (
-          <span key={i} title={formatCount(v)} style={{ height: `${Math.max(4, (v / max) * 100)}%`, animationDelay: `${i * 25}ms` }}
+          <span key={i} title={v.toLocaleString("ru-RU")} style={{ height: `${Math.max(4, (v / max) * 100)}%`, animationDelay: `${i * 25}ms` }}
             className="page-enter flex-1 rounded-t-md bg-gradient-to-t from-accent/70 to-[#7c4dff]/70 transition-opacity duration-150 hover:opacity-80" />
         ))}
       </div>
-      <p className="sr-only">{series.map(formatCount).join(", ")}</p>
+      <details className="mt-2 text-sm">
+        <summary className="cursor-pointer font-medium text-accent">Число просмотров по роликам</summary>
+        <ol className="mt-2 grid list-decimal gap-1 pl-5 tabular-nums sm:grid-cols-3">
+          {series.map((v, i) => <li key={i}>{v.toLocaleString("ru-RU")}</li>)}
+        </ol>
+      </details>
     </figure>
   );
 }
@@ -45,6 +50,7 @@ export default function OfferPage() {
   if (err) return <ErrorState message={err} />;
   if (!o) return <LoadingState />;
   const offer = o.offers?.find((x) => x.id === pick);
+  const latestYouTubeViews = o.platform === "youtube" ? o.recent_views?.[0] : undefined;
 
   return (
     <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_420px]">
@@ -75,8 +81,13 @@ export default function OfferPage() {
             <dl className="grid grid-cols-2 gap-4">
               <div><dd className="text-2xl font-bold tabular-nums">{o.followers != null ? formatCount(o.followers) : "—"}</dd><dt className="text-xs text-muted">подписчиков</dt></div>
               <div>
-                <dd className="text-2xl font-bold tabular-nums">{o.avg_views != null ? formatCount(o.avg_views) : "—"}</dd>
-                <dt className="text-xs text-muted">{o.avg_views != null ? `просмотров на видео, среднее по ${o.videos_in_sample}` : "просмотры скрыты до одобрения YouTube"}</dt>
+                <dd className="text-2xl font-bold tabular-nums">
+                  {o.platform === "youtube" ? latestYouTubeViews?.toLocaleString("ru-RU") ?? "Нет данных"
+                    : o.avg_views != null ? formatCount(o.avg_views) : "Нет данных"}
+                </dd>
+                <dt className="text-xs text-muted">{o.platform === "youtube"
+                  ? latestYouTubeViews != null ? "просмотров у последнего доступного ролика" : "Просмотры появятся после подтверждения канала и обновления статистики"
+                  : o.avg_views != null ? `просмотров на видео, среднее по ${o.videos_in_sample}` : "Просмотры недоступны"}</dt>
               </div>
             </dl>
             {o.recent_views && o.recent_views.length > 1 && <RecentViews views={o.recent_views} />}

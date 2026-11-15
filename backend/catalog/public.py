@@ -6,7 +6,7 @@ YouTube averages are hidden until derived metrics are approved (D-016) — also 
 from datetime import timedelta
 
 from django.conf import settings
-from django.db.models import Count, Exists, Min, OuterRef, Q, Subquery
+from django.db.models import Count, Exists, F, Min, OuterRef, Q, Subquery
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework.permissions import AllowAny
@@ -20,7 +20,7 @@ from common.pagination import StandardPagination
 from reviews.models import Review
 from reviews.services import completed_orders_count, ratings_for, seller_rating
 from social_data.core.registry import platform_enabled
-from social_data.models import SocialAccount
+from social_data.models import DataSource, Platform, SocialAccount, TrustStatus
 from social_data.services.refresh_service import display_status
 
 from .models import AccountNetwork, AdvertisingOffer, NetworkItem
@@ -137,11 +137,13 @@ def offer_card(acc: SocialAccount, ratings: dict, *, with_offers=False) -> dict:
     }
     if with_offers:
         card["description"] = acc.description
-        # Raw per-video views exactly as the platform API returned them (not a derived metric, D-024):
-        # buyers can judge the channel even while the YouTube average is hidden (D-016).
         cur = acc.current_statistics
-        card["recent_views"] = ([v.views for v in cur.videos.order_by("-published_at", "-views")[:15]]
-                                if cur and cur.trust_status in ("VERIFIED", "STALE") else [])
+        show_videos = cur is not None and cur.trust_status in (TrustStatus.VERIFIED, TrustStatus.STALE)
+        if show_videos and acc.platform == Platform.YOUTUBE:
+            show_videos = (acc.ownership_verified and cur.source == DataSource.OFFICIAL_API
+                           and cur.fetched_at >= timezone.now() - timedelta(days=30))
+        card["recent_views"] = list(cur.videos.order_by(F("published_at").desc(nulls_last=True), "pk")
+                                    .values_list("views", flat=True)[:15]) if show_videos else []
         card["offers"] = [{"id": str(o.pk), "ad_format": o.ad_format, "ad_format_label": o.get_ad_format_display(),
                            "price_minor": o.price_minor, "conditions": o.conditions, "placement_days": o.placement_days,
                            "publish_within_days": o.publish_within_days} for o in offers]

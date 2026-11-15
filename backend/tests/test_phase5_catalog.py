@@ -82,12 +82,29 @@ def test_stale_not_in_verified_filter(api, seller, account_factory, offer_factor
 def test_youtube_average_hidden_and_not_filterable(api, seller, account_factory, offer_factory, settings):
     settings.YOUTUBE_DERIVED_METRICS_APPROVED = False
     yt = listed(account_factory, offer_factory, seller, platform="youtube", avg_views=90_000)
-    card = api.get(f"/api/v1/catalog/accounts/{yt.pk}").json()
+    url = f"/api/v1/catalog/accounts/{yt.pk}"
+    cur = yt.current_statistics
+    cur.videos.create(external_video_id="older", published_at=timezone.now() - timedelta(days=1), views=999)
+    cur.videos.create(external_video_id="latest", published_at=timezone.now(), views=0)
+    yt.ownership_verified = False
+    yt.save(update_fields=["ownership_verified"])
+    card = api.get(url).json()
+    assert card["recent_views"] == []
     assert card["avg_views"] is None and card["trust_status"] == "VERIFIED" and card["followers"] == 50_000
     assert ids(api.get("/api/v1/catalog/accounts", {"avg_min": 1})) == set()
     assert ids(api.get("/api/v1/catalog/accounts", {"verified": "1"})) == {str(yt.pk)}  # followers are verified (D-016 clarification)
+    yt.ownership_verified = True
+    yt.save(update_fields=["ownership_verified"])
+    assert api.get(url).json()["recent_views"] == [0, 999]
+    cur.source = "fake"
+    cur.save(update_fields=["source"])
+    assert api.get(url).json()["recent_views"] == []
+    cur.source = "official_api"
+    cur.fetched_at = timezone.now() - timedelta(days=31)
+    cur.save(update_fields=["source", "fetched_at"])
+    assert api.get(url).json()["recent_views"] == []
     settings.YOUTUBE_DERIVED_METRICS_APPROVED = True
-    assert api.get(f"/api/v1/catalog/accounts/{yt.pk}").json()["avg_views"] == 90_000
+    assert api.get(url).json()["avg_views"] == 90_000
 
 
 @pytest.mark.django_db
@@ -149,7 +166,7 @@ def test_counts_online_filter_and_seller_brief(api, seller, account_factory, off
 def test_offer_page_shows_raw_recent_views(api, seller, account_factory, offer_factory):
     from social_data.models import SocialVideo
 
-    acc = listed(account_factory, offer_factory, seller, platform="youtube")
+    acc = listed(account_factory, offer_factory, seller, platform="youtube", ownership_verified=True)
     for i, v in enumerate([100, 200, 300]):
         SocialVideo.objects.create(statistics=acc.current_statistics, external_video_id=f"v{i}", views=v,
                                         url=f"https://youtube.com/shorts/v{i}")
