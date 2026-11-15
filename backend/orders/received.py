@@ -40,7 +40,7 @@ class ReceivedOrders(APIView):
                 .order_by("-paid_at", "-pk"))
         if params.get("format_csv") == "1":
             response = HttpResponse(content_type="text/csv; charset=utf-8")
-            response["Content-Disposition"] = 'attachment; filename="promarketing-orders.csv"'
+            response["Content-Disposition"] = 'attachment; filename="yourvideoteam-orders.csv"'
             response.write("\ufeff")
             writer = csv.writer(response)
             writer.writerow(["Дата", "Заказ", "Описание", "Покупатель", "Статус", "Сумма", "Валюта"])

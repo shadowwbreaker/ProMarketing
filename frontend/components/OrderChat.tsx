@@ -133,7 +133,7 @@ export function OrderChat({ orderId, role, peerId, empty, onOrders }: {
           m.kind === "system" ? (
             <article key={m.id}>
               <p className="mb-1 flex flex-wrap justify-between gap-1 text-xs">
-                <span><b>ProMarketing</b><span className="ml-2 rounded bg-accent/10 px-1.5 py-0.5 text-accent">Уведомление</span></span>
+                <span><b>YourVideoTeam</b><span className="ml-2 rounded bg-accent/10 px-1.5 py-0.5 text-accent">Уведомление</span></span>
                 <time dateTime={m.created_at} className="text-muted">{formatDateTime(m.created_at)}</time>
               </p>
               <p className="rounded-lg bg-accent/8 px-3 py-2 text-sm">{m.body}

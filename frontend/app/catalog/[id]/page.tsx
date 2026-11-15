@@ -50,7 +50,6 @@ export default function OfferPage() {
   if (err) return <ErrorState message={err} />;
   if (!o) return <LoadingState />;
   const offer = o.offers?.find((x) => x.id === pick);
-  const latestYouTubeViews = o.platform === "youtube" ? o.recent_views?.[0] : undefined;
 
   return (
     <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_420px]">
@@ -82,12 +81,13 @@ export default function OfferPage() {
               <div><dd className="text-2xl font-bold tabular-nums">{o.followers != null ? formatCount(o.followers) : "—"}</dd><dt className="text-xs text-muted">подписчиков</dt></div>
               <div>
                 <dd className="text-2xl font-bold tabular-nums">
-                  {o.platform === "youtube" ? latestYouTubeViews?.toLocaleString("ru-RU") ?? "Нет данных"
-                    : o.avg_views != null ? formatCount(o.avg_views) : "Нет данных"}
+                  {o.avg_views?.toLocaleString("ru-RU") ?? "Нет данных"}
                 </dd>
-                <dt className="text-xs text-muted">{o.platform === "youtube"
-                  ? latestYouTubeViews != null ? "просмотров у последнего доступного ролика" : "Просмотры появятся после подтверждения канала и обновления статистики"
-                  : o.avg_views != null ? `просмотров на видео, среднее по ${o.videos_in_sample}` : "Просмотры недоступны"}</dt>
+                <dt className="text-xs text-muted">{o.avg_views != null
+                  ? `среднее число просмотров по последним роликам (выборка: ${o.videos_in_sample})`
+                  : "Среднее число просмотров пока недоступно"}</dt>
+                {o.platform === "youtube" && o.avg_views != null && o.trust_status !== "MANUAL" &&
+                  <p className="mt-1 text-xs text-muted">Расчёт YourVideoTeam по данным YouTube</p>}
               </div>
             </dl>
             {o.recent_views && o.recent_views.length > 1 && <RecentViews views={o.recent_views} />}

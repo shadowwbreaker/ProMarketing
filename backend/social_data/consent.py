@@ -1,9 +1,9 @@
 """Owner consent for fetching statistics (D-024). The text shown in the UI must match CONSENT_TEXT_VERSION."""
 from common.exceptions import DomainError
 
-CONSENT_TEXT_VERSION = "2026-11-09"
+CONSENT_TEXT_VERSION = "2026-11-15"
 CONSENT_TEXT = (
-    "Я владелец этого канала и разрешаю ProMarketing один раз получить из официального API платформы "
+    "Я владелец этого канала и разрешаю YourVideoTeam один раз получить из официального API платформы "
     "число подписчиков и просмотры последних 15 видео, чтобы показать их покупателям в объявлении. "
     "Повторно данные запрашиваются только когда я нажимаю «Обновить статистику»."
 )

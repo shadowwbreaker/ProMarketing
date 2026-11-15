@@ -35,7 +35,7 @@ class MessageSerializer(serializers.ModelSerializer):
             return None
         o = m.chat.order
         return {"id": str(m.author_id), "role": "buyer" if m.author_id == o.buyer_id else "seller",
-                "display_name": m.author.profile.display_name}
+                "display_name": m.author.profile.public_display_name}
 
     def get_body(self, m):
         return "" if m.deleted_at and not self.context.get("staff") else m.body

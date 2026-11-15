@@ -81,7 +81,7 @@ def test_stale_not_in_verified_filter(api, seller, account_factory, offer_factor
 @pytest.mark.django_db
 def test_youtube_average_hidden_and_not_filterable(api, seller, account_factory, offer_factory, settings):
     settings.YOUTUBE_DERIVED_METRICS_APPROVED = False
-    yt = listed(account_factory, offer_factory, seller, platform="youtube", avg_views=90_000)
+    yt = listed(account_factory, offer_factory, seller, platform="youtube", avg_views=499)
     url = f"/api/v1/catalog/accounts/{yt.pk}"
     cur = yt.current_statistics
     cur.videos.create(external_video_id="older", published_at=timezone.now() - timedelta(days=1), views=999)
@@ -104,7 +104,18 @@ def test_youtube_average_hidden_and_not_filterable(api, seller, account_factory,
     cur.save(update_fields=["source", "fetched_at"])
     assert api.get(url).json()["recent_views"] == []
     settings.YOUTUBE_DERIVED_METRICS_APPROVED = True
-    assert api.get(url).json()["avg_views"] == 90_000
+    assert api.get(url).json()["avg_views"] is None
+    cur.fetched_at = timezone.now()
+    cur.videos_in_sample = 2
+    cur.save(update_fields=["fetched_at", "videos_in_sample"])
+    detail = api.get(url).json()
+    assert detail["avg_views"] == 499 and detail["videos_in_sample"] == 2 and detail["recent_views"][0] == 0
+    result, = api.get("/api/v1/catalog/accounts", {"avg_min": 499, "sort": "views"}).json()["results"]
+    assert result["avg_views"] == detail["avg_views"]
+    yt.ownership_verified = False
+    yt.save(update_fields=["ownership_verified"])
+    assert api.get(url).json()["avg_views"] is None
+    assert ids(api.get("/api/v1/catalog/accounts", {"avg_min": 499})) == set()
 
 
 @pytest.mark.django_db

@@ -96,7 +96,7 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-30 border-b border-border/70 bg-surface/85 backdrop-blur-md supports-[backdrop-filter]:bg-surface/75">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
-        <Link href="/" className="shrink-0" aria-label="ProMarketing — на главную"><Logo /></Link>
+        <Link href="/" className="shrink-0" aria-label="YourVideoTeam — на главную"><Logo /></Link>
         <nav className="flex min-w-0 items-center gap-1 text-sm sm:gap-2" aria-label="Основное меню">
           <NavLink href="/catalog">Каталог</NavLink>
           {loading ? null : me ? (

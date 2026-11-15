@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-export const metadata = { title: "Документация — ProMarketing" };
+export const metadata = { title: "Документация — YourVideoTeam" };
 
 export default function GuidePage() {
   const link = "font-semibold text-accent underline";
@@ -10,7 +10,7 @@ export default function GuidePage() {
     <article className="mx-auto max-w-3xl space-y-7">
       <header>
         <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">Документация</h1>
-        <p className="mt-3 text-muted">Как купить рекламу, выставить канал и провести заказ в ProMarketing.</p>
+        <p className="mt-3 text-muted">Как купить рекламу, выставить канал и провести заказ в YourVideoTeam.</p>
       </header>
       <nav aria-label="Разделы документации" className="flex flex-wrap gap-2">
         {[["buy", "Покупка рекламы"], ["sell", "Продажа рекламы"], ["stats", "Статистика"], ["help", "Сообщения и помощь"]].map(([id, label]) =>
@@ -36,7 +36,7 @@ export default function GuidePage() {
       </section>
       <section id="stats" className={section}>
         <h2 className="text-xl font-bold">Как читать статистику</h2>
-        <p className="mt-3 leading-relaxed">В карточке канала указаны источник и дата статистики, если они доступны. Числа с пометкой «Вручную» указал продавец. Для подтверждённого YouTube-канала карточка показывает просмотры последнего доступного ролика и данные по недавним роликам, если они были получены из YouTube. Эти просмотры относятся к опубликованным роликам и не гарантируют охват будущего размещения.</p>
+        <p className="mt-3 leading-relaxed">В карточке канала указаны источник и дата статистики, если они доступны. Числа с пометкой «Вручную» указал продавец. Для подтверждённого YouTube-канала YourVideoTeam рассчитывает среднее по данным о просмотрах не более 15 последних доступных коротких роликов. Фактический размер выборки указан в карточке. Эти данные описывают прошлые публикации и не гарантируют охват будущего размещения.</p>
         <p className="mt-2 leading-relaxed">Владелец канала может запросить свежие данные через «Мои каналы» → карточка канала → «Обновить статистику».</p>
       </section>
       <section id="help" className={section}>

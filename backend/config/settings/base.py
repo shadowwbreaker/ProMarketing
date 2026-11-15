@@ -150,7 +150,7 @@ REST_FRAMEWORK = {
     },
 }
 SPECTACULAR_SETTINGS = {
-    "TITLE": "ProMarketing API",
+    "TITLE": "YourVideoTeam API",
     "DESCRIPTION": "Маркетплейс рекламы в TikTok, Instagram Reels и YouTube Shorts",
     "VERSION": "0.1.0",
     "SERVE_INCLUDE_SCHEMA": False,

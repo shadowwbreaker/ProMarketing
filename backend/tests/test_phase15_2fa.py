@@ -21,7 +21,7 @@ def test_staff_requires_2fa_when_enabled(api, user_factory, settings):
     assert r.status_code == 403 and r.json()["error"]["code"] == "2fa_required"
     assert c.get("/api/v1/me/2fa").json() == {"enabled": False, "required": True}
     s = c.post("/api/v1/me/2fa/setup").json()
-    assert s["otpauth_url"].startswith("otpauth://totp/ProMarketing")
+    assert s["otpauth_url"].startswith("otpauth://totp/YourVideoTeam")
     assert c.post("/api/v1/me/2fa/confirm", {"code": "000000"}, format="json").json()["error"]["code"] == "invalid_otp"
     assert c.post("/api/v1/me/2fa/confirm", {"code": code_for(s["secret"])}, format="json").json()["enabled"] is True
     assert c.get("/api/v1/staff/dashboard").status_code == 200

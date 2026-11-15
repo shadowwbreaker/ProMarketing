@@ -12,7 +12,7 @@ from common.exceptions import DomainError
 
 from .models import TwoFactor
 
-ISSUER = "ProMarketing"
+ISSUER = "YourVideoTeam"
 
 
 def is_enabled(user) -> bool:

@@ -200,10 +200,11 @@ def test_stale_and_youtube_derived_metric_rules(seller, settings):
 
 
 @pytest.mark.django_db
-def test_purge_expired_youtube_data(seller, settings):
+@pytest.mark.parametrize("approved", [False, True])
+def test_purge_expired_youtube_data(seller, settings, approved):
     from social_data.tasks import purge_expired_youtube_data
 
-    settings.YOUTUBE_DERIVED_METRICS_APPROVED = False
+    settings.YOUTUBE_DERIVED_METRICS_APPROVED = approved
     acc = SocialAccount.objects.create(owner=seller, platform="youtube", external_id="UCy", handle="c",
                                        profile_url="https://www.youtube.com/@c", title="c")
     old = timezone.now() - timedelta(days=31)

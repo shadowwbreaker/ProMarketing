@@ -117,7 +117,7 @@ class Conversation(APIView):
             if isinstance(message, DirectMessage):
                 author = me if message.author_id == me.pk else peer
                 result.append({"id": str(message.pk), "kind": "user", "body": message.body,
-                               "author": {"id": str(author.pk), "display_name": author.profile.display_name},
+                               "author": {"id": str(author.pk), "display_name": author.profile.public_display_name},
                                "created_at": message.created_at, "attachments": [], "edited": False, "deleted_at": None})
             else:
                 data = MessageSerializer(message).data

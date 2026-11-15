@@ -40,7 +40,7 @@ class Command(BaseCommand):
         if created:
             seller.set_unusable_password()
             seller.save(update_fields=["password"])
-            UserProfile.objects.create(user=seller, display_name="Демо-продавец ProMarketing", bio=DESCRIPTION)
+            UserProfile.objects.create(user=seller, display_name="Демо-продавец YourVideoTeam", bio=DESCRIPTION)
         elif seller.has_usable_password() or seller.is_staff or seller.is_superuser:
             raise CommandError("The demo seller email is already in use")
         assign_role(seller, "seller")

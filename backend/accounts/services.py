@@ -51,7 +51,7 @@ def consume_token(token: str, purpose: str) -> User:
 def send_verification_email(user: User) -> None:
     token = issue_token(user, EmailToken.Purpose.VERIFY_EMAIL)
     link = f"{settings.FRONTEND_URL}/verify-email?token={token}"
-    send_mail("Подтвердите email на ProMarketing", f"Подтвердите адрес: {link}", None, [user.email])
+    send_mail("Подтвердите email на YourVideoTeam", f"Подтвердите адрес: {link}", None, [user.email])
 
 
 @transaction.atomic
@@ -91,7 +91,7 @@ def request_password_reset(email: str) -> None:
         return
     token = issue_token(user, EmailToken.Purpose.RESET_PASSWORD)
     link = f"{settings.FRONTEND_URL}/reset-password?token={token}"
-    send_mail("Сброс пароля ProMarketing", f"Чтобы задать новый пароль, перейдите по ссылке: {link}", None, [user.email])
+    send_mail("Сброс пароля YourVideoTeam", f"Чтобы задать новый пароль, перейдите по ссылке: {link}", None, [user.email])
 
 
 def reset_password(token: str, new_password: str) -> User:

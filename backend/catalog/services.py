@@ -4,7 +4,7 @@ from django.db import IntegrityError, transaction
 from audit.services import record
 from common.exceptions import DomainError
 from social_data.core.registry import platform_enabled
-from social_data.models import SocialAccount
+from social_data.models import DataSource, Platform, SocialAccount
 from social_data.services.refresh_service import display_status
 
 from .models import AccountNetwork, AdvertisingOffer, NetworkItem
@@ -152,7 +152,9 @@ def network_stats(net: AccountNetwork, *, for_owner: bool) -> dict:
         acc = it.social_account
         st = display_status(acc.current_statistics, acc.platform, for_owner=for_owner)
         followers += st["followers"] or 0
-        if st["avg_views"] is not None:
+        # The public YouTube average describes a single channel, not the combined reach of a network.
+        youtube_api_average = acc.platform == Platform.YOUTUBE and st["source"] != DataSource.MANUAL
+        if st["avg_views"] is not None and (for_owner or not youtube_api_average):
             avg_sum += st["avg_views"]
             with_avg += 1
         verified += st["trust_status"] == "VERIFIED"

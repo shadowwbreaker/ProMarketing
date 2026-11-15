@@ -43,7 +43,7 @@ def with_last_order_message(orders):
 
 def peer_summary(user):
     return {
-        "id": str(user.pk), "display_name": user.profile.display_name,
+        "id": str(user.pk), "display_name": user.profile.public_display_name,
         "avatar_url": avatar_url(user.profile), "date_joined": user.date_joined,
         "online": bool(user.last_seen_at and timezone.now() - user.last_seen_at < timedelta(minutes=10)),
         "blocked": user.status == user.Status.BLOCKED,
