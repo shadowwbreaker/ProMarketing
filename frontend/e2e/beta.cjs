@@ -68,9 +68,12 @@ const { chromium } = require("playwright");
     await orderLog.getByText(question).waitFor();
     await orderLog.getByText(brief).waitFor();
     assert.equal(await seller.getByLabel("К заказу").count(), 0);
-    await orderLog.getByText("Продавец принял заказ.").waitFor();
+    const acceptance = (page, log) => log.locator("p").filter({ hasText: "Продавец принял заказ." }).filter({
+      has: page.locator(`a[href="/orders/${id}"]`),
+    });
+    await acceptance(seller, orderLog).waitFor();
     const buyerLog = buyer.getByRole("log", { name: "Чат заказа" });
-    await buyerLog.getByText("Продавец принял заказ.").waitFor({ timeout: 10000 });
+    await acceptance(buyer, buyerLog).waitFor({ timeout: 10000 });
 
     const reply = `Ответ продавца ${token}`;
     await seller.getByLabel("Сообщение", { exact: true }).fill(reply);
