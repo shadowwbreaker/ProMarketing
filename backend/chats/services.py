@@ -50,10 +50,12 @@ def post_message(order_id, *, user, body: str, attachments=()) -> ChatMessage:
     if not body and not attachments:
         raise DomainError("Пустое сообщение", code="empty_message", status_code=400)
     with transaction.atomic():
-        chat = Chat.objects.select_for_update().select_related("order").get(order_id=order_id)
+        chat = Chat.objects.select_for_update().select_related("order").filter(order_id=order_id).first()
+        if not chat:
+            raise DomainError("Чат не найден", code="not_found", status_code=404)
         role = _participant(chat, user)
-        if role == "staff":
-            raise DomainError("Сотрудники пишут в карточке спора", code="staff_use_dispute", status_code=403)
+        if role == "staff" and not user.has_perm_code("support.work"):
+            raise DomainError("Недостаточно прав", code="forbidden", status_code=403)
         from files.models import Attachment
 
         atts = list(Attachment.objects.filter(pk__in=list(attachments), owner=user, scan_status="clean"))
@@ -61,8 +63,15 @@ def post_message(order_id, *, user, body: str, attachments=()) -> ChatMessage:
             raise DomainError("Вложение не найдено", code="bad_attachment", status_code=400)
         msg = ChatMessage.objects.create(chat=chat, author=user, body=body, contact_signal=has_contact_signal(body))
         msg.attachments.set(atts)
-        other = chat.order.seller if role == "buyer" else chat.order.buyer
-        notify(other, "chat.message", "Новое сообщение по заказу", body[:120], order=chat.order_id)
+        order = chat.order
+        recipients = (order.buyer, order.seller) if role == "staff" else (order.seller if role == "buyer" else order.buyer,)
+        for recipient in recipients:
+            notify(recipient, "chat.message", "Новое сообщение по заказу", body[:120], order=order.pk)
+        if role == "staff":
+            from audit.services import record
+
+            record(action="order_chat.staff_reply", subject_type="chat_message", subject_id=msg.pk,
+                   actor=user, order_id=order.pk, is_staff_action=True)
     return msg
 
 

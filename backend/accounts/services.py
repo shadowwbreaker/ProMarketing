@@ -10,6 +10,7 @@ from django.core.mail import send_mail
 from django.db import transaction
 from django.utils import timezone
 
+from audit.models import AuditLog
 from audit.services import record
 from common.exceptions import DomainError
 
@@ -98,7 +99,7 @@ def register_user(*, email: str, password: str, display_name: str, as_seller: bo
     if as_seller:
         assign_role(user, "seller")
     record(action="user.registered", subject_type="user", subject_id=user.pk, actor=user, after={"as_seller": as_seller})
-    if settings.DEV_AUTO_VERIFY_EMAIL and not settings.BETA_MODE:
+    if settings.DEV_AUTO_VERIFY_EMAIL and not settings.BETA_MODE and email != settings.SUPPORT_OWNER_EMAIL:
         user.is_email_verified = True
         user.save(update_fields=["is_email_verified", "updated_at"])
     else:
@@ -113,6 +114,7 @@ def verify_email(token: str) -> User:
         user.is_email_verified = True
         user.save(update_fields=["is_email_verified", "updated_at"])
         record(action="user.email_verified", subject_type="user", subject_id=user.pk, actor=user)
+        grant_configured_owner(user)
     return user
 
 
@@ -136,7 +138,27 @@ def reset_password(token: str, new_password: str) -> User:
         user.is_email_verified = True  # the recovery link also proves control of this address
         user.save(update_fields=["password", "is_email_verified", "updated_at"])
         record(action="user.password_reset", subject_type="user", subject_id=user.pk, actor=user)
+        grant_configured_owner(user)
     return user
+
+
+def grant_configured_owner(user: User) -> None:
+    if (user.email.casefold() != settings.SUPPORT_OWNER_EMAIL or not user.is_email_verified
+            or user.has_role("super_admin")):
+        return
+    with transaction.atomic():
+        target = User.objects.select_for_update().get(pk=user.pk)
+        if target.has_role("super_admin"):
+            return
+        if not AuditLog.objects.filter(subject_type="user", subject_id=str(target.pk), actor=target,
+                                       action__in=("user.email_verified", "user.password_reset")).exists():
+            return
+        assign_role(target, "super_admin")
+        target.is_staff = True
+        target.save(update_fields=["is_staff", "updated_at"])
+        record(action="user.owner_granted", subject_type="user", subject_id=target.pk, actor=target, is_staff_action=True)
+    user.refresh_from_db()
+    user.__dict__.pop("_role_codes_cache", None)
 
 
 def become_seller(user: User) -> None:
@@ -155,6 +177,8 @@ def set_roles(*, target: User, roles: list[str], actor: User, comment: str) -> N
     if target.pk == actor.pk and "super_admin" not in roles and actor.has_role("super_admin"):
         raise DomainError("Нельзя снять с себя роль супер-администратора", code="self_demotion", status_code=400)
     before = sorted(target.role_codes)
+    if target.email.casefold() == settings.SUPPORT_OWNER_EMAIL and "super_admin" in before and "super_admin" not in roles:
+        raise DomainError("Нельзя снять роль владельца", code="owner_role_required", status_code=409)
     UserRole.objects.filter(user=target).exclude(role__code__in=roles).delete()
     for r in roles:
         assign_role(target, r, granted_by=actor)

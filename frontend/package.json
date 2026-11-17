@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest run",
+    "test": "vitest run && node --test scripts/secure-globs.test.mjs",
     "typecheck": "tsc --noEmit",
     "e2e": "node e2e/run-all.cjs"
   },
@@ -31,9 +31,13 @@
     "jsdom": "^26.1.0",
     "tailwindcss": "^4",
     "typescript": "^5",
-    "vitest": "^3.2.4"
+    "vitest": "^4.1.12",
+    "picomatch": "file:vendor/picomatch"
   },
   "overrides": {
-    "postcss": "^8.5.32"
+    "postcss": "^8.5.32",
+    "picomatch": "$picomatch",
+    "minimatch@^3": "^3.1.5",
+    "minimatch@>=7": "^11.0.9"
   }
 }

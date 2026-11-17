@@ -3,7 +3,7 @@ from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
-from rest_framework.throttling import UserRateThrottle
+from common.throttles import UserRateThrottle
 from rest_framework.views import APIView
 
 from common.exceptions import DomainError

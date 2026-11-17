@@ -1,6 +1,5 @@
 import { apiFetch } from "./client";
 
-export type Reason = { code: string; title: string; allowed_for: "buyer" | "seller" | "both" };
 export type Dispute = {
   id: string;
   order: string;
@@ -22,10 +21,7 @@ export type Dispute = {
 };
 export type Evidence = { attachment?: string; url?: string; description?: string };
 
-export const getReasons = () => apiFetch<Reason[]>("/dispute-reasons");
 export const orderDisputes = (oid: string) => apiFetch<Dispute[]>(`/orders/${oid}/disputes`);
-export const openDispute = (oid: string, body: { reason: string; description: string; items?: string[]; evidence?: Evidence[] }) =>
-  apiFetch<Dispute>(`/orders/${oid}/disputes/open`, { method: "POST", body });
 export const replyDispute = (id: string, body: string, evidence: Evidence[] = []) =>
   apiFetch<Dispute>(`/disputes/${id}/reply`, { method: "POST", body: { body, evidence } });
 export const appealDispute = (id: string, reason: string) => apiFetch<Dispute>(`/disputes/${id}/appeal`, { method: "POST", body: { reason } });
@@ -42,9 +38,6 @@ export const DECISION_LABEL: Record<string, string> = {
 };
 
 // staff
-export const staffQueue = (qs = "") => apiFetch<{ count: number; results: Record<string, unknown>[] }>(`/staff/disputes${qs ? `?${qs}` : ""}`);
 export const staffDispute = (id: string) => apiFetch<Dispute & Record<string, unknown>>(`/staff/disputes/${id}`);
 export const staffAction = (id: string, action: string, body: Record<string, unknown> = {}) =>
   apiFetch<Dispute & Record<string, unknown>>(`/staff/disputes/${id}/${action}`, { method: "POST", body });
-export const createTicket = (body: { subject: string; body: string; order?: string; category?: string }) =>
-  apiFetch<{ id: string }>("/support/tickets", { method: "POST", body });

@@ -3,7 +3,7 @@
 const { chromium } = require("playwright");
 (async () => {
   const base = process.env.E2E_BASE_URL ?? "http://localhost:3000";
-  const browser = await chromium.launch();
+  const browser = await chromium.launch({ channel: process.env.E2E_BROWSER_CHANNEL });
   const page = await browser.newPage();
   const email = `seller${Date.now()}@example.com`;
   await page.goto(`${base}/register`);

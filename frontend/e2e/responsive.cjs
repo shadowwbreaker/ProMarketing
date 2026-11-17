@@ -1,10 +1,10 @@
 // E2E: key pages render without horizontal scroll or runtime errors at phone (375) and desktop (1280) widths.
 const { chromium } = require("playwright");
 const PUBLIC = ["/", "/catalog", "/catalog?kind=networks", "/login", "/register", "/forgot-password", "/support", "/status"];
-const PRIVATE = ["/account", "/account?tab=analytics", "/messages", "/favorites", "/purchases", "/account/accounts/new", "/account/networks", "/orders/new?offer=x", "/staff", "/staff/disputes", "/staff/users", "/staff/accounts", "/staff/orders", "/staff/audit", "/staff/fraud", "/staff/reviews", "/staff/tickets"];
+const PRIVATE = ["/account", "/account?tab=analytics", "/messages", "/favorites", "/purchases", "/account/accounts/new", "/account/networks", "/orders/new?offer=x", "/staff", "/staff/users", "/staff/accounts", "/staff/orders/search", "/staff/audit", "/staff/fraud", "/staff/reviews", "/staff/tickets"];
 (async () => {
   const base = process.env.E2E_BASE_URL ?? "http://localhost:3000";
-  const browser = await chromium.launch();
+  const browser = await chromium.launch({ channel: process.env.E2E_BROWSER_CHANNEL });
   const problems = [];
   for (const width of [375, 1280]) {
     const ctx = await browser.newContext({ viewport: { width, height: 900 } });
@@ -14,7 +14,7 @@ const PRIVATE = ["/account", "/account?tab=analytics", "/messages", "/favorites"
     const check = async (path) => {
       errs.length = 0;
       await page.goto(base + path);
-      await page.waitForLoadState("networkidle").catch(() => {});
+      await page.waitForLoadState("networkidle", { timeout: 3000 }).catch(() => {});
       await page.waitForTimeout(400);
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
       if (overflow > 1) problems.push(`${width}px ${path}: horizontal overflow ${overflow}px`);

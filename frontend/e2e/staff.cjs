@@ -2,7 +2,7 @@
 const { chromium } = require("playwright");
 (async () => {
   const base = process.env.E2E_BASE_URL ?? "http://localhost:3000";
-  const browser = await chromium.launch();
+  const browser = await chromium.launch({ channel: process.env.E2E_BROWSER_CHANNEL });
   const page = await (await browser.newContext()).newPage();
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
@@ -28,7 +28,7 @@ const { chromium } = require("playwright");
   await page.getByRole("button", { name: "На проверку" }).first().click();
   await page.getByText("under_review").first().waitFor();
   await page.getByRole("button", { name: "Одобрить" }).first().click();
-  await page.getByRole("link", { name: "Заказы" }).click();
+  await page.goto(base + "/staff/orders/search");
   await page.getByText("Найдено:").waitFor();
   await page.getByRole("link", { name: "Журнал" }).click();
   await page.getByText("Целостность журнала: не нарушена").waitFor();

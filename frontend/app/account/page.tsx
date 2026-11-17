@@ -25,9 +25,6 @@ const GROUPS: { title: string; tabs: Tab[] }[] = [
     { key: "payouts", label: "Выплаты", seller: true },
     { key: "analytics", label: "Аналитика" },
   ] },
-  { title: "Общение", tabs: [
-    { key: "tickets", label: "Обращения в поддержку" },
-  ] },
   { title: "Прочее", tabs: [
     { key: "profile", label: "Настройки профиля" },
     { key: "security", label: "Безопасность" },
@@ -201,7 +198,6 @@ function AccountPage() {
         {tab === "analytics" && <AnalyticsPanel />}
         {tab === "referrals" && <ReferralsPanel />}
         {tab === "reviews" && <MineList<Simple> path="reviews" empty="Отзывов пока нет" render={(r) => `${r.rating}★ ${r.text ?? ""}`} />}
-        {tab === "tickets" && <MineList<Simple> path="tickets" empty="Обращений нет" render={(t) => `${t.subject} · ${t.status}`} />}
       </section>
     </div>
   );

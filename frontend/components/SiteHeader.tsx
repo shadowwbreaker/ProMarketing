@@ -14,6 +14,8 @@ function UserMenu({ sound, toggleSound }: { sound: boolean; toggleSound: () => v
   const { me, signOut } = useAuth();
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [hover, setHover] = useState(false);
+  const expanded = open || hover;
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const close = (e: MouseEvent) => {
@@ -25,22 +27,26 @@ function UserMenu({ sound, toggleSound }: { sound: boolean; toggleSound: () => v
   if (!me) return null;
   const item = "block px-4 py-2 text-sm transition-colors duration-150 hover:bg-bg";
   return (
-    <div ref={ref} className="relative">
-      <button onClick={() => setOpen((v) => !v)} aria-expanded={open} aria-haspopup="menu"
-        className="flex min-w-0 items-center gap-2 font-semibold hover:text-accent">
+    <div ref={ref} className="relative min-w-0"
+      onPointerEnter={(e) => { if (e.pointerType === "mouse") setHover(true); }}
+      onPointerLeave={() => setHover(false)}
+      onKeyDown={(e) => { if (e.key === "Escape") { setOpen(false); setHover(false); } }}>
+      <button onClick={() => setOpen((v) => !v)} aria-expanded={expanded} aria-haspopup="menu" aria-label={me.profile.display_name}
+        className="flex w-full min-w-0 items-center gap-2 font-semibold hover:text-accent">
         <Avatar id={me.id} name={me.profile.display_name} size={28} src={me.profile.avatar_url} />
         <span className="hidden max-w-[9rem] truncate sm:inline">{me.profile.display_name}</span>
         <span className="hidden text-xs sm:inline">▾</span>
       </button>
-      {open && (
-        <div role="menu" className="pop absolute right-0 z-20 mt-2 w-56 overflow-hidden rounded-2xl border border-border bg-surface py-1.5 shadow-xl" onClick={() => setOpen(false)}>
+      {expanded && (
+        <div role="menu" className="pop absolute right-0 top-full z-20 w-56 overflow-hidden rounded-2xl border border-border bg-surface py-1.5 shadow-xl" onClick={() => { setOpen(false); setHover(false); }}>
           <Link href={`/sellers/${me.id}`} className={item} role="menuitem">Мой профиль</Link>
           <Link href="/account/accounts/new" className={item} role="menuitem">+ Добавить канал</Link>
           <Link href="/purchases" className={`${item} md:hidden`} role="menuitem">Мои покупки</Link>
           <Link href="/account?tab=accounts" className={item} role="menuitem">Мои каналы</Link>
           <Link href="/favorites" className={`${item} sm:hidden`} role="menuitem">Избранное</Link>
           {me.permissions.includes("staff.access") && <Link href="/staff" className={`${item} lg:hidden`} role="menuitem">Служебный раздел</Link>}
-          <Link href="/support" className={item} role="menuitem">Помощь</Link>
+          <Link href="/support/tickets" className={item} role="menuitem">Обращения в поддержку</Link>
+          {me.permissions.includes("support.work") && <Link href="/staff/tickets" className={item} role="menuitem">Рабочее место поддержки</Link>}
           <Link href="/account?tab=profile" className={item} role="menuitem">Настройки</Link>
           <button type="button" role="menuitemcheckbox" aria-checked={sound} className={`${item} w-full text-left`} onClick={toggleSound}>
             Звук сообщений: {sound ? "вкл." : "выкл."}

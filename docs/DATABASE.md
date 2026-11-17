@@ -96,3 +96,9 @@
 ## 9. Дополнения к списку roadmap (Phase 1)
 
 Roadmap перечисляет 23 модели. Для выполнения требований других фаз дополнительно нужны: `social_account_connections`, `stats_refresh_jobs`, `order_terms_versions`, `publication_proofs`, `publication_checks`, `order_events`, `payment_allocations`, `payment_webhook_events`, `financial_ledger_entries`, `attachments`, `chat_message_revisions`, `dispute_reasons`, `dispute_items`, `dispute_messages`, `dispute_decisions`, `dispute_actions`, `admin_notes`, роли/разрешения, `review_complaints`.
+
+## Актуализация · 18 ноября 2026
+
+support.0004_arbitration_queue добавляет передачу и связь заявки с делом; встречная жалоба атомарно дополняет позиции. accounts.0007_retire_seed_accounts архивирует известные demo/e2e без удаления заказов/чатов/аудита, скрывает предложения и отзывает доступ. DB_CONN_MAX_AGE=0. [Миграции](RELEASE_2026-11-18.md).
+
+Роли включают arbitrator (арбитраж), support_agent (поддержка) и super_admin (владелец). Dispute.intake_category хранит order/refund для общего приёма; referred_at — дату передачи арбитражу. SupportTicket.arbitration — необязательная защищённая ссылка на дело. TicketMessage хранит ticket, author, body и даты в общей истории обращения. Эти изменения введены support.0004; остальные поля моделей не удаляются.

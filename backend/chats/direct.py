@@ -8,7 +8,7 @@ from django.db import IntegrityError, transaction
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework.response import Response
-from rest_framework.throttling import ScopedRateThrottle
+from common.throttles import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from accounts.models import User

@@ -44,7 +44,7 @@ export default function HomePage() {
               Продать рекламу
             </Link>
           </div>
-          <p className="mt-5 text-sm text-muted">Комиссия 5% · выплата через 48 часов после подтверждения · споры решает поддержка</p>
+          <p className="mt-5 text-sm text-muted">Выплата через 48 часов после подтверждения · споры решает поддержка</p>
         </div>
         <ShortsFan className="mx-auto w-full max-w-sm lg:max-w-none" />
       </section>

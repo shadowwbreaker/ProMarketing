@@ -76,3 +76,7 @@
 Сотрудники: `/staff/disputes[/{id}[/{action}]]`, `/staff/tickets`, `/staff/dashboard`, `/staff/users`, `/staff/accounts`, `/staff/orders`, `/staff/audit[/verify]`, `/staff/reviews`, `/staff/fraud-signals`.
 Отзывы: `POST /reviews/{id}/{reply|complain}`. Phase 13: `/me/{favorites|viewed|recommendations|analytics|referrals}`, `GET /catalog/compare?ids=`.
 Полная схема — `/api/schema/` (OpenAPI).
+
+## Актуализация · 18 ноября 2026
+
+Phase 13 выше — исторический перечень: /catalog/compare, /me/viewed, /me/recommendations удалены D-022. Актуальные маршруты поддержки — таблица API [TECH_SUPPORT_LOCAL](TECH_SUPPORT_LOCAL.md). GET/PUT /staff/users/{id}/roles управляет ролями выбранного подтверждённого пользователя с комментарием. Старый disputes/open не обходит referral/assignee/arbitration.work. Апелляция неверного типа:400, конфликт интересов:403, лимит:429, отказ лимитера:503. [Подробности](RELEASE_2026-11-18.md).

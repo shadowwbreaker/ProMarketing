@@ -5,7 +5,9 @@ import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { LoadingState } from "@/components/ui/States";
+import { ErrorState, LoadingState } from "@/components/ui/States";
+import { UserRolesEditor } from "@/components/UserRolesEditor";
+import { ROLE_LABELS } from "@/lib/roles";
 import { useToast } from "@/components/ui/Toast";
 import { apiFetch } from "@/lib/api/client";
 import { useAuth } from "@/lib/auth/AuthProvider";
@@ -18,8 +20,12 @@ export default function StaffUser() {
   const { me } = useAuth();
   const toast = useToast();
   const [u, setU] = useState<any>();
-  const load = useCallback(() => apiFetch<any>(`/staff/users/${id}`).then(setU), [id]);
+  const [error, setError] = useState("");
+  const load = useCallback(() => apiFetch<any>(`/staff/users/${id}`).then((user) => {
+    setU(user); setError("");
+  }).catch((ex) => setError(fieldErrors(ex).form ?? "Не удалось загрузить пользователя.")), [id]);
   useEffect(() => void load(), [load]);
+  if (error) return <ErrorState message={error} onRetry={() => void load()} />;
   if (!u) return <LoadingState />;
   const can = me?.permissions.includes("user.sanction");
   const act = (action: string) => {
@@ -32,8 +38,9 @@ export default function StaffUser() {
   const orders = (rows: any[]) => <ul className="text-sm">{rows.map((o) => <li key={o.id}><Link className="text-accent" href={`/orders/${o.id}`}>{formatDateTime(o.created_at)}</Link> · {o.status} · {formatMoney(o.total_minor)}</li>)}</ul>;
   return (
     <div className="flex flex-col gap-4">
+      <Link href="/staff/users" className="text-sm font-semibold text-accent">К пользователям</Link>
       <h1 className="text-2xl font-bold">{u.display_name} <span className="text-base font-normal text-muted">{u.email}</span></h1>
-      <p className="text-sm">Статус: <b>{u.status}</b> · роли: {u.roles.join(", ")} · email {u.is_email_verified ? "подтверждён" : "не подтверждён"} · был {u.last_seen_at ? formatDateTime(u.last_seen_at) : "—"}</p>
+      <p className="text-sm">Статус: <b>{u.status}</b> · роли: {u.roles.map((role: string) => ROLE_LABELS[role] ?? role).join(", ")} · email {u.is_email_verified ? "подтверждён" : "не подтверждён"} · был {u.last_seen_at ? formatDateTime(u.last_seen_at) : "—"}</p>
       {can && (
         <div className="flex flex-wrap gap-2">
           <Button variant="secondary" onClick={() => act("warning")}>Предупреждение</Button>
@@ -42,6 +49,8 @@ export default function StaffUser() {
           <Button variant="ghost" onClick={() => act("unblock")}>Разблокировать</Button>
         </div>
       )}
+      {me?.permissions.includes("user.manage_roles") && <UserRolesEditor key={u.id} userId={u.id} roles={u.roles}
+        onSaved={(roles) => setU((current: any) => ({ ...current, roles }))} />}
       <div className="grid gap-4 md:grid-cols-2">
         <Card><h2 className="mb-1 font-bold">Покупки</h2>{orders(u.orders_as_buyer)}</Card>
         <Card><h2 className="mb-1 font-bold">Продажи</h2>{orders(u.orders_as_seller)}</Card>

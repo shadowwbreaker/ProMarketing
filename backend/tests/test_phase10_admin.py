@@ -102,3 +102,34 @@ def test_audit_log_view_and_integrity(api, market, team):
     assert e["actor"] == team["admin"].email and e["reason"] == "предупреждение"
     assert e["before"] == {"status": "active"} and e["after"] == {"status": "active"}
     assert as_(api, team["admin"]).get("/api/v1/staff/audit/verify").json()["ok"] is True
+
+
+@pytest.mark.django_db
+def test_owner_can_select_user_and_grant_or_revoke_roles(api, market, team):
+    from accounts.models import User
+    from audit.models import AuditLog
+
+    employee = market["buyer"]
+    owner = team["super"]
+    url = f"/api/v1/staff/users/{employee.pk}/roles"
+    roles = ["buyer", "seller", "support_agent", "arbitrator", "moderator", "admin"]
+    body = {"roles": roles, "comment": "Назначение ролей выбранному пользователю."}
+    selected = as_(api, owner).get("/api/v1/staff/users", {"q": employee.email}).data
+    assert selected["count"] == 1 and selected["results"][0]["id"] == str(employee.pk)
+    for unauthorized in (employee, team["support"], team["admin"]):
+        assert as_(api, unauthorized).put(url, body, format="json").status_code == 403
+    granted = as_(api, owner).put(url, body, format="json")
+    assert granted.status_code == 200, granted.data
+    assert set(granted.data["roles"]) == set(roles)
+    assert "moderation.content" in granted.data["permissions"]
+    assert "arbitration.work" in granted.data["permissions"]
+    employee = User.objects.get(pk=employee.pk)
+    assert as_(api, employee).get("/api/v1/staff/reviews").status_code == 200
+    assert api.get("/api/v1/staff/arbitration").status_code == 200
+    revoked = as_(api, owner).put(url, {"roles": ["buyer"], "comment": "Снятие служебных ролей."}, format="json")
+    assert revoked.status_code == 200 and revoked.data["roles"] == ["buyer"]
+    employee = User.objects.get(pk=employee.pk)
+    assert not employee.is_staff
+    assert as_(api, employee).get("/api/v1/staff/reviews").status_code == 403
+    assert api.get("/api/v1/staff/arbitration").status_code == 403
+    assert AuditLog.objects.filter(subject_id=str(employee.pk), action="user.roles_changed", actor=owner).count() == 2

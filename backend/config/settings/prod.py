@@ -63,6 +63,8 @@ if BETA_MODE and EMAIL_BACKEND in _NON_DELIVERY_BACKENDS:
 
 # --- refuse unsafe configuration -------------------------------------------------------
 _errors = []
+if ENABLE_TEST_FIXTURES:  # noqa: F405
+    _errors.append("ENABLE_TEST_FIXTURES is forbidden in production")
 if SECRET_KEY.startswith("dev-") or len(SECRET_KEY) < 40:
     _errors.append("DJANGO_SECRET_KEY must be a strong secret (>= 40 chars)")
 if PAYMENT_PROVIDER == "mock" and not BETA_MODE:

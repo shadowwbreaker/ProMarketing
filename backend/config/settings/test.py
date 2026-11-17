@@ -1,5 +1,6 @@
 from .base import *  # noqa: F401,F403
 
+ENABLE_TEST_FIXTURES = True
 DEBUG = False
 ENV = "test"
 PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]  # speed only in tests

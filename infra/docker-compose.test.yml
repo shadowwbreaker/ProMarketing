@@ -1,0 +1,8 @@
+# Explicit disposable test setup; never use with the real service database.
+services:
+  backend:
+    environment:
+      ENABLE_TEST_FIXTURES: "true"
+      BETA_MODE: "${E2E_BETA_MODE:-false}"
+      THROTTLE_AUTH: "120/min"
+    command: sh -c "python manage.py migrate && python manage.py seed_demo && python manage.py runserver 0.0.0.0:8000"

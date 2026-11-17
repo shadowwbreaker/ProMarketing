@@ -8,7 +8,7 @@ from rest_framework import status
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
-from rest_framework.throttling import ScopedRateThrottle
+from common.throttles import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from audit.services import record
@@ -114,6 +114,10 @@ class LoginView(CsrfAuthMixin, APIView):
             if not verify(user, otp):
                 record(action="user.login_bad_otp", subject_type="user", subject_id=user.pk, actor=user, ip=_ip(request))
                 raise DomainError("Неверный код подтверждения", code="invalid_otp", status_code=400)
+        services.grant_configured_owner(user)
+        if s.validated_data["staff_support"] and not (user.has_perm_code("support.work") or user.has_perm_code("arbitration.work")):
+            raise DomainError("Вход доступен сотрудникам технической поддержки и администраторам",
+                              code="support_login_required", status_code=403)
         login(request, user)  # rotates session key (session fixation protection)
         request.session.pop("staff_totp", None)
         if factor_enabled:
@@ -227,6 +231,30 @@ class StaffUserRolesView(APIView):
         s.is_valid(raise_exception=True)
         services.set_roles(target=target, roles=s.validated_data["roles"], actor=request.user,
                            comment=s.validated_data["comment"])
+        return Response(MeSerializer(target).data)
+
+
+class SupportRolesByEmail(APIView):
+    permission_classes = [HasPerm("user.manage_roles")]
+
+    def put(self, request):
+        from django.db import transaction
+        from rest_framework import serializers
+
+        email = serializers.EmailField(max_length=254).run_validation(request.data.get("email"))
+        role = serializers.ChoiceField(choices=("admin", "support_agent", "arbitrator")).run_validation(request.data.get("role"))
+        enabled = serializers.BooleanField().run_validation(request.data.get("enabled", True))
+        with transaction.atomic():
+            target = get_object_or_404(User.objects.select_for_update().filter(is_active=True), email__iexact=email)
+            if not target.is_email_verified:
+                raise DomainError("Пользователь должен подтвердить email", code="email_unverified", status_code=400)
+            roles = set(target.role_codes)
+            if enabled:
+                roles.add(role)
+            else:
+                roles.discard(role)
+            services.set_roles(target=target, roles=sorted(roles), actor=request.user,
+                               comment="Изменение роли по подтверждённому email")
         return Response(MeSerializer(target).data)
 
 

@@ -39,7 +39,7 @@ APPEAL_DAYS = 7
 MIN_DESCRIPTION = 20
 
 DISPUTE_TRANSITIONS = {
-    D.OPEN: {D.WAITING_SELLER, D.WAITING_BUYER, D.UNDER_REVIEW},
+    D.OPEN: {D.WAITING_SELLER, D.WAITING_BUYER, D.UNDER_REVIEW, D.REJECTED},
     D.WAITING_SELLER: {D.UNDER_REVIEW, D.EVIDENCE_REQUESTED, D.ESCALATED, D.WAITING_BUYER, D.RESOLVED, D.REJECTED},
     D.WAITING_BUYER: {D.UNDER_REVIEW, D.EVIDENCE_REQUESTED, D.ESCALATED, D.WAITING_SELLER, D.RESOLVED, D.REJECTED},
     D.UNDER_REVIEW: {D.EVIDENCE_REQUESTED, D.ESCALATED, D.RESOLVED, D.REJECTED, D.WAITING_SELLER, D.WAITING_BUYER},
@@ -97,9 +97,12 @@ def _attach_evidence(d: Dispute, user, evidence: list[dict]):
 
 
 # --- opening ----------------------------------------------------------------------------
-def open_dispute(order_id, *, actor, item_ids: list, reason_code: str, description: str, evidence: list[dict] | None = None) -> Dispute:
+def open_dispute(order_id, *, actor, item_ids: list, reason_code: str, description: str, evidence: list[dict] | None = None,
+                 intake_category: str = "order") -> Dispute:
     from payments.services import suspend_payout
 
+    if intake_category not in ("order", "refund"):
+        raise DomainError("Неизвестная категория обращения", code="bad_category", status_code=400)
     description = (description or "").strip()
     if len(description) < MIN_DESCRIPTION:
         raise DomainError(f"Опишите проблему подробнее (не короче {MIN_DESCRIPTION} символов)", code="description_required", status_code=400)
@@ -115,29 +118,49 @@ def open_dispute(order_id, *, actor, item_ids: list, reason_code: str, descripti
         if not items or (item_ids and len(items) != len(set(map(str, item_ids)))):
             raise DomainError("Выберите позиции этого заказа", code="bad_items", status_code=400)
 
-        # Scenario 15: a claim on an item that is already disputed joins that dispute as a counter-claim.
-        active = DisputeItem.objects.filter(order_item__in=items, is_active=True).select_related("dispute").first()
-        if active:
-            d = Dispute.objects.select_for_update().get(pk=active.dispute_id)
+        # Lock the order first. A partially overlapping counterclaim must not lose its new items.
+        active = list(DisputeItem.objects.filter(order_item__in=items, is_active=True)
+                      .values_list("order_item_id", "dispute_id"))
+        case_ids = {case_id for _, case_id in active}
+        if len(case_ids) > 1:
+            raise DomainError("Позиции относятся к разным жалобам. Отправьте обращения отдельно.",
+                              code="multiple_disputes", status_code=400)
+        active_item_ids = {item_id for item_id, _ in active}
+        new_items = [item for item in items if item.pk not in active_item_ids]
+        allowed = BUYER_DISPUTABLE if role == "buyer" else SELLER_DISPUTABLE
+        bad = [item for item in new_items if item.status not in allowed]
+        if bad:
+            raise DomainError("По этим позициям жалоба сейчас недоступна", code="not_disputable", status_code=400,
+                              details={"items": [str(i.pk) for i in bad], "statuses": [i.status for i in bad]})
+        if case_ids:
+            d = Dispute.objects.select_for_update().get(pk=next(iter(case_ids)))
             if d.opened_by_id == actor.pk:
                 raise DomainError("По этой позиции у вас уже есть открытая жалоба", code="already_disputed")
+            if d.items.filter(order_item__in=new_items).exists():
+                raise DomainError("По части позиций уже принято решение. Отправьте отдельное обращение.",
+                                  code="item_already_decided", status_code=400)
+            for item in new_items:
+                DisputeItem.objects.create(dispute=d, order_item=item, status_before=item.status)
+                _move(order, item, S.DISPUTED, actor=actor, event="item.disputed", dispute=d.pk)
+                suspend_payout(item, reason=f"dispute {d.pk}")
             d.has_counterclaim = True
             d.save(update_fields=["has_counterclaim", "updated_at"])
             DisputeMessage.objects.create(dispute=d, author=actor, body=f"Встречная претензия ({reason.title}): {description}")
             _attach_evidence(d, actor, evidence)
-            append_event(order, "dispute.counterclaim", actor=actor, dispute=d.pk, reason=reason.code)
+            append_event(order, "dispute.counterclaim", actor=actor, dispute=d.pk, reason=reason.code,
+                         items=[str(item.pk) for item in items])
             if d.status in (D.WAITING_SELLER, D.WAITING_BUYER):
                 _set_status(d, D.UNDER_REVIEW, actor=actor, comment="встречная претензия")
+            notify(d.opened_by, "dispute.reply", "Встречная претензия по заказу", description[:120],
+                   order=order.pk, dispute=d.pk)
+            if d.assignee_id:
+                notify(d.assignee, "dispute.reply", "Новая встречная претензия", description[:120],
+                       order=order.pk, dispute=d.pk)
             return d
 
-        allowed = BUYER_DISPUTABLE if role == "buyer" else SELLER_DISPUTABLE
-        bad = [i for i in items if i.status not in allowed]
-        if bad:
-            raise DomainError("По этим позициям жалоба сейчас недоступна", code="not_disputable", status_code=400,
-                              details={"items": [str(i.pk) for i in bad], "statuses": [i.status for i in bad]})
         now = timezone.now()
         d = Dispute.objects.create(order=order, opened_by=actor, reason=reason, description=description,
-                                   response_due_at=now + timedelta(hours=settings.DISPUTE_RESPONSE_HOURS))
+                                   intake_category=intake_category, response_due_at=now + timedelta(hours=settings.DISPUTE_RESPONSE_HOURS))
         for it in items:
             DisputeItem.objects.create(dispute=d, order_item=it, status_before=it.status)
             _move(order, it, S.DISPUTED, actor=actor, event="item.disputed", dispute=d.pk)
@@ -180,12 +203,16 @@ def party_reply(dispute_id, *, actor, body: str, evidence: list[dict] | None = N
 def appeal(dispute_id, *, actor, reason: str) -> Dispute:
     from payments.services import suspend_payout
 
-    reason = (reason or "").strip()
+    if not isinstance(reason, str):
+        raise DomainError("Основания апелляции должны быть текстом", code="invalid_reason", status_code=400)
+    reason = reason.strip()
     if len(reason) < MIN_DESCRIPTION:
         raise DomainError("Опишите основания апелляции", code="description_required", status_code=400)
     with transaction.atomic():
-        d = Dispute.objects.select_for_update().select_related("order").get(pk=dispute_id)
-        _role(d.order, actor)
+        order_id = Dispute.objects.values_list("order_id", flat=True).get(pk=dispute_id)
+        order = Order.objects.select_for_update().get(pk=order_id)
+        d = Dispute.objects.select_for_update().get(pk=dispute_id)
+        _role(order, actor)
         if d.status not in (D.RESOLVED, D.REJECTED):
             raise DomainError("Апелляция возможна только на принятое решение", code="not_appealable")
         if d.appeal_of_id or d.appeals.exists():
@@ -194,8 +221,9 @@ def appeal(dispute_id, *, actor, reason: str) -> Dispute:
             raise DomainError("Срок апелляции истёк", code="appeal_window_passed")
         _set_status(d, D.APPEALED, actor=actor, comment="подана апелляция")
         a = Dispute.objects.create(order=d.order, opened_by=actor, reason=d.reason, description=reason, appeal_of=d,
-                                   status=D.APPEALED, priority=Dispute.Priority.HIGH)
-        order = Order.objects.select_for_update().get(pk=d.order_id)
+                                   status=D.APPEALED, priority=Dispute.Priority.HIGH,
+                                   intake_category=d.intake_category,
+                                   referred_at=timezone.now() if d.intake_category or d.referred_at else None)
         for di in d.items.select_related("order_item"):
             it = OrderItem.objects.select_for_update().get(pk=di.order_item_id)
             DisputeItem.objects.create(dispute=a, order_item=it, status_before=it.status)
@@ -208,6 +236,9 @@ def appeal(dispute_id, *, actor, reason: str) -> Dispute:
 
 # --- staff --------------------------------------------------------------------------------
 def _staff(d: Dispute, actor, perm="dispute.handle"):
+    if actor.pk in (d.order.buyer_id, d.order.seller_id):
+        raise DomainError("Участник заказа не может рассматривать собственное обращение",
+                          code="conflict_of_interest", status_code=403)
     if not actor.has_perm_code(perm):
         raise DomainError("Недостаточно прав", code="forbidden", status_code=403)
     if d.status in (D.ESCALATED, D.APPEALED) and perm in ("dispute.decide",) and not actor.has_perm_code("dispute.escalated"):
@@ -218,6 +249,22 @@ def assign(dispute_id, *, actor, assignee) -> Dispute:
     with transaction.atomic():
         d = Dispute.objects.select_for_update().get(pk=dispute_id)
         _staff(d, actor)
+        if assignee.pk in (d.order.buyer_id, d.order.seller_id):
+            raise DomainError("Участник заказа не может быть назначенным сотрудником",
+                              code="conflict_of_interest", status_code=403)
+        if d.referred_at:
+            if actor.pk != assignee.pk or not actor.has_perm_code("arbitration.work"):
+                raise DomainError("Жалобу ведёт арбитраж", code="arbitration_required", status_code=403)
+            if actor.pk in (d.order.buyer_id, d.order.seller_id):
+                raise DomainError("Участник заказа не может быть его арбитром", code="conflict_of_interest", status_code=403)
+        if d.assignee_id == assignee.pk:
+            return d
+        if d.status not in ACTIVE_DISPUTE_STATUSES:
+            raise DomainError("Жалоба закрыта", code="dispute_closed")
+        if d.status in (D.ESCALATED, D.APPEALED) and not assignee.has_perm_code("dispute.escalated"):
+            raise DomainError("Жалобу рассматривает старший сотрудник", code="escalated_only", status_code=403)
+        if d.assignee_id and (assignee.pk == actor.pk or not actor.has_perm_code("dispute.escalated")):
+            raise DomainError("Жалоба уже у другого сотрудника", code="dispute_taken", status_code=409)
         if not assignee.has_perm_code("dispute.handle"):
             raise DomainError("Сотрудник не может вести споры", code="bad_assignee", status_code=400)
         if d.appeal_of_id:
@@ -230,6 +277,44 @@ def assign(dispute_id, *, actor, assignee) -> Dispute:
         record(action="dispute.assigned", subject_type="dispute", subject_id=d.pk, actor=actor, is_staff_action=True,
                order_id=d.order_id, before={"assignee": before}, after={"assignee": str(assignee.pk)})
     return d
+
+
+@transaction.atomic
+def refer_to_arbitration(dispute_id, *, actor):
+    dispute = Dispute.objects.select_for_update().get(pk=dispute_id)
+    _staff(dispute, actor, perm="support.work")
+    if dispute.referred_at:
+        raise DomainError("Жалоба уже передана в арбитраж", code="already_referred")
+    if not actor.has_perm_code("support.work") or dispute.assignee_id != actor.pk:
+        raise DomainError("Сначала возьмите обращение в работу", code="ticket_unassigned", status_code=403)
+    if dispute.status not in ACTIVE_DISPUTE_STATUSES or not dispute.items.filter(is_active=True).exists():
+        raise DomainError("По обращению уже принято решение", code="dispute_closed")
+    dispute.referred_at = timezone.now()
+    dispute.assignee = None
+    dispute.save(update_fields=["referred_at", "assignee", "updated_at"])
+    record(action="dispute.referred", subject_type="dispute", subject_id=dispute.pk, actor=actor,
+           is_staff_action=True, order_id=dispute.order_id)
+    return dispute
+
+
+@transaction.atomic
+def close_without_refund(dispute_id, *, actor, comment):
+    order_id = Dispute.objects.values_list("order_id", flat=True).get(pk=dispute_id)
+    Order.objects.select_for_update().only("pk").get(pk=order_id)
+    dispute = Dispute.objects.select_for_update().get(pk=dispute_id)
+    required = "arbitration.work" if dispute.referred_at else "support.work"
+    _staff(dispute, actor, perm=required)
+    if not actor.has_perm_code(required) or dispute.assignee_id != actor.pk:
+        raise DomainError("Закрыть обращение может назначенный сотрудник", code="forbidden", status_code=403)
+    items = list(dispute.items.filter(is_active=True).values_list("order_item_id", flat=True))
+    if dispute.status not in ACTIVE_DISPUTE_STATUSES or not items:
+        raise DomainError("Обращение уже закрыто", code="dispute_closed")
+    if dispute.decisions.filter(actions__status=DisputeAction.Status.PENDING).exists():
+        raise DomainError("Дождитесь подтверждения возврата", code="refund_pending")
+    for item_id in items:
+        decide(dispute_id, actor=actor, item_id=item_id, decision_type=DisputeDecision.Type.REJECT,
+               comment=comment, _support_close=not dispute.referred_at)
+    return dispute
 
 
 def set_priority(dispute_id, *, actor, priority: str) -> Dispute:
@@ -288,12 +373,13 @@ def escalate(dispute_id, *, actor, comment: str) -> Dispute:
             raise DomainError("Комментарий обязателен", code="comment_required", status_code=400)
         _set_status(d, D.ESCALATED, actor=actor, comment=comment, staff=True)
         d.priority = Dispute.Priority.HIGH
-        d.save(update_fields=["priority", "updated_at"])
+        d.assignee = None
+        d.save(update_fields=["priority", "assignee", "updated_at"])
     return d
 
 
 def decide(dispute_id, *, actor, item_id, decision_type: str, comment: str, refund_amount_minor: int | None = None,
-           new_deadline=None, sanction: dict | None = None) -> DisputeDecision:
+           new_deadline=None, sanction: dict | None = None, _support_close=False) -> DisputeDecision:
     """One decision for one order item (roadmap 9.6). Comment is mandatory; financial decisions need finance.refund."""
     from payments.services import refund_item, resume_payout
 
@@ -311,13 +397,22 @@ def decide(dispute_id, *, actor, item_id, decision_type: str, comment: str, refu
         return DisputeDecision.objects.create(dispute_id=dispute_id, decision_type=decision_type, comment=comment, decided_by=actor)
 
     with transaction.atomic():
-        d = Dispute.objects.select_for_update().select_related("order").get(pk=dispute_id)
-        _staff(d, actor, perm="dispute.decide")
+        order_id = Dispute.objects.values_list("order_id", flat=True).get(pk=dispute_id)
+        order = Order.objects.select_for_update().get(pk=order_id)
+        d = Dispute.objects.select_for_update().get(pk=dispute_id)
+        _staff(d, actor, perm="support.work" if _support_close else "dispute.decide")
+        if _support_close and (d.referred_at or d.assignee_id != actor.pk or decision_type != T.REJECT):
+            raise DomainError("Недопустимое закрытие обращения", code="forbidden", status_code=403)
+        if not _support_close:
+            if not (d.referred_at and d.assignee_id == actor.pk and actor.has_perm_code("arbitration.work")):
+                raise DomainError("Решение доступно арбитру, который взял заказ", code="arbitration_required", status_code=403)
         if decision_type in FINANCIAL and not actor.has_perm_code("finance.refund"):
             raise DomainError("Финансовые решения доступны только администратору", code="forbidden", status_code=403)
         if decision_type == T.SANCTION and not actor.has_perm_code("user.sanction"):
             raise DomainError("Недостаточно прав для санкций", code="forbidden", status_code=403)
         reviewable = set(ACTIVE_DISPUTE_STATUSES) - {D.OPEN}
+        if _support_close:
+            reviewable.add(D.OPEN)
         if decision_type == T.SANCTION:
             reviewable |= {D.RESOLVED, D.REJECTED}  # sanctions may follow the decision (scenarios 7, 10)
         if d.status not in reviewable:
@@ -327,7 +422,11 @@ def decide(dispute_id, *, actor, item_id, decision_type: str, comment: str, refu
         di = d.items.select_for_update().filter(order_item_id=item_id, is_active=True).first()
         if decision_type != T.SANCTION and not di:
             raise DomainError("Позиция не относится к спору или уже решена", code="bad_item", status_code=400)
-        if decision_type == T.PARTIAL_REFUND and not refund_amount_minor:
+        if di and DisputeAction.objects.filter(
+            decision__dispute=d, decision__order_item_id=item_id, status=DisputeAction.Status.PENDING,
+        ).exists():
+            raise DomainError("Дождитесь подтверждения предыдущего решения", code="refund_pending")
+        if decision_type == T.PARTIAL_REFUND and (type(refund_amount_minor) is not int or refund_amount_minor <= 0):
             raise DomainError("Укажите сумму частичного возврата", code="amount_required", status_code=400)
         if decision_type in (T.REDO, T.EXTEND) and not new_deadline:
             raise DomainError("Укажите новый срок", code="deadline_required", status_code=400)
@@ -339,8 +438,6 @@ def decide(dispute_id, *, actor, item_id, decision_type: str, comment: str, refu
                order_id=d.order_id, after={"item": str(item_id) if item_id else None, "amount": refund_amount_minor,
                                            "deadline": str(new_deadline) if new_deadline else None},
                comment=comment)
-        order = Order.objects.select_for_update().get(pk=d.order_id)
-
         if decision_type == T.SANCTION:
             s = sanction or {}
             target_id = order.buyer_id if s.get("target") == "buyer" else order.seller_id
@@ -367,8 +464,6 @@ def decide(dispute_id, *, actor, item_id, decision_type: str, comment: str, refu
 
         if decision_type in FINANCIAL:
             amount = None if decision_type == T.FULL_REFUND else refund_amount_minor
-            di.is_active, di.decided = False, True
-            di.save(update_fields=["is_active", "decided", "updated_at"])
         elif decision_type == T.REJECT:
             target = S.AWAITING_BUYER_CONFIRMATION if before == S.PUBLISHED else before
             if not can_transition(S.DISPUTED, target):
@@ -399,38 +494,65 @@ def decide(dispute_id, *, actor, item_id, decision_type: str, comment: str, refu
             action.status = DisputeAction.Status.DONE
             action.save(update_fields=["status", "updated_at"])
 
+
     if decision_type in FINANCIAL:
         try:
             refund = refund_item(item_id, amount_minor=amount, reason=f"Решение по спору: {comment}", actor=actor, decision=decision)
-            action.refund_request = refund
-            action.status = DisputeAction.Status.DONE if refund and refund.status == "succeeded" else DisputeAction.Status.PENDING
-        except DomainError as e:
-            action.status, action.error = DisputeAction.Status.FAILED, e.message
-            with transaction.atomic():  # the decision stands, but money could not move → item stays in dispute
-                DisputeItem.objects.filter(pk=di.pk).update(is_active=True, decided=False)
-            action.save(update_fields=["refund_request", "status", "error", "updated_at"])
+            if not refund:
+                raise DomainError("Подтверждённый платёж не найден", code="payment_not_found")
+        except DomainError as exc:
+            action.status, action.error = DisputeAction.Status.FAILED, exc.message
+            action.save(update_fields=["status", "error", "updated_at"])
             raise
-        action.save(update_fields=["refund_request", "status", "error", "updated_at"])
-        with transaction.atomic():
-            it = OrderItem.objects.select_for_update().get(pk=item_id)
-            if it.status == S.PARTIALLY_REFUNDED:
-                # The seller keeps the undisputed remainder: hold 48h from the decision if never confirmed (D-014)
-                from payments.services import create_payout_hold
-
-                if not it.confirmed_at:
-                    it.confirmed_at = timezone.now()
-                    it.payout_available_at = it.confirmed_at + timedelta(hours=settings.PAYOUT_HOLD_HOURS)
-                    it.save(update_fields=["confirmed_at", "payout_available_at", "updated_at"])
-                create_payout_hold(it)
-                resume_payout(it)
-    _maybe_resolve(dispute_id, actor)
+        sync_refund_decision(refund.pk)
+    else:
+        _maybe_resolve(dispute_id, actor)
     return decision
+
+
+@transaction.atomic
+def sync_refund_decision(refund_id):
+    from payments.models import RefundRequest
+    from payments.services import create_payout_hold, resume_payout
+
+    refund = RefundRequest.objects.select_related("dispute_decision").get(pk=refund_id)
+    decision = refund.dispute_decision
+    if not decision:
+        return
+    order_id = Dispute.objects.values_list("order_id", flat=True).get(pk=decision.dispute_id)
+    order = Order.objects.select_for_update().get(pk=order_id)
+    dispute = Dispute.objects.select_for_update().get(pk=decision.dispute_id)
+    action = DisputeAction.objects.select_for_update().get(decision=decision)
+    if action.status != DisputeAction.Status.PENDING:
+        return
+    action.refund_request = refund
+    if refund.status == RefundRequest.Status.SUCCEEDED:
+        action.status = DisputeAction.Status.DONE
+        DisputeItem.objects.filter(dispute=dispute, order_item_id=refund.order_item_id).update(is_active=False, decided=True)
+        item = OrderItem.objects.select_for_update().get(pk=refund.order_item_id)
+        if item.status == S.PARTIALLY_REFUNDED:
+            if not item.confirmed_at:
+                item.confirmed_at = timezone.now()
+                item.payout_available_at = item.confirmed_at + timedelta(hours=settings.PAYOUT_HOLD_HOURS)
+                item.save(update_fields=["confirmed_at", "payout_available_at", "updated_at"])
+            create_payout_hold(item)
+            resume_payout(item)
+        _maybe_resolve(dispute.pk, decision.decided_by)
+    elif refund.status == RefundRequest.Status.FAILED:
+        action.status = DisputeAction.Status.FAILED
+        action.error = "Провайдер отклонил возврат"
+        item = OrderItem.objects.select_for_update().get(pk=refund.order_item_id)
+        if item.status == S.REFUND_PENDING:
+            _move(order, item, S.DISPUTED, event="item.refund_failed", dispute=dispute.pk)
+    action.save(update_fields=["refund_request", "status", "error", "updated_at"])
 
 
 def _maybe_resolve(dispute_id, actor):
     with transaction.atomic():
-        d = Dispute.objects.select_for_update().select_related("order").get(pk=dispute_id)
-        if d.items.filter(is_active=True).exists():
+        order_id = Dispute.objects.values_list("order_id", flat=True).get(pk=dispute_id)
+        order = Order.objects.select_for_update().get(pk=order_id)
+        d = Dispute.objects.select_for_update().get(pk=dispute_id)
+        if d.status not in ACTIVE_DISPUTE_STATUSES or d.items.filter(is_active=True).exists():
             return
         types = set(d.decisions.filter(decision_type__in=FINAL).values_list("decision_type", flat=True))
         dst = D.REJECTED if types == {DisputeDecision.Type.REJECT} else D.RESOLVED
@@ -443,7 +565,7 @@ def _maybe_resolve(dispute_id, actor):
             _set_status(d, D.CLOSED, actor=actor, comment="решение по апелляции окончательное", staff=True)
             d.closed_at = timezone.now()
             d.save(update_fields=["closed_at", "updated_at"])
-        append_event(Order.objects.select_for_update().get(pk=d.order_id), "dispute.decided", actor=actor, dispute=d.pk, result=dst)
+        append_event(order, "dispute.decided", actor=actor, dispute=d.pk, result=dst)
     for u in (d.order.buyer, d.order.seller):
         notify(u, "dispute.decided", "Принято решение по жалобе", "Подробности — в карточке заказа", dispute=d.pk, order=d.order_id)
 

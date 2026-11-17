@@ -1,4 +1,4 @@
-from rest_framework.throttling import ScopedRateThrottle
+from common.throttles import ScopedRateThrottle
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 
@@ -14,7 +14,7 @@ from common.permissions import HasPerm, IsActiveUser
 from orders.models import Order
 
 from . import services
-from .models import AdminNote, Dispute, DisputeReason, SupportTicket, TicketMessage
+from .models import ACTIVE_DISPUTE_STATUSES, AdminNote, Dispute, DisputeReason
 
 
 # --- serialization ----------------------------------------------------------------------
@@ -90,6 +90,7 @@ def staff_dispute_detail(d: Dispute) -> dict:
     }
     data["previous_disputes"] = list(Dispute.objects.filter(Q(order__buyer_id=o.buyer_id) | Q(order__seller_id=o.seller_id))
                                      .exclude(pk=d.pk).values("id", "order", "status", "reason__code", "created_at")[:20])
+    data["referred_at"] = d.referred_at
     data["admin_notes"] = list(AdminNote.objects.filter(subject_type="dispute", subject_id=d.pk).order_by("created_at")
                                .values("id", "author", "body", "created_at"))
     return data
@@ -171,12 +172,18 @@ class Reply(APIView):
         return Response(dispute_payload(Dispute.objects.get(pk=pk), staff=False))
 
 
+class AppealIn(serializers.Serializer):
+    reason = serializers.CharField(min_length=20, max_length=10000)
+
+
 class Appeal(APIView):
     permission_classes = [IsActiveUser]
 
     def post(self, request, pk):
         _party_dispute(request, pk)
-        a = services.appeal(pk, actor=request.user, reason=request.data.get("reason", ""))
+        form = AppealIn(data=request.data)
+        form.is_valid(raise_exception=True)
+        a = services.appeal(pk, actor=request.user, reason=form.validated_data["reason"])
         return Response(dispute_payload(a, staff=False), status=201)
 
 
@@ -185,7 +192,9 @@ class StaffQueue(APIView):
     permission_classes = [HasPerm("dispute.handle")]
 
     def get(self, request):
-        qs = Dispute.objects.select_related("order__buyer__profile", "order__seller__profile", "reason", "assignee")
+        qs = Dispute.objects.filter(referred_at__isnull=True).select_related(
+            "order__buyer__profile", "order__seller__profile", "reason", "assignee",
+        )
         p = request.query_params
         if s := p.get("status"):
             qs = qs.filter(status__in=s.split(","))
@@ -209,11 +218,46 @@ class StaffQueue(APIView):
             "is_appeal": bool(d.appeal_of_id), "has_counterclaim": d.has_counterclaim} for d in page])
 
 
+class ArbitrationQueue(APIView):
+    permission_classes = [HasPerm("arbitration.work")]
+
+    def get(self, request):
+        qs = Dispute.objects.filter(referred_at__isnull=False).exclude(
+            Q(order__buyer=request.user) | Q(order__seller=request.user),
+        ).select_related("reason")
+        if request.query_params.get("scope") == "mine":
+            qs = qs.filter(assignee=request.user)
+        else:
+            qs = qs.filter(assignee__isnull=True, status__in=ACTIVE_DISPUTE_STATUSES)
+        pager = StandardPagination()
+        page = pager.paginate_queryset(qs.order_by("referred_at", "pk"), request, view=self)
+        return pager.get_paginated_response([{
+            "id": str(d.pk), "order_number": str(d.order_id)[:8], "reason": d.reason.title,
+            "status": d.get_status_display(), "referred_at": d.referred_at,
+        } for d in page])
+
+
+class ArbitrationClaim(APIView):
+    permission_classes = [HasPerm("arbitration.work")]
+
+    def post(self, request, pk):
+        get_object_or_404(Dispute, pk=pk, referred_at__isnull=False)
+        dispute = services.assign(pk, actor=request.user, assignee=request.user)
+        return Response({"id": str(dispute.pk)})
+
+
+def require_case_access(dispute, user):
+    services._staff(dispute, user)
+    if not (dispute.referred_at and user.has_perm_code("arbitration.work") and dispute.assignee_id == user.pk):
+        raise DomainError("Карточка доступна назначенному арбитру", code="arbitration_required", status_code=403)
+
+
 class StaffDetail(APIView):
     permission_classes = [HasPerm("dispute.handle", "staff.view_personal_data")]
 
     def get(self, request, pk):
         d = get_object_or_404(Dispute.objects.select_related("order__buyer__profile", "order__seller__profile", "reason"), pk=pk)
+        require_case_access(d, request.user)
         record(action="dispute.viewed", subject_type="dispute", subject_id=d.pk, actor=request.user, is_staff_action=True, order_id=d.order_id)
         return Response(staff_dispute_detail(d))
 
@@ -223,7 +267,12 @@ class StaffAction(APIView):
 
     def post(self, request, pk, action):
         u, data = request.user, request.data
-        if action == "assign":
+        dispute = get_object_or_404(Dispute, pk=pk)
+        require_case_access(dispute, u)
+        if action == "close":
+            comment = serializers.CharField(min_length=10, max_length=10000).run_validation(data.get("comment"))
+            services.close_without_refund(pk, actor=u, comment=comment)
+        elif action == "assign":
             assignee = get_object_or_404(User, pk=data.get("assignee") or u.pk)
             services.assign(pk, actor=u, assignee=assignee)
         elif action == "priority":
@@ -261,91 +310,3 @@ class StaffAction(APIView):
             raise DomainError("Неизвестное действие", code="bad_action", status_code=404)
         d = Dispute.objects.select_related("order__buyer__profile", "order__seller__profile", "reason").get(pk=pk)
         return Response(staff_dispute_detail(d))
-
-
-# --- support tickets -------------------------------------------------------------------
-class Tickets(APIView):
-    permission_classes = [IsActiveUser]
-    throttle_classes = [ScopedRateThrottle]
-    throttle_scope = "ticket"
-
-    def post(self, request):
-        subject = (request.data.get("subject") or "").strip()
-        body = (request.data.get("body") or "").strip()
-        if len(subject) < 3 or len(body) < 10:
-            raise DomainError("Укажите тему и опишите вопрос", code="bad_ticket", status_code=400)
-        order = None
-        if oid := request.data.get("order"):
-            order = get_object_or_404(Order, pk=oid)
-            if request.user.pk not in (order.buyer_id, order.seller_id):
-                raise DomainError("Нет доступа", code="forbidden", status_code=404)
-        t = SupportTicket.objects.create(author=request.user, order=order, category=(request.data.get("category") or "general")[:64], subject=subject[:200])
-        TicketMessage.objects.create(ticket=t, author=request.user, body=body)
-        return Response({"id": str(t.pk), "status": t.status}, status=201)
-
-
-def _ticket_payload(t, staff):
-    return {"id": str(t.pk), "subject": t.subject, "category": t.category, "status": t.status, "priority": t.priority,
-            "order": str(t.order_id) if t.order_id else None, "created_at": t.created_at,
-            "messages": [{"body": m.body, "is_staff_reply": m.is_staff_reply, "created_at": m.created_at} for m in t.messages.order_by("created_at")]}
-
-
-class TicketDetail(APIView):
-    permission_classes = [IsActiveUser]
-
-    def get(self, request, pk):
-        t = get_object_or_404(SupportTicket, pk=pk, author=request.user)
-        return Response(_ticket_payload(t, False))
-
-    def post(self, request, pk):
-        t = get_object_or_404(SupportTicket, pk=pk, author=request.user)
-        if t.status == SupportTicket.Status.CLOSED:
-            raise DomainError("Обращение закрыто", code="ticket_closed")
-        TicketMessage.objects.create(ticket=t, author=request.user, body=(request.data.get("body") or "")[:10_000])
-        t.status = SupportTicket.Status.OPEN
-        t.save(update_fields=["status", "updated_at"])
-        return Response(_ticket_payload(t, False))
-
-
-class StaffTickets(APIView):
-    permission_classes = [HasPerm("staff.access")]
-
-    def get(self, request):
-        qs = SupportTicket.objects.exclude(status="closed").order_by("-priority", "created_at")
-        if p := request.query_params.get("priority"):
-            qs = qs.filter(priority=p)
-        return Response([{**_ticket_payload(t, True), "author": t.author.email,
-                          "assignee": t.assignee.email if t.assignee else None} for t in qs[:200]])
-
-
-class StaffTicketAction(APIView):
-    permission_classes = [HasPerm("staff.access")]
-
-    def post(self, request, pk, action):
-        t = get_object_or_404(SupportTicket, pk=pk)
-        u, data = request.user, request.data
-        before = {"status": t.status, "priority": t.priority, "assignee": str(t.assignee_id) if t.assignee_id else None}
-        if action == "reply":
-            TicketMessage.objects.create(ticket=t, author=u, is_staff_reply=True, body=(data.get("body") or "")[:10_000])
-            t.status = SupportTicket.Status.WAITING_USER
-            from notifications.services import notify
-
-            notify(t.author, "ticket.reply", "Ответ поддержки", t.subject)
-        elif action == "assign":
-            t.assignee = get_object_or_404(User, pk=data.get("assignee") or u.pk)
-            t.status = SupportTicket.Status.IN_PROGRESS
-        elif action == "priority":
-            if data.get("priority") not in SupportTicket.Priority.values:
-                raise DomainError("Неверный приоритет", code="bad_priority", status_code=400)
-            t.priority = data["priority"]
-        elif action == "close":
-            t.status = SupportTicket.Status.CLOSED
-        else:
-            raise DomainError("Неизвестное действие", code="bad_action", status_code=404)
-        t.save()
-        record(action=f"ticket.{action}", subject_type="ticket", subject_id=t.pk, actor=u, is_staff_action=True,
-               before=before, after={"status": t.status, "priority": t.priority, "assignee": str(t.assignee_id) if t.assignee_id else None})
-        return Response(_ticket_payload(t, True))
-
-
-

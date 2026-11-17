@@ -51,7 +51,12 @@ def test_chat_participants_only_with_system_messages(api, market, user_factory):
     support = user_factory(roles=("support_agent",))
     staff_view = as_(api, support).get(f"/api/v1/orders/{oid}/chat").json()["results"]
     assert len(staff_view) == len(msgs) and "contact_signal" in staff_view[0]  # arbitration sees history
-    assert api.post(f"/api/v1/orders/{oid}/chat", {"body": "x"}, format="json").json()["error"]["code"] == "staff_use_dispute"
+    reply = api.post(f"/api/v1/orders/{oid}/chat", {"body": "Помогу уточнить условия заказа."}, format="json")
+    assert reply.status_code == 201
+    for party in (market["buyer"], market["seller"]):
+        last = chat(as_(api, party), oid)["results"][-1]
+        assert last["id"] == reply.json()["id"]
+        assert last["author"]["role"] == "support"
     from notifications.models import Notification
 
     assert Notification.objects.filter(user=market["seller"], type="chat.message").exists()

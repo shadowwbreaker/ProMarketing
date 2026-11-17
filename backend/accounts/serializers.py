@@ -22,6 +22,7 @@ class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True)
     otp = serializers.CharField(required=False, allow_blank=True, max_length=10)
+    staff_support = serializers.BooleanField(default=False)
 
 
 class TokenSerializer(serializers.Serializer):

@@ -31,7 +31,7 @@ export const refreshInbox = () => window.dispatchEvent(new Event("inbox-updated"
 export type Msg = {
   id: string;
   kind: "user" | "system";
-  author: null | { id: string; role?: "buyer" | "seller"; display_name: string };
+  author: null | { id: string | null; role?: "buyer" | "seller" | "support"; display_name: string };
   body: string;
   order_brief?: OrderTerms | null;
   order_id?: string;
@@ -42,8 +42,14 @@ export type Msg = {
   warning?: string;
 };
 
-export const getChat = (oid: string, markRead = false) =>
-  apiFetch<{ locked: boolean; results: Msg[]; marked_read?: number }>(`/orders/${oid}/chat${markRead ? "?read=1" : ""}`);
+export function getChat(oid: string, markRead = false, before?: string) {
+  const params = new URLSearchParams();
+  if (before) params.set("before", before);
+  if (markRead) params.set("read", "1");
+  return apiFetch<{ locked: boolean; results: Msg[]; marked_read?: number; next?: string | null }>(
+    `/orders/${oid}/chat?${params}`,
+  );
+}
 export const sendMessage = (oid: string, body: string, attachments: string[] = []) =>
   apiFetch<Msg>(`/orders/${oid}/chat`, { method: "POST", body: { body, attachments } });
 export const fileUrl = (id: string) => `${API_URL}/api/v1/files/${id}`;

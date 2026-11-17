@@ -4,7 +4,7 @@
 const { chromium } = require("playwright");
 
 const base = process.env.E2E_BASE_URL ?? "http://localhost:3000";
-const browser = await chromium.launch();
+const browser = await chromium.launch({ channel: process.env.E2E_BROWSER_CHANNEL });
 const page = await browser.newPage();
 const errors = [];
 // 404s for routes of later phases (catalog, login) are expected until those phases are built

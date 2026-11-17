@@ -23,7 +23,7 @@ async function login(page, email) {
 }
 
 (async () => {
-  const browser = await chromium.launch();
+  const browser = await chromium.launch({ channel: process.env.E2E_BROWSER_CHANNEL });
   const buyer = await (await browser.newContext({ viewport: { width: 1366, height: 860 } })).newPage();
   watch(buyer, "buyer");
   const text = `Добрый день! Есть окно на этой неделе? ${Date.now()}`;

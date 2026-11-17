@@ -19,6 +19,7 @@ class SupportTicket(BaseModel):
 
     author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="tickets")
     order = models.ForeignKey("orders.Order", null=True, blank=True, on_delete=models.PROTECT, related_name="tickets")
+    arbitration = models.ForeignKey("Dispute", null=True, blank=True, on_delete=models.PROTECT, related_name="intake_tickets")
     category = models.CharField(max_length=64)
     subject = models.CharField(max_length=200)
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.OPEN, db_index=True)
@@ -72,6 +73,8 @@ class Dispute(BaseModel):
     opened_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="opened_disputes")
     reason = models.ForeignKey(DisputeReason, on_delete=models.PROTECT, related_name="+")
     description = models.TextField(max_length=10_000)
+    intake_category = models.CharField(max_length=16, blank=True, default="")
+    referred_at = models.DateTimeField(null=True, blank=True, db_index=True)
     status = models.CharField(max_length=24, choices=DisputeStatus.choices, default=DisputeStatus.OPEN, db_index=True)
     priority = models.CharField(max_length=8, choices=Priority.choices, default=Priority.NORMAL)
     assignee = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="assigned_disputes")

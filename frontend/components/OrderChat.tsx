@@ -58,6 +58,7 @@ export function OrderChat({ orderId, role, peerId, empty, onOrders }: {
         const c = await getChat(orderId, role !== "staff");
         setMsgs(c.results);
         setLocked(c.locked);
+        if (!startedHistory.current) setCursor(c.next ?? null);
         if (c.marked_read) refreshInbox();
       }
       setError(undefined);
@@ -74,10 +75,10 @@ export function OrderChat({ orderId, role, peerId, empty, onOrders }: {
   }, [msgs]);
 
   async function loadOlder() {
-    if (!peerId || !cursor) return;
+    if ((!peerId && !orderId) || !cursor) return;
     setOlderBusy(true);
     try {
-      const c = await getConversation(peerId, { before: cursor });
+      const c = peerId ? await getConversation(peerId, { before: cursor }) : await getChat(orderId!, false, cursor);
       if ("unchanged" in c) return;
       const log = logRef.current;
       const height = log?.scrollHeight ?? 0;
@@ -85,7 +86,7 @@ export function OrderChat({ orderId, role, peerId, empty, onOrders }: {
       startedHistory.current = true;
       followRef.current = false;
       setEarlier((previous) => [...c.results, ...previous]);
-      setCursor(c.next);
+      setCursor(c.next ?? null);
       requestAnimationFrame(() => { if (log) log.scrollTop = scrollTop + log.scrollHeight - height; });
     } catch (ex) {
       toast(fieldErrors(ex).form ?? "Не удалось загрузить историю", "error");
@@ -161,8 +162,8 @@ export function OrderChat({ orderId, role, peerId, empty, onOrders }: {
           ),
         )}
       </div>
-      {role !== "staff" && (
-        <form onSubmit={send} className="shrink-0 border-t border-border p-3 sm:px-4">
+      {(role !== "staff" || orderId) && loaded && !error && (
+        <form method="post" onSubmit={send} className="shrink-0 border-t border-border p-3 sm:px-4">
           <textarea name="body" rows={2} maxLength={destination ? 5000 : 2000} aria-label="Сообщение" placeholder="Написать…" className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-base" />
           <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
             {destination && <label className="relative inline-flex min-h-10 cursor-pointer items-center rounded-lg px-2 text-sm font-medium text-accent focus-within:ring-2 focus-within:ring-accent">

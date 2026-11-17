@@ -4,7 +4,7 @@ const { chromium } = require("playwright");
 
 (async () => {
   const base = process.env.E2E_BASE_URL ?? "http://localhost:3000";
-  const browser = await chromium.launch();
+  const browser = await chromium.launch({ channel: process.env.E2E_BROWSER_CHANNEL });
   try {
     const page = await browser.newPage({ javaScriptEnabled: false });
     const password = "Synthetic-password-123";

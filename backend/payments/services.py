@@ -148,7 +148,9 @@ def refund_item(item_id, *, amount_minor: int | None, reason: str, actor, decisi
     """Refund (full when amount is None) one order item through the provider. Double refunds are impossible:
     the item row is locked and the sum of succeeded+pending refunds can never exceed the paid amount."""
     provider = get_payment_provider()
+    order_id = OrderItem.objects.values_list("order_id", flat=True).get(pk=item_id)
     with transaction.atomic():
+        order = Order.objects.select_for_update().get(pk=order_id)
         item = OrderItem.objects.select_for_update().get(pk=item_id)
         payment = Payment.objects.filter(order_id=item.order_id, status=Payment.Status.SUCCEEDED).first()
         if not payment:
@@ -170,7 +172,6 @@ def refund_item(item_id, *, amount_minor: int | None, reason: str, actor, decisi
                                               idempotency_key=f"ref-{uuid.uuid4().hex}")
         _ledger(L.REFUND_REQUESTED, amount, item=item, refund=refund.pk)
         notify(item.order.buyer, "refund.started", "Возврат инициирован", f"{amount / 100:.2f} ₽", order=item.order_id)
-        order = Order.objects.select_for_update().get(pk=item.order_id)
         from orders.state import can_transition
 
         if can_transition(item.status, S.REFUND_PENDING):
@@ -194,12 +195,13 @@ def _finish_refund(refund_id, provider_status: str):
     from orders.services import _move
     from orders.state import can_transition
 
+    order_id = RefundRequest.objects.values_list("order_item__order_id", flat=True).get(pk=refund_id)
     with transaction.atomic():
+        order = Order.objects.select_for_update().get(pk=order_id)
         refund = RefundRequest.objects.select_for_update().get(pk=refund_id)
         if refund.status in (RefundRequest.Status.SUCCEEDED, RefundRequest.Status.FAILED):
             return refund
         item = OrderItem.objects.select_for_update().get(pk=refund.order_item_id)
-        order = Order.objects.select_for_update().get(pk=item.order_id)
         if provider_status == "succeeded":
             refund.status = RefundRequest.Status.SUCCEEDED
             refund.save(update_fields=["status", "updated_at"])
@@ -223,6 +225,10 @@ def _finish_refund(refund_id, provider_status: str):
         else:
             refund.status = RefundRequest.Status.PENDING
             refund.save(update_fields=["status", "updated_at"])
+        if refund.dispute_decision_id:
+            from support.services import sync_refund_decision
+
+            transaction.on_commit(lambda: sync_refund_decision(refund.pk))
     return refund
 
 

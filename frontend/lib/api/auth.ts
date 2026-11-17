@@ -16,9 +16,9 @@ export type Page<T> = { count: number; next: string | null; previous: string | n
 export const ensureCsrf = () => apiFetch<{ ok: boolean }>("/auth/csrf");
 export const getMe = () => apiFetch<Me>("/me");
 export const getSession = () => apiFetch<{ user: Me | null }>("/auth/session");
-export const login = async (email: string, password: string, otp?: string) => {
+export const login = async (email: string, password: string, otp?: string, staffSupport = false) => {
   await ensureCsrf();
-  return apiFetch<Me>("/auth/login", { method: "POST", body: { email, password, otp } });
+  return apiFetch<Me>("/auth/login", { method: "POST", body: { email, password, otp, ...(staffSupport ? { staff_support: true } : {}) } });
 };
 export const get2fa = () => apiFetch<{ enabled: boolean; required: boolean }>("/me/2fa");
 export const setup2fa = () => apiFetch<{ secret: string; otpauth_url: string }>("/me/2fa/setup", { method: "POST" });

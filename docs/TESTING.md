@@ -84,3 +84,8 @@ CI: `.github/workflows/ci.yml` — ruff, проверка миграций, pyte
 - `backend/tests/test_beta_security_regressions.py` проверяет анонимный CSRF, сессии TOTP, параллельные повторы заказа, карантин, ответы ClamAV, подтверждение email и перенос статусов.
 - `frontend/e2e/security.cjs` отправляет формы с отключённым JavaScript и проверяет, что пароль не попадает в URL. Для общего набора E2E используйте отдельную базу с демо-данными и `DEV_AUTO_VERIFY_EMAIL=false`.
 - [Отчёт о выпуске](TEST_REPORT_2026-11-15.md) содержит результаты повторной проверки, процедуры для Vercel и ограничения проверки.
+
+## Актуализация · 18 ноября 2026
+
+Обычный Docker без seed. E2E: отдельный проект/том, освободить 3000/8000 остановкой обычного проекта без удаления томов, затем docker compose -p promarketing-release-test -f infra/docker-compose.yml -f infra/docker-compose.test.yml up -d --build. Никогда не подключать override к реальной БД/Neon. После проверки остановить тестовый проект и запустить обычный без override. Проверки: pytest, ruff, makemigrations --check, lint, typecheck, npm test (Vitest + Node glob), build, node e2e/run-all.cjs с Playwright/Chromium. [Результаты](RELEASE_2026-11-18.md).
+Тестовый override задаёт THROTTLE_AUTH=120/min для серии входов E2E; реальный предел анонимного каталога остаётся 300/min и проверяется отдельно. Для специального e2e/beta.cjs выставьте E2E_BETA_MODE=true перед пересозданием backend тестового проекта; для остальных сценариев оставьте false. Браузер можно выбрать E2E_BROWSER_CHANNEL=msedge, если Playwright Chromium не установлен. Значения NODE_PATH/путь Playwright зависят от вашего окружения.

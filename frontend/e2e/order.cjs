@@ -11,7 +11,7 @@ async function login(ctx, base, email) {
 }
 (async () => {
   const base = process.env.E2E_BASE_URL ?? "http://localhost:3000";
-  const browser = await chromium.launch();
+  const browser = await chromium.launch({ channel: process.env.E2E_BROWSER_CHANNEL });
   const buyer = await login(await browser.newContext(), base, "demo-buyer@example.com");
   await buyer.goto(`${base}/catalog?q=${encodeURIComponent("Кухня")}`);
   await buyer.getByText("Кухня за 60 секунд").click();
@@ -23,6 +23,8 @@ async function login(ctx, base, email) {
   await buyer.getByRole("button", { name: /Создать заказ/ }).click();
   await buyer.waitForURL(/\/orders\/[0-9a-f-]{36}$/);
   const orderUrl = buyer.url();
+  const orderId = orderUrl.split("/orders/")[1];
+  const reply = "Здравствуйте! Сниму завтра. " + Date.now();
   await buyer.getByText("Ожидает оплаты").first().waitFor();
   await buyer.getByRole("button", { name: "Перейти к оплате" }).click();
   await buyer.waitForURL("**mock_payment=*");
@@ -31,10 +33,12 @@ async function login(ctx, base, email) {
 
   const seller = await login(await browser.newContext(), base, "demo-seller1@example.com");
   await seller.goto(orderUrl);
-  await seller.getByRole("log", { name: "Чат заказа" }).getByText("Техническое задание к заказу").waitFor();
-  await seller.getByLabel("Сообщение").fill("Здравствуйте! Сниму завтра.");
+  await seller.getByRole("log", { name: "Чат заказа" }).locator("p")
+    .filter({ hasText: "Техническое задание к заказу" })
+    .filter({ has: seller.locator('a[href="/orders/' + orderId + '"]') }).waitFor();
+  await seller.getByLabel("Сообщение").fill(reply);
   await seller.getByRole("button", { name: "Отправить", exact: true }).click();
-  await buyer.getByText("Здравствуйте! Сниму завтра.").waitFor({ timeout: 10000 }); // buyer sees it via polling
+  await buyer.getByText(reply).waitFor({ timeout: 10000 }); // buyer sees it via polling
   await buyer.getByLabel("Сообщение").fill("Напишите мне в телеграм");
   await buyer.getByRole("button", { name: "Отправить", exact: true }).click();
   await buyer.getByText(/Договариваться и платить вне платформы запрещено/).waitFor();

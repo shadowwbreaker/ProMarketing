@@ -5,7 +5,7 @@ from django.utils import timezone
 from drf_spectacular.utils import extend_schema
 from rest_framework import serializers, status
 from rest_framework.response import Response
-from rest_framework.throttling import ScopedRateThrottle
+from common.throttles import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from audit.services import record

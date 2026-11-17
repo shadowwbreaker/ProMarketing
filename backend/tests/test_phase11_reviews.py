@@ -53,7 +53,8 @@ def test_no_review_during_dispute_and_complaint_does_not_lower_rating(api, marke
 
 
 @pytest.mark.django_db
-def test_reply_complaint_and_moderation(api, market, user_factory):
+@pytest.mark.parametrize("moderator_role", ["moderator", "support_agent"])
+def test_reply_complaint_and_moderation(api, market, user_factory, moderator_role):
     oid, iid = done(api, market)
     rid = review(api, market["buyer"], oid, iid, rating=1, text="Мошенник!!!").json()["id"]
     assert as_(api, market["buyer"]).post(f"/api/v1/reviews/{rid}/reply", {"text": "x"}, format="json").status_code == 403
@@ -63,7 +64,7 @@ def test_reply_complaint_and_moderation(api, market, user_factory):
     assert s.post(f"/api/v1/reviews/{rid}/complain", {"reason": "Оскорбление без оснований"}, format="json").status_code == 201
     assert as_(api, user_factory()).post(f"/api/v1/reviews/{rid}/complain", {"reason": "посторонний человек"}, format="json").status_code == 403
     assert Review.objects.get(pk=rid).moderation_status == "published"  # stays until moderator decides
-    mod = as_(api, user_factory(roles=("moderator",)))
+    mod = as_(api, user_factory(roles=(moderator_role,)))
     assert len(mod.get("/api/v1/staff/reviews", {"complaints": "1"}).json()) == 1
     r = mod.post(f"/api/v1/staff/reviews/{rid}/hide", {"comment": "Оскорбление"}, format="json").json()
     assert r["moderation_status"] == "hidden" and r["complaints"][0]["status"] == "accepted"

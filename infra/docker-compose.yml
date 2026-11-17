@@ -1,6 +1,6 @@
 # Dev environment (D-017): Docker Desktop + WSL2. Usage from repo root:
 #   copy .env.example .env   (then fill FIELD_ENCRYPTION_KEY)
-#   (demo data is seeded automatically on start; logins in README)
+#   Clean startup. Demo fixtures are opt-in through docker-compose.test.yml.
 #   docker compose -f infra/docker-compose.yml up --build
 name: promarketing
 services:
@@ -10,7 +10,6 @@ services:
       POSTGRES_USER: promarketing
       POSTGRES_PASSWORD: promarketing
       POSTGRES_DB: promarketing
-    ports: ["5432:5432"]
     volumes: [pgdata:/var/lib/postgresql/data]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U promarketing"]
@@ -18,7 +17,6 @@ services:
       retries: 10
   redis:
     image: redis:7-alpine
-    ports: ["6379:6379"]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -26,8 +24,10 @@ services:
   backend:
     build: ../backend
     env_file: ../.env
-    command: sh -c "python manage.py migrate && python manage.py seed_demo && python manage.py runserver 0.0.0.0:8000"
-    ports: ["8000:8000"]
+    environment:
+      DB_CONN_MAX_AGE: "0"
+    command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    ports: ["127.0.0.1:8000:8000"]
     volumes: ["../backend:/app"]
     depends_on:
       db: {condition: service_healthy}
@@ -53,7 +53,7 @@ services:
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:8000
       API_INTERNAL_URL: http://backend:8000
-    ports: ["3000:3000"]
+    ports: ["127.0.0.1:3000:3000"]
     depends_on: [backend]
 volumes:
   pgdata:

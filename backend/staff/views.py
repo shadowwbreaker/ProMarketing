@@ -75,7 +75,7 @@ class Users(APIView):
     permission_classes = [HasPerm("staff.view_personal_data")]
 
     def get(self, request):
-        qs = User.objects.select_related("profile").order_by("-date_joined")
+        qs = User.objects.filter(is_active=True).select_related("profile").order_by("-date_joined")
         if q := (request.query_params.get("q") or "").strip():
             qs = qs.filter(Q(email__icontains=q) | Q(profile__display_name__icontains=q))
         if st := request.query_params.get("status"):
@@ -217,11 +217,12 @@ class Orders(APIView):
         if st := p.get("status"):
             qs = qs.filter(status__in=st.split(","))
         if q := (p.get("q") or "").strip():
-            import uuid
+            from orders.numbers import number_filter
 
-            try:
-                qs = qs.filter(pk=uuid.UUID(q))
-            except ValueError:
+            reference = number_filter(q)
+            if reference is not None:
+                qs = qs.filter(reference)
+            else:
                 qs = qs.filter(Q(buyer__email__icontains=q) | Q(seller__email__icontains=q))
         if p.get("disputed") == "1":
             qs = qs.filter(disputes__isnull=False).distinct()

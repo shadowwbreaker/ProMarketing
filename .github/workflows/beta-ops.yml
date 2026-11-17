@@ -20,14 +20,16 @@ jobs:
         with: { ref: beta }
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
-      - run: pip install -r backend/requirements.txt
+      - run: python -m pip install --upgrade pip==26.3 && pip install -r backend/requirements.txt
       - name: migrate
         working-directory: backend
         env:
           DJANGO_SETTINGS_MODULE: config.settings.ops
           DATABASE_URL: ${{ secrets.DATABASE_URL_UNPOOLED }}
           DJANGO_SECRET_KEY: ci-only-not-used-for-requests-0123456789abcdef
-        run: python manage.py migrate --noinput
+        run: |
+          python manage.py migrate --noinput
+          python manage.py shell -c "from accounts.models import User; from django.db.models import Q; samples = Q(email__startswith='demo-', email__endswith='@example.com') | Q(email='beta-catalog-seller@example.invalid') | Q(email__iregex=r'^(e2e|seller)[0-9]{10,}@example[.]com$'); print('Release active sample identities:', User.objects.filter(is_active=True).filter(samples).count())"
 
   timers:
     if: github.event_name != 'push'

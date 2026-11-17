@@ -12,7 +12,7 @@ from PIL import Image, ImageOps, UnidentifiedImageError
 from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
-from rest_framework.throttling import ScopedRateThrottle
+from common.throttles import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from audit.services import record

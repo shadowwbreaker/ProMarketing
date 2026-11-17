@@ -1,0 +1,12 @@
+{
+  "name": "picomatch",
+  "description": "Local security fork of picomatch 4.0.7: repeated extglobs disabled",
+  "version": "4.0.8-yvt.1",
+  "author": "Jon Schlinkert (https://github.com/jonschlinkert)",
+  "repository": "micromatch/picomatch",
+  "license": "MIT",
+  "main": "index.js",
+  "engines": {
+    "node": ">=12"
+  }
+}

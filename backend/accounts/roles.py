@@ -4,6 +4,7 @@ ROLES = {
     "buyer": ("Покупатель", False),
     "seller": ("Продавец", False),
     "support_agent": ("Сотрудник поддержки", True),
+    "arbitrator": ("Арбитраж", True),
     "moderator": ("Модератор", True),
     "admin": ("Администратор", True),
     "super_admin": ("Супер-администратор", True),
@@ -14,6 +15,8 @@ P = {
     "order.create": "Создавать заказы",
     "account.manage_own": "Управлять своими рекламными аккаунтами",
     "dispute.open": "Открывать споры по своим заказам",
+    "arbitration.work": "Рассматривать переданные в арбитраж заказы",
+    "support.work": "Работать с обращениями и чатами заказов",
     "staff.access": "Доступ к служебному интерфейсу",
     "staff.view_orders": "Просмотр всех заказов",
     "staff.view_personal_data": "Просмотр персональных данных",
@@ -22,7 +25,7 @@ P = {
     "dispute.escalated": "Рассматривать эскалированные споры и апелляции",
     "finance.refund": "Инициировать возвраты",
     "finance.payout": "Управлять выплатами",
-    "moderation.content": "Модерация предложений и отзывов",
+    "moderation.content": "Модерация отзывов",
     "moderation.stats": "Проверка подозрительной статистики",
     "user.sanction": "Применять санкции",
     "user.manage_roles": "Назначать роли",
@@ -33,7 +36,9 @@ P = {
 
 _BUYER = {"order.create", "dispute.open"}
 _SELLER = {"account.manage_own", "dispute.open"}
-_SUPPORT = {"staff.access", "staff.view_orders", "staff.view_personal_data", "dispute.handle"}
+_SUPPORT = {"support.work", "staff.access", "staff.view_orders", "staff.view_personal_data", "dispute.handle", "moderation.content"}
+_ARBITRATOR = {"arbitration.work", "staff.access", "staff.view_orders", "staff.view_personal_data",
+               "dispute.handle", "dispute.decide", "dispute.escalated", "finance.refund"}
 _MODERATOR = {"staff.access", "moderation.content", "moderation.stats"}
 _ADMIN = _SUPPORT | _MODERATOR | {
     "dispute.decide",
@@ -44,12 +49,13 @@ _ADMIN = _SUPPORT | _MODERATOR | {
     "audit.view",
     "finance.view",
 }
-_SUPER = _ADMIN | {"user.manage_roles", "settings.security"}
+_SUPER = set(P)  # The verified owner has every application permission, including buyer/seller actions.
 
 ROLE_PERMISSIONS: dict[str, frozenset[str]] = {
     "buyer": frozenset(_BUYER),
     "seller": frozenset(_SELLER),
     "support_agent": frozenset(_SUPPORT),
+    "arbitrator": frozenset(_ARBITRATOR),
     "moderator": frozenset(_MODERATOR),
     "admin": frozenset(_ADMIN),
     "super_admin": frozenset(_SUPER),

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { SearchBar, StaffTable } from "@/components/StaffTable";
 import { formatDateTime } from "@/lib/format";
+import { ROLE_LABELS } from "@/lib/roles";
 
 export default function StaffUsers() {
   const [q, setQ] = useState("");
@@ -20,7 +21,7 @@ export default function StaffUsers() {
       <StaffTable path="/staff/users" params={{ q, status }} columns={[
         { title: "Email", render: (u) => <Link className="text-accent" href={`/staff/users/${u.id}`}>{u.email}</Link> },
         { title: "Имя", render: (u) => u.display_name },
-        { title: "Роли", render: (u) => u.roles.join(", ") },
+        { title: "Роли", render: (u) => u.roles.map((role: string) => ROLE_LABELS[role] ?? role).join(", ") },
         { title: "Статус", render: (u) => u.status },
         { title: "Регистрация", render: (u) => formatDateTime(u.date_joined) },
       ]} />

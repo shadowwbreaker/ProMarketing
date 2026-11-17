@@ -29,5 +29,6 @@ urlpatterns = [
     path("me/notifications/<uuid:pk>/read", cabinet.NotificationRead.as_view()),
     path("me/notifications/unread-count", cabinet.NotificationsUnread.as_view()),
     path("me/notifications/read-all", cabinet.NotificationsReadAll.as_view()),
+    path("staff/support/roles", views.SupportRolesByEmail.as_view()),
     path("staff/users/<uuid:user_id>/roles", views.StaffUserRolesView.as_view()),
 ]

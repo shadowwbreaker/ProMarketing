@@ -15,8 +15,8 @@ DESC = "Подробное описание проблемы для арбитр
 
 @pytest.fixture
 def staff(user_factory):
-    return {"support": user_factory(roles=("support_agent",)), "admin": user_factory(roles=("admin",)),
-            "admin2": user_factory(roles=("admin",)), "super": user_factory(roles=("super_admin",)),
+    return {"support": user_factory(roles=("support_agent",)), "admin": user_factory(roles=("admin", "arbitrator")),
+            "admin2": user_factory(roles=("admin", "arbitrator")), "super": user_factory(roles=("super_admin",)),
             "moderator": user_factory(roles=("moderator",))}
 
 
@@ -29,7 +29,37 @@ def open_(api, user, oid, reason, items=None, evidence=None, desc=DESC):
     return as_(api, user).post(f"/api/v1/orders/{oid}/disputes/open", body, format="json")
 
 
+def prepare_arbitration(api, user, did):
+    """Exercise the real handoff/claim workflow before legacy scenario decisions."""
+    from accounts.models import User
+
+    case = Dispute.objects.get(pk=did)
+    if not case.referred_at:
+        employee = User.objects.filter(user_roles__role__code="support_agent").first()
+        if case.assignee_id is None:
+            response = as_(api, employee).post(f"/api/v1/staff/tickets/{did}/assign")
+            assert response.status_code == 200, response.data
+        response = as_(api, employee).post(f"/api/v1/staff/tickets/{did}/refer")
+        assert response.status_code == 200, response.data
+        case.refresh_from_db()
+    if case.assignee_id is None:
+        return as_(api, user).post(f"/api/v1/staff/arbitration/{did}/claim")
+
+
+def case_detail(api, staff, did):
+    prepare_arbitration(api, staff["admin"], did)
+    return as_(api, staff["admin"]).get(f"/api/v1/staff/disputes/{did}").json()
+
+
 def act(api, user, did, action, **body):
+    if user.has_perm_code("arbitration.work"):
+        claim = prepare_arbitration(api, user, did)
+        if claim is not None and claim.status_code != 200:
+            return claim
+        if action == "assign":
+            return as_(api, user).post(f"/api/v1/staff/arbitration/{did}/claim")
+    elif action == "assign":
+        return as_(api, user).post(f"/api/v1/staff/tickets/{did}/assign")
     return as_(api, user).post(f"/api/v1/staff/disputes/{did}/{action}", body, format="json")
 
 
@@ -88,7 +118,7 @@ def test_staff_detail_has_everything(api, market, staff):
     as_(api, market["buyer"]).post(f"/api/v1/orders/{oid}/chat", {"body": "Видео не по ТЗ"}, format="json")
     did = open_(api, market["buyer"], oid, "brief_mismatch",
                 evidence=[{"url": "https://www.tiktok.com/@acc1/video/123", "description": "сама публикация"}]).json()["id"]
-    d = as_(api, staff["support"]).get(f"/api/v1/staff/disputes/{did}").json()
+    d = case_detail(api, staff, did)
     for key in ("order", "chat", "events", "publication_checks", "account_stats", "payment", "previous_disputes", "admin_notes", "evidence"):
         assert key in d, key
     assert d["order"]["original_terms"]["brief"] and d["order"]["items"][0]["price_minor"] == 100_000
@@ -105,7 +135,7 @@ def test_s01_seller_not_responding(api, market, staff):
 
     oid, iid = accepted(api, market)
     did = open_(api, market["buyer"], oid, "seller_not_responding").json()["id"]
-    detail = as_(api, staff["support"]).get(f"/api/v1/staff/disputes/{did}").json()
+    detail = case_detail(api, staff, did)
     assert detail["order"]["seller"]["last_seen_at"] is not None or True  # last activity is shown to staff
     assert process_timeouts(timezone.now() + timedelta(hours=49)) == 1
     d = Dispute.objects.get(pk=did)
@@ -158,7 +188,7 @@ def test_s04_removed_early_during_hold(api, market, staff, mock_provider):
     did = open_(api, market["buyer"], oid, "removed_early",
                 evidence=[{"url": "https://www.tiktok.com/@acc1/video/123", "description": "ссылка больше не открывается"}]).json()["id"]
     assert Payout.objects.get(order_item_id=iid).status == "suspended"  # payout frozen during dispute (D-014)
-    r = act(api, staff["support"], did, "check-publication", item=iid)
+    r = act(api, staff["admin"], did, "check-publication", item=iid)
     assert r.status_code == 200
     decide(api, staff["admin"], did, iid, "partial_refund", refund_amount_minor=60_000)
     assert Payout.objects.get(order_item_id=iid).amount_minor == 40_000 - 2_000
@@ -221,7 +251,7 @@ def test_s07_false_complaint_rejected_and_history_visible(api, market, staff):
     assert r.json()["status"] == "REJECTED"
     assert OrderItem.objects.get(pk=iid).status == "AWAITING_BUYER_CONFIRMATION"  # restored, new confirmation window
     decide(api, staff["admin"], did, None, "sanction", sanction={"target": "buyer", "type": "warning"})
-    hist = as_(api, staff["support"]).get(f"/api/v1/staff/disputes/{did}").json()["order"]["buyer"]["history"]
+    hist = case_detail(api, staff, did)["order"]["buyer"]["history"]
     assert hist["opened"] == 1 and hist["rejected"] == 1 and hist["sanctions"] == 1
     from reviews.services import seller_rating
 
@@ -237,7 +267,7 @@ def test_s08_inflated_statistics_admin_recheck(api, market, staff):
     set_provider_override("tiktok", FakeProvider("tiktok"))
     oid, iid = accepted(api, market)
     did = open_(api, market["buyer"], oid, "fake_statistics").json()["id"]
-    r = act(api, staff["support"], did, "check-account", item=iid)
+    r = act(api, staff["admin"], did, "check-account", item=iid)
     assert r.status_code == 200
     job = StatsRefreshJob.objects.get(trigger="admin_check")
     assert job.status == "succeeded"
@@ -251,7 +281,7 @@ def test_s09_price_change_after_payment(api, market, staff):
     oid, iid = accepted(api, market)
     as_(api, market["seller"]).patch(f"/api/v1/offers/{market['offers'][0].pk}", {"price_minor": 900_000}, format="json")
     did = open_(api, market["buyer"], oid, "extra_payment").json()["id"]
-    d = as_(api, staff["support"]).get(f"/api/v1/staff/disputes/{did}").json()
+    d = case_detail(api, staff, did)
     assert d["order"]["items"][0]["price_minor"] == 100_000 and d["order"]["total_minor"] == 100_000
 
 
@@ -260,7 +290,7 @@ def test_s10_off_platform_attempt(api, market, staff):
     oid, iid = accepted(api, market)
     as_(api, market["seller"]).post(f"/api/v1/orders/{oid}/chat", {"body": "Давай оплату напрямую, напиши в телеграм"}, format="json")
     did = open_(api, market["buyer"], oid, "off_platform").json()["id"]
-    chat = as_(api, staff["support"]).get(f"/api/v1/staff/disputes/{did}").json()["chat"]
+    chat = case_detail(api, staff, did)["chat"]
     assert any(m["contact_signal"] for m in chat)
     decide(api, staff["admin"], did, None, "sanction", sanction={"target": "seller", "type": "limit", "days": 7})
     market["seller"].refresh_from_db()
@@ -272,7 +302,7 @@ def test_s11_brief_changed_after_payment_not_binding(api, market, staff):
     oid, iid = published(api, market)
     as_(api, market["buyer"]).post(f"/api/v1/orders/{oid}/terms/propose", {"changes": {"brief": "Совсем другое ТЗ"}}, format="json")
     did = open_(api, market["buyer"], oid, "brief_mismatch").json()["id"]
-    d = as_(api, staff["support"]).get(f"/api/v1/staff/disputes/{did}").json()
+    d = case_detail(api, staff, did)
     assert d["order"]["current_terms"]["version"] == 1 and d["order"]["current_terms"]["brief"] != "Совсем другое ТЗ"
 
 
@@ -289,7 +319,7 @@ def test_s12_seller_account_deleted(api, market, staff):
     acc.handle = "gone_missing"
     acc.save()
     set_provider_override("tiktok", FakeProvider("tiktok"))
-    act(api, staff["support"], did, "check-account", item=iid)
+    act(api, staff["admin"], did, "check-account", item=iid)
     from social_data.models import StatsRefreshJob
 
     job = StatsRefreshJob.objects.get(trigger="admin_check")
@@ -306,7 +336,7 @@ def test_s13_platform_removed_video_policy_visible(api, market, staff):
     pay(api, market["buyer"], oid)
     to_confirmation(api, market, oid, iid)
     did = open_(api, market["buyer"], oid, "removed_early").json()["id"]
-    d = as_(api, staff["support"]).get(f"/api/v1/staff/disputes/{did}").json()
+    d = case_detail(api, staff, did)
     assert d["order"]["original_terms"]["platform_removal_policy"] == "seller_not_liable"
     assert decide(api, staff["admin"], did, iid, "reject", comment="По условиям заказа риск модерации платформы не на продавце").json()["status"] == "REJECTED"
 
@@ -322,7 +352,7 @@ def test_s14_buyer_delayed_materials(api, market, staff):
     assert open_(api, market["seller"], oid, "materials_delayed").status_code == 201
     as_(api, market["buyer"]).post(f"/api/v1/orders/{oid}/materials-delivered")
     did = Dispute.objects.get(order_id=oid).pk
-    events = [e["type"] for e in as_(api, staff["support"]).get(f"/api/v1/staff/disputes/{did}").json()["events"]]
+    events = [e["type"] for e in case_detail(api, staff, did)["events"]]
     assert "materials.delivered" in events
 
 
@@ -335,7 +365,7 @@ def test_s15_counter_claims_join_one_dispute(api, market, staff):
     assert Dispute.objects.filter(order_id=oid).count() == 1
     d = Dispute.objects.get(pk=did)
     assert d.status == "UNDER_REVIEW"
-    msgs = as_(api, staff["support"]).get(f"/api/v1/staff/disputes/{did}").json()["messages"]
+    msgs = case_detail(api, staff, did)["messages"]
     assert any("Встречная претензия" in m["body"] for m in msgs)
 
 
@@ -344,12 +374,13 @@ def test_s15_counter_claims_join_one_dispute(api, market, staff):
 def test_evidence_request_escalation_and_internal_notes(api, market, staff):
     oid, iid = published(api, market)
     did = open_(api, market["buyer"], oid, "wrong_link").json()["id"]
-    assert act(api, staff["support"], did, "assign").json()["assignee"] == str(staff["support"].pk)
-    act(api, staff["support"], did, "message", body="Внутренняя заметка", internal=True)
-    act(api, staff["support"], did, "note", body="Подозрительно")
+    assert act(api, staff["support"], did, "assign").json()["assigned_to_me"] is True
+    prepare_arbitration(api, staff["admin"], did)
+    act(api, staff["admin"], did, "message", body="Внутренняя заметка", internal=True)
+    act(api, staff["admin"], did, "note", body="Подозрительно")
     party = as_(api, market["buyer"]).get(f"/api/v1/disputes/{did}").json()
     assert all(m["body"] != "Внутренняя заметка" for m in party["messages"])  # staff-only stays hidden
-    r = act(api, staff["support"], did, "request-evidence", **{"from": "seller", "comment": "Пришлите скриншот статистики"})
+    r = act(api, staff["admin"], did, "request-evidence", **{"from": "seller", "comment": "Пришлите скриншот статистики"})
     assert r.json()["status"] == "EVIDENCE_REQUESTED"
     from notifications.models import Notification
 
@@ -357,7 +388,7 @@ def test_evidence_request_escalation_and_internal_notes(api, market, staff):
     as_(api, market["seller"]).post(f"/api/v1/disputes/{did}/reply",
                                     {"body": "Вот", "evidence": [{"url": "https://www.tiktok.com/@a/video/9"}]}, format="json")
     assert Dispute.objects.get(pk=did).status == "UNDER_REVIEW"
-    act(api, staff["support"], did, "escalate", comment="Сложный случай")
+    act(api, staff["admin"], did, "escalate", comment="Сложный случай")
     assert decide(api, staff["support"], did, iid, "reject").status_code == 403
     r = decide(api, staff["admin"], did, iid, "reject")
     assert r.status_code == 200 and r.json()["status"] == "REJECTED"  # admin has dispute.escalated
@@ -399,7 +430,7 @@ def test_no_double_refund_through_decisions(api, market, staff):
     oid, iid = published(api, market)
     did = open_(api, market["buyer"], oid, "not_published").json()["id"]
     decide(api, staff["admin"], did, iid, "full_refund")
-    assert decide(api, staff["admin2"], did, iid, "full_refund").status_code in (400, 409)
+    assert decide(api, staff["admin2"], did, iid, "full_refund").status_code in (400, 403, 409)
     assert RefundRequest.objects.filter(order_item_id=iid).count() == 1
 
 
@@ -425,7 +456,7 @@ def test_support_tickets(api, market, staff, user_factory):
     assert b.get("/api/v1/me/tickets").json()["count"] == 1
     assert as_(api, user_factory()).get(f"/api/v1/support/tickets/{tid}").status_code == 404
     st = as_(api, staff["support"])
-    assert len(st.get("/api/v1/staff/tickets").json()) == 1
+    assert st.get("/api/v1/staff/tickets").json()["count"] == 1
     st.post(f"/api/v1/staff/tickets/{tid}/assign")
     st.post(f"/api/v1/staff/tickets/{tid}/priority", {"priority": "high"}, format="json")
     r = st.post(f"/api/v1/staff/tickets/{tid}/reply", {"body": "Деньги у провайдера до подтверждения"}, format="json").json()

@@ -24,8 +24,8 @@ class Command(BaseCommand):
     help = "Create demo sellers, accounts, offers and a network (dev only)"
 
     def handle(self, *args, **opts):
-        if settings.ENV == "production":
-            raise CommandError("seed_demo is forbidden in production")
+        if settings.ENV == "production" or not settings.ENABLE_TEST_FIXTURES:
+            raise CommandError("Test fixtures require ENABLE_TEST_FIXTURES=true and a non-production environment")
         now = timezone.now()
         sellers = []
         for i in range(2):
@@ -43,7 +43,9 @@ class Command(BaseCommand):
             UserProfile.objects.create(user=buyer, display_name="Демо-покупатель")
             assign_role(buyer, "buyer")
         for email, name, role in [("demo-admin@example.com", "Демо-администратор", "admin"),
-                                  ("demo-support@example.com", "Демо-поддержка", "support_agent")]:
+                                  ("demo-support@example.com", "Демо-поддержка", "support_agent"),
+                                  ("demo-owner@example.com", "Демо-владелец", "super_admin"),
+                                  ("demo-arbitrator@example.com", "Демо-арбитр", "arbitrator")]:
             if not User.objects.filter(email=email).exists():
                 staff = User.objects.create_user(email=email, password="Demo-password-1", is_email_verified=True, is_staff=True)
                 UserProfile.objects.create(user=staff, display_name=name)

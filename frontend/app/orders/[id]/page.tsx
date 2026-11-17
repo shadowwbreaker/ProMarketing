@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useCallback, useEffect, useState } from "react";
 import { DisputePanel } from "@/components/DisputePanel";
+import { OrderRequestActions } from "@/components/OrderRequestActions";
 import { OrderChat } from "@/components/OrderChat";
 import { OrderTermsDetails } from "@/components/OrderTermsDetails";
 import { Avatar } from "@/components/profile/Avatar";
@@ -168,6 +169,7 @@ function OrderPageInner() {
   const { id } = useParams<{ id: string }>();
   const q = useSearchParams();
   const mockPayment = q.get("mock_payment");
+  const requestId = q.get("request");
   const toast = useToast();
   const [o, setO] = useState<Order>();
   const [events, setEvents] = useState<OrderEvent[]>([]);
@@ -264,7 +266,7 @@ function OrderPageInner() {
           </Card>
         ))}
 
-        <DisputePanel order={o} onChanged={() => void load()} />
+        {o.role !== "staff" && <DisputePanel order={o} onChanged={() => void load()} />}
 
         <Card>
           <h2 className="mb-2 font-bold">Условия (версия {t.version})</h2>
@@ -300,6 +302,7 @@ function OrderPageInner() {
             {o.paid_at && <Link href={`/messages?order=${o.id}`} className="text-sm font-semibold text-accent hover:underline">В сообщениях</Link>}
           </>}
         </div>
+        {o.role === "staff" && requestId && <OrderRequestActions key={requestId} orderId={o.id} requestId={requestId} />}
         <OrderChat key={o.id} orderId={o.id} role={o.role} peerId={o.paid_at && o.role !== "staff" ? peer.id : undefined} />
       </aside>
     </div>

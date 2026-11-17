@@ -89,7 +89,7 @@ DATABASES = {
     )
 }
 DATABASES["default"]["ATOMIC_REQUESTS"] = False
-DATABASES["default"]["CONN_MAX_AGE"] = env.int("DB_CONN_MAX_AGE", default=60)
+DATABASES["default"]["CONN_MAX_AGE"] = env.int("DB_CONN_MAX_AGE", default=0)
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTH_USER_MODEL = "accounts.User"
@@ -137,7 +137,7 @@ REST_FRAMEWORK = {
     "DEFAULT_PAGINATION_CLASS": "common.pagination.StandardPagination",
     "PAGE_SIZE": 20,
     # Baseline flood protection for every endpoint (shared through Redis across workers); scoped limits below are stricter.
-    "DEFAULT_THROTTLE_CLASSES": ["rest_framework.throttling.AnonRateThrottle", "common.throttles.SignedInUserThrottle"],
+    "DEFAULT_THROTTLE_CLASSES": ["common.throttles.AnonRateThrottle", "common.throttles.SignedInUserThrottle"],
     # Client IP: behind exactly one reverse proxy (Caddy) take the address it appended; 0 = use REMOTE_ADDR (dev).
     # Never trust a client-supplied X-Forwarded-For chain (NUM_PROXIES=None would).
     "NUM_PROXIES": env.int("NUM_PROXIES", default=0),
@@ -214,6 +214,8 @@ BUYER_PUBLICATION_CHECKS_LIMIT = env.int("BUYER_PUBLICATION_CHECKS_LIMIT", defau
 # Beta for investors/testers: everything real except money — payment is simulated and confirmed instantly (D-025).
 BETA_MODE = env.bool("BETA_MODE", default=False)
 DEV_AUTO_VERIFY_EMAIL = env.bool("DEV_AUTO_VERIFY_EMAIL", default=False)  # dev only: skip email confirmation
+SUPPORT_OWNER_EMAIL = env("SUPPORT_OWNER_EMAIL", default="").strip().casefold() or "maxshishkin07@gmail.com"
+ENABLE_TEST_FIXTURES = env.bool("ENABLE_TEST_FIXTURES", default=False)
 STAFF_2FA_REQUIRED = env.bool("STAFF_2FA_REQUIRED", default=False)  # forced on in production
 RESULTS_REPORTS_ENABLED = env.bool("RESULTS_REPORTS_ENABLED", default=True)  # D-018: buyer opt-in, 3 checks max
 

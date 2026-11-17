@@ -33,6 +33,8 @@ class Command(BaseCommand):
 
     @transaction.atomic
     def handle(self, *args, **options):
+        if settings.ENV == "production" or not settings.ENABLE_TEST_FIXTURES:
+            raise CommandError("Sample identities are restricted to explicit local test fixtures")
         if not settings.BETA_MODE or settings.PAYMENT_PROVIDER != "mock":
             raise CommandError("The demo catalog requires BETA_MODE and mock payments")
 
