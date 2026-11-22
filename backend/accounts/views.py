@@ -2,6 +2,7 @@ from django.contrib.auth import authenticate, login, logout, update_session_auth
 from django.contrib.auth.password_validation import validate_password
 from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
+from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import ensure_csrf_cookie
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
@@ -258,6 +259,7 @@ class SupportRolesByEmail(APIView):
         return Response(MeSerializer(target).data)
 
 
+@method_decorator(never_cache, name="dispatch")
 class TwoFactorView(APIView):
     permission_classes = [IsActiveUser]
     allow_before_staff_2fa = True

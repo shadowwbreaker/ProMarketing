@@ -120,3 +120,50 @@ def test_ops_tick_requires_cron_secret(api, monkeypatch):
     assert api.get("/api/v1/ops/tick", HTTP_AUTHORIZATION="Bearer wrong").status_code == 403
     r = api.get("/api/v1/ops/tick", HTTP_AUTHORIZATION="Bearer s3cret-value")
     assert r.status_code == 200 and all(v == "ok" for v in r.json()["ran"].values()), r.json()
+
+
+@pytest.mark.django_db
+def test_provisioning_is_private_not_cached_and_does_not_enable_2fa(api, user_factory, caplog):
+    from urllib.parse import parse_qs, unquote, urlparse
+
+    from accounts.models import TwoFactor
+    from audit.models import AuditLog
+    from common.crypto import decrypt
+    from rest_framework.test import APIClient
+
+    owner = user_factory(email="qr-owner@example.com")
+    another = user_factory(email="qr-other@example.com")
+    guest = APIClient()
+    assert guest.post("/api/v1/me/2fa/setup").status_code == 403
+
+    with caplog.at_level("DEBUG"):
+        result = as_(api, owner).post("/api/v1/me/2fa/setup")
+    assert result.status_code == 200
+    cache_control = result["Cache-Control"]
+    assert all(flag in cache_control for flag in ("no-store", "no-cache", "private"))
+    assert "Expires" in result
+    secret, uri = result.data["secret"], result.data["otpauth_url"]
+    parsed = urlparse(uri)
+    params = parse_qs(parsed.query)
+    assert parsed.scheme == "otpauth" and parsed.netloc == "totp"
+    assert unquote(parsed.path) == "/YourVideoTeam:qr-owner@example.com"
+    assert params["issuer"] == ["YourVideoTeam"] and params["secret"] == [secret]
+    totp = pyotp.parse_uri(uri)
+    assert totp.interval == 30 and totp.digits == 6
+    factor = TwoFactor.objects.get(user=owner)
+    assert not factor.confirmed_at and decrypt(factor.secret_enc) == secret
+    assert factor.secret_enc != secret
+    assert secret not in caplog.text and uri not in caplog.text
+    assert not AuditLog.objects.filter(action="user.2fa_enabled", actor=owner).exists()
+
+    other = as_(api, another).get("/api/v1/me/2fa")
+    assert other.data == {"enabled": False, "required": False}
+    assert "no-store" in other["Cache-Control"]
+    assert as_(api, another).post("/api/v1/me/2fa/confirm", {"code": totp.now()}, format="json").status_code == 409
+    assert not TwoFactor.objects.get(user=owner).confirmed_at
+
+    as_(api, owner)
+    assert api.post("/api/v1/me/2fa/confirm", {"code": totp.now()}, format="json").status_code == 200
+    assert TwoFactor.objects.get(user=owner).confirmed_at
+    assert api.get("/api/v1/me/2fa").data["enabled"]
+    assert secret not in api.get("/api/v1/me/2fa").content.decode()

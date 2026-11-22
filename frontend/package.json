@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "next": "15.5.29",
+    "qrcode.react": "4.2.0",
     "react": "19.1.0",
     "react-dom": "19.1.0"
   },
@@ -29,10 +30,11 @@
     "eslint": "^9",
     "eslint-config-next": "15.5.29",
     "jsdom": "^26.1.0",
+    "jsqr": "1.4.0",
+    "picomatch": "file:vendor/picomatch",
     "tailwindcss": "^4",
     "typescript": "^5",
-    "vitest": "^4.1.12",
-    "picomatch": "file:vendor/picomatch"
+    "vitest": "^4.1.12"
   },
   "overrides": {
     "postcss": "^8.5.32",
