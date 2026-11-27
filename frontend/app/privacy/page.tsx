@@ -1,7 +1,12 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { LegalContact, LegalDocument, legalLink } from "@/components/LegalDocument";
+import { privacyUrl, termsUrl } from "@/lib/legalUrls";
 
-export const metadata = { title: "Политика конфиденциальности — YourVideoTeam" };
+export const metadata: Metadata = {
+  title: "Политика конфиденциальности — YourVideoTeam",
+  alternates: { canonical: privacyUrl },
+};
 
 export default function PrivacyPage() {
   return <LegalDocument
@@ -40,7 +45,7 @@ export default function PrivacyPage() {
         </>,
       },
       {
-        id: "terms", title: "Условия использования", body: <p>Правила работы с сервисом приведены в <Link className={legalLink} href="/terms">пользовательском соглашении</Link>. Актуальная редакция политики публикуется на этой странице.</p>,
+        id: "terms", title: "Условия использования", body: <p>Правила работы с сервисом приведены в <Link className={legalLink} href={termsUrl}>пользовательском соглашении</Link>. Актуальная редакция политики публикуется на этой странице.</p>,
       },
     ]}
   />;

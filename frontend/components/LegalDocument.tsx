@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { legalSiteUrl } from "@/lib/legalUrls";
 
 type LegalSection = { id: string; title: string; body: ReactNode };
 
@@ -16,6 +17,9 @@ export function LegalDocument({ title, intro, sections }: {
       <header>
         <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">{title}</h1>
         <p className="mt-3 text-muted">{intro}</p>
+        <p className="mt-2 text-sm text-muted">
+          Официальный сайт YourVideoTeam — <a className={legalLink} href={legalSiteUrl}>www.yourvideoteam.agency</a>.
+        </p>
       </header>
       <nav aria-label="Разделы документа" className="flex flex-wrap gap-2">
         {sections.map(({ id, title }) => (

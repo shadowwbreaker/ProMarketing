@@ -27,15 +27,18 @@ async function fits(page) {
     assert.equal(await page.getByText(/Комиссия 5%/).count(), 0);
     const footer = page.getByRole("contentinfo");
     const links = await footer.getByRole("link").evaluateAll((rows) => rows.map((row) => row.getAttribute("href")));
-    assert.deepEqual(links, ["/catalog", "/terms", "/rules", "/privacy"]);
+    const official = "https://www.yourvideoteam.agency";
+    assert.deepEqual(links, ["/catalog", official + "/terms", "/rules", official + "/privacy"]);
     for (const width of [320, 375, 1280]) {
       await page.setViewportSize({ width, height: 900 });
       await fits(page);
     }
-    await footer.getByRole("link", { name: "Пользовательское соглашение" }).click();
+    await page.goto(base + "/terms");
     await page.getByRole("heading", { name: "Пользовательское соглашение", exact: true }).waitFor();
-    await page.getByRole("contentinfo").getByRole("link", { name: "Политика конфиденциальности" }).click();
+    assert.equal(await page.locator('link[rel="canonical"]').getAttribute("href"), official + "/terms");
+    await page.goto(base + "/privacy");
     await page.getByRole("heading", { name: "Политика конфиденциальности", exact: true }).waitFor();
+    assert.equal(await page.locator('link[rel="canonical"]').getAttribute("href"), official + "/privacy");
 
     const support = await login(browser, "demo-support@example.com");
     support.on("pageerror", (error) => errors.push(error.message));

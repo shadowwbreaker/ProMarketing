@@ -1,7 +1,12 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { LegalContact, LegalDocument, legalLink } from "@/components/LegalDocument";
+import { privacyUrl, termsUrl } from "@/lib/legalUrls";
 
-export const metadata = { title: "Пользовательское соглашение — YourVideoTeam" };
+export const metadata: Metadata = {
+  title: "Пользовательское соглашение — YourVideoTeam",
+  alternates: { canonical: termsUrl },
+};
 
 export default function TermsPage() {
   return <LegalDocument
@@ -35,7 +40,7 @@ export default function TermsPage() {
       },
       {
         id: "privacy", title: "Данные и изменения условий", body: <>
-          <p>Обработка сведений об учётной записи, заказах и подключённых каналах описана в <Link className={legalLink} href="/privacy">политике конфиденциальности</Link>.</p>
+          <p>Обработка сведений об учётной записи, заказах и подключённых каналах описана в <Link className={legalLink} href={privacyUrl}>политике конфиденциальности</Link>.</p>
           <p>Актуальная редакция условий публикуется на этой странице. Функции беты могут меняться по мере тестирования.</p>
         </>,
       },
