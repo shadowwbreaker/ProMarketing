@@ -20,6 +20,27 @@ def test_health_live_and_ready(api):
     assert r.json()["checks"] == {"database": "ok", "cache": "ok"}
 
 
+def test_readiness_reuses_cached_status_and_recovers_after_expiry(api, monkeypatch):
+    from unittest.mock import Mock
+
+    from common.views import ReadyView, _readiness_cache
+
+    probe = Mock(side_effect=[{"database": "error", "cache": "ok"}, {"database": "ok", "cache": "ok"}])
+    monkeypatch.setattr(ReadyView, "probe_dependencies", staticmethod(probe))
+    _readiness_cache.clear()
+    try:
+        first = api.get("/api/v1/health/ready")
+        assert first.status_code == 503 and first.data["status"] == "degraded"
+        assert api.get("/api/v1/health/ready").data == first.data
+        assert api.get("/api/v1/health/live").status_code == 200
+        probe.assert_called_once()
+        _readiness_cache.delete("checks")
+        assert api.get("/api/v1/health/ready").status_code == 200
+        assert probe.call_count == 2
+    finally:
+        _readiness_cache.clear()
+
+
 @pytest.mark.django_db
 def test_error_format_and_request_id(api):
     r = api.get("/api/v1/health/does-not-exist", HTTP_X_REQUEST_ID="abc123")

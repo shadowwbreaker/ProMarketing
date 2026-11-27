@@ -29,10 +29,12 @@ def setup(user) -> dict:
     return {"secret": secret, "otpauth_url": pyotp.TOTP(secret).provisioning_uri(name=user.email, issuer_name=ISSUER)}
 
 
-def verify(user, code: str) -> bool:
+def verify(user, code: object) -> bool:
     """Accepts the current or adjacent 30-second step; a step can be used only once (replay protection)."""
-    code = (code or "").strip().replace(" ", "")
-    if not code.isdigit() or len(code) != 6:
+    if not isinstance(code, str):
+        return False
+    code = code.strip().replace(" ", "")
+    if len(code) != 6 or not code.isascii() or not code.isdecimal():
         return False
     with transaction.atomic():
         tf = TwoFactor.objects.select_for_update().filter(user=user).first()
@@ -48,7 +50,7 @@ def verify(user, code: str) -> bool:
     return False
 
 
-def confirm(user, code: str):
+def confirm(user, code: object):
     tf = TwoFactor.objects.filter(user=user).first()
     if not tf or tf.confirmed_at:
         raise DomainError("Сначала начните настройку", code="2fa_not_started")
@@ -60,8 +62,8 @@ def confirm(user, code: str):
     record(action="user.2fa_enabled", subject_type="user", subject_id=user.pk, actor=user)
 
 
-def disable(user, code: str, password: str):
-    if not user.check_password(password or "") or not verify(user, code):
+def disable(user, code: object, password: object):
+    if not isinstance(password, str) or not user.check_password(password) or not verify(user, code):
         raise DomainError("Неверный пароль или код", code="invalid_otp", status_code=400)
     TwoFactor.objects.filter(user=user).delete()
     record(action="user.2fa_disabled", subject_type="user", subject_id=user.pk, actor=user)

@@ -10,7 +10,9 @@
 cp .env.example .env        # заполните FIELD_ENCRYPTION_KEY
 docker compose -f infra/docker-compose.yml up --build
 ```
-Демо-данные создаются автоматически при старте backend. Сервисы: db, redis, backend, worker (фоновые задачи), beat (таймеры заказов и выплат), frontend.
+Обычный Docker запускает db, redis, backend, worker (фоновые задачи), beat (таймеры заказов и выплат) и frontend без демоданных. Для браузерных тестов используйте отдельную БД и `infra/docker-compose.test.yml` по инструкции в [TESTING](docs/TESTING.md).
+
+> В первых версиях демоданные создавались автоматически при старте backend. Теперь приведённые ниже демо-входы создаются только в изолированном тестовом окружении.
 Демо-входы: `demo-buyer@example.com`, `demo-seller1@example.com`, `demo-admin@example.com`, `demo-support@example.com`, пароль `Demo-password-1`.
 В dev (`DEV_AUTO_VERIFY_EMAIL=true`) новые аккаунты подтверждаются сразу. Подтвердить уже созданный: `docker compose -f infra/docker-compose.yml exec backend python manage.py verify_email you@example.com`.
 Backend: http://localhost:8000/api/v1/health/ready · Frontend: http://localhost:3000 · Статус: http://localhost:3000/status

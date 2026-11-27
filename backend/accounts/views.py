@@ -110,7 +110,7 @@ class LoginView(CsrfAuthMixin, APIView):
         factor_enabled = is_enabled(user)
         if factor_enabled:
             otp = request.data.get("otp")
-            if not otp:
+            if otp is None or otp == "":
                 raise DomainError("Введите код из приложения-аутентификатора", code="otp_required", status_code=401)
             if not verify(user, otp):
                 record(action="user.login_bad_otp", subject_type="user", subject_id=user.pk, actor=user, ip=_ip(request))

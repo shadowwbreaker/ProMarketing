@@ -48,6 +48,25 @@ def test_login_with_otp_and_replay_protection(api, user_factory):
 
 
 @pytest.mark.django_db
+def test_non_text_totp_is_rejected_by_account_endpoints(api, user_factory):
+    user = user_factory()
+    client = as_(api, user)
+    secret = client.post("/api/v1/me/2fa/setup").data["secret"]
+    confirm = "/api/v1/me/2fa/confirm"
+    for code in (123456, 0, True, ["123456"]):
+        response = client.post(confirm, {"code": code}, format="json")
+        assert response.status_code == 400
+        assert response.data["error"]["code"] == "invalid_otp"
+    assert client.post(confirm, {"code": code_for(secret)}, format="json").status_code == 200
+    response = client.post("/api/v1/me/2fa/disable", {"code": 123456, "password": PWD}, format="json")
+    assert response.status_code == 400 and response.data["error"]["code"] == "invalid_otp"
+    client.logout()
+    for code in (123456, 0):
+        response = client.post("/api/v1/auth/login", {"email": user.email, "password": PWD, "otp": code}, format="json")
+        assert response.status_code == 400 and response.data["error"]["code"] == "invalid_otp"
+
+
+@pytest.mark.django_db
 def test_disable_requires_password_and_code(api, user_factory):
     u = user_factory(roles=("support_agent",))
     c = as_(api, u)
